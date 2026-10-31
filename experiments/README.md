@@ -2,6 +2,51 @@
 
 ## Research: competitive four-player Catan AI
 
+### Loss attribution, pass 2: event-level replay of swing boards (2026-10-31)
+
+`scripts/replay_swing_boards.py` replayed 100 boards per direction from the
+sealed tactical-control panel (`planner_parameter` vs `tactical`), both arms,
+with the evaluator's exact construction under the frozen snapshot: 400 games,
+zero outcome mismatches (`runs/swing-replay-tactical-v1.json`). Means are for
+the candidate's seat; "candidate arm" is `planner_parameter` in that seat,
+"control arm" is Tactical in the same seat on the same board.
+
+| Metric (candidate seat) | Boards control won, candidate lost | Boards candidate won, control lost |
+|---|---|---|
+| final points, candidate arm / control arm | 6.5 / 10.1 | 10.1 / 6.3 |
+| production received | 65 / 85 | 85 / 68 |
+| cards discarded | 11.6 / 5.3 | 12.8 / 5.5 |
+| development cards bought | 1.8 / 5.6 | 2.6 / 4.5 |
+| largest army at end | .05 / .44 | .06 / .19 |
+| longest road at end | .20 / .52 | .61 / .18 |
+| player offers made | 0 / 22.4 | 0 / 22.5 |
+| bank trades | 4.8 / 11.3 | 6.9 / 9.1 |
+| first city turn | 46.7 / 48.1 | 48.9 / 57.3 |
+| never built a city | .30 / .05 | .02 / .35 |
+
+Readings, descriptive, from 200 boards:
+
+- **Discards.** The fitted planner discards about twice as many cards as
+  Tactical on the same boards in both directions. Its leaf charges .5 per card
+  over seven; the hand term rewards holding up to three of each resource. It
+  hoards for a build it then loses to a seven. A discard-aware hand valuation is
+  a concrete, cheap candidate.
+- **Awards.** On boards the planner lost, Tactical held Largest Army 44% and
+  Longest Road 52% of the time from the same seat; the planner held them 5% and
+  20%. It buys a third as many development cards. Two awards are four points,
+  which matches losses by three or more. Valuing knights toward Largest Army
+  and roads toward Longest Road as award races, not just as development cards
+  and road count, is the second candidate.
+- **Production.** Production received is the symmetric driver: 65 vs 85 when
+  losing, 85 vs 68 when winning. Placement and expansion already carry most of
+  the fitted weights; the robber lands on the planner's tiles slightly more
+  often in both directions, consistent with it being the apparent leader.
+- **Trading** is zero offers, as already known; row 6 measured what one offer
+  per turn is worth.
+
+Each of these is a lane proposal with a powered config and a bar before it
+runs, not a result.
+
 ### Row 6 first test: one priced offer per turn, FAIL on the family rule, PASS tactical (2026-10-31)
 
 `offer-powered-dev.json`: `planner_offer` (the `planner_robber` turn search plus
