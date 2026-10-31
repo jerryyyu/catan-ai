@@ -2,6 +2,27 @@
 
 ## Research: competitive four-player Catan AI
 
+### Powered rescreen: finish search, FAIL, precisely small (2026-10-31)
+
+`finish-powered-dev.json` reran the unchanged `planner_finish` against the
+unchanged `planner_robber`: 512 fresh boards per panel (1600000 to 1601511),
+all seats, cap 4, 8,192 games, zero truncations
+(`runs/finish-powered-dev-v2.json`; v1 aborted at shard 39 on a source edit and
+is preserved as an aborted run, not a result).
+
+| Panel | Pairs | Paired lift | Cluster SD | MDE at 80% | Bar | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| tactical | 2048 | +.0254 | .080 | .010 | +.05 | fail |
+| mixed | 2048 | +.0195 | .071 | .009 | +.05 | fail |
+
+The cluster SD is a quarter of the opening lane's because the two arms play
+identical games until someone nears ten points, so this screen could see a
+1 pp effect. The finish search is worth about +2 to +2.5 pp: real, precisely
+measured, and below the bar. That matches loss attribution pass 1, where only
+14% to 19% of candidate losses were by one point. Candidate worst turn 1.543 s
+against the 10 s gate. The lane stays parked; the component is cheap and
+combinable.
+
 ### Powered rescreen: opening search, FAIL but now measured (2026-10-31)
 
 `opening-search-powered-dev.json` reran the unchanged `planner_opening` against

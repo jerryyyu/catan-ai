@@ -47,6 +47,8 @@ panel design could detect at 80% power (present only for receipts written after 
 | external-timeout-copy-repair-v1 |  |  |  |  |  |  |  |  |  |  |
 | finish-dev-v1 | dev | planner_finish | planner_robber | tactical | 32 | +0.031 | -0.929 | 0 |  | False |
 | finish-dev-v1 | dev | planner_finish | planner_robber | mixed | 32 | +0.031 | -0.929 | 0 |  | False |
+| finish-powered-dev-v2 | dev | planner_finish | planner_robber | tactical | 2048 | +0.025 | -0.095 | 0 | +0.010 | False |
+| finish-powered-dev-v2 | dev | planner_finish | planner_robber | mixed | 2048 | +0.020 | -0.101 | 0 | +0.009 | False |
 | full-solver-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
 | inference-calibration-four-panel-v1 |  |  |  |  |  |  |  |  |  |  |
 | inference-calibration-four-panel-v2 |  |  |  |  |  |  |  |  |  |  |

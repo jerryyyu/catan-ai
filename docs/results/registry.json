@@ -803,6 +803,47 @@
    "stage": "dev"
   },
   {
+   "bytes": 406486664,
+   "candidate": "planner_finish",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 8192,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "finish-powered-dev-v2",
+   "panels": {
+    "mixed": {
+     "cluster_sd": 0.07063727078134814,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "minimum_detectable_effect_80": 0.008745864969325765,
+     "p95_seconds": 0.01582370698451996,
+     "paired_seed_lcb": -0.10050909891499009,
+     "paired_win_lift": 0.01953125,
+     "pairs": 2048,
+     "pass": false
+    },
+    "tactical": {
+     "cluster_sd": 0.08022090928872207,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "minimum_detectable_effect_80": 0.009932451135144266,
+     "p95_seconds": 0.014755625277757645,
+     "paired_seed_lcb": -0.09464972391499009,
+     "paired_win_lift": 0.025390625,
+     "pairs": 2048,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/finish-powered-dev-v2.json",
+   "process_cap": 4,
+   "sha256": "d0dda6066175a5decc63653301e86cefa2d55e83461aea775b751a0ceba42e9d",
+   "source_hash": "4a64b697769ff475",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
    "bytes": 4605,
    "candidate": null,
    "checkpoint_sha256": null,
