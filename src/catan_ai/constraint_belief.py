@@ -54,6 +54,18 @@ def solve_resources(view, seed=0, timeout_ms=500):
             solver.add(*(hands[s][r] == 0 for s in range(4) if s != seat))
     solver.add(*(hands[view.seat][r] == view.players[view.seat].resources[resource]
                  for r, resource in enumerate(RESOURCES)))
+    if getattr(view, 'phase', None) == 'actions':
+        observed_trades = {(a['give'], a['receive']) for a in view.actions
+                           if a['type'] == 'bank_trade'}
+        own = view.players[view.seat].resources
+        for give in RESOURCES:
+            if own[give] < view.trade_rate(view.seat, give):
+                continue
+            for r, receive in enumerate(RESOURCES):
+                if receive == give:
+                    continue
+                available = 19 - sum(hand[r] for hand in hands)
+                solver.add((available > 0) == ((give.value, receive.value) in observed_trades))
     status = solver.check()
     if status != z3.sat:
         raise RuntimeError(f'{status}: {solver.reason_unknown()}')

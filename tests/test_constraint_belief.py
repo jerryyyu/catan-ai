@@ -75,3 +75,30 @@ def test_verifier_rejects_missing_or_extra_choices():
     view.events[0]['action'] = {'type': 'buy_development'}
     with pytest.raises(BeliefFailure, match='choices'):
         verify_witness(view, {}, {})
+
+
+@pytest.mark.parametrize('wool_available', [False, True])
+@pytest.mark.parametrize('seed', [0, 1, 7])
+def test_bank_trade_legality_constrains_hidden_discard(wool_available, seed):
+    from catan_ai.engine import Resource
+
+    grant = event({'type': 'setup_settlement'}, seat=1)
+    grant['resource_deltas'] = [{'grain': 4}, {'wool': 19, 'ore': 1}, {}, {}]
+    grant['counts'] = [4, 20, 0, 0]
+    discard = event({'type': 'discard'}, seat=1)
+    del discard['resource_deltas']
+    discard['counts'] = [4, 19, 0, 0]
+    view = view_for([grant, discard])
+    view.players[0].resources[Resource.GRAIN] = 4
+    view.players[0].resource_count = 4
+    view.players[1].resources = None
+    view.players[1].resource_count = 19
+    view.phase = 'actions'
+    view.trade_rate = lambda seat, resource: 4
+    view.actions = tuple({'type': 'bank_trade', 'give': 'grain', 'receive': r.value}
+                         for r in RESOURCES if r != Resource.GRAIN
+                         and (r != Resource.WOOL or wool_available))
+    before = deepcopy(view)
+    choices = solve_resources(view, seed)
+    assert choices == {1: 'wool' if wool_available else 'ore'}
+    assert view.events == before.events and view.players == before.players
