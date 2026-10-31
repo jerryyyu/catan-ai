@@ -46,6 +46,8 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - name: Lint
+        run: npm run lint
       - name: Typecheck and build
         run: npm run build
       - name: Unit tests
