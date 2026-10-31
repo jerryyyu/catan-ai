@@ -64,7 +64,7 @@ def verify_install():
         if importlib.metadata.version(name) != expected:
             raise RuntimeError(f'external dependency version mismatch: {name}')
     return {'commit': pin, 'versions': versions, 'python_hash_seed': os.environ.get('PYTHONHASHSEED'),
-            'adaptation': 'depth2-guided-solver-v12',
+            'adaptation': 'depth2-guided-solver-v13',
             'package_sha256': hashlib.sha256(json.dumps(hashes, sort_keys=True).encode()).hexdigest()}
 
 

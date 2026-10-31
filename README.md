@@ -127,7 +127,7 @@ time; bot timings include observation, decision and application. These local
 one-human/three-bot pilots support debugging, not a human-transfer strength claim.
 
 For a private three-human match, open **Private three-human match** (or `/#room`),
-choose the Tactical bot's seat, and create a room. Share one invitation with each
+choose the bot and its seat, and create a room. Tactical remains the default. Share one invitation with each
 human, including yourself. Each invitation grants access to that seat; keep it
 private. Players enter a display name, completed-match count, optional platform,
 and consent to recording. Play starts when all three join. Refresh retains the
@@ -137,7 +137,15 @@ view at any recorded step without advancing the live game.
 Room records use the same private storage directory, with `room_` filenames.
 They retain source identity, participant self-reports, actions and bot compute
 timings; only token hashes are stored. Run one server process. Restart recovery
-requires matching source and reproduces the fixed Tactical/Heuristic decisions.
+requires matching source and reproduces the fixed bot decisions. The opt-in
+**Trained challenger (pilot)** uses `planner_parameter`. Before starting the
+server, set `CATAN_PARAMETER_MODEL` to a checkpoint bound to that exact server
+source. A missing or incompatible checkpoint rejects room creation. The room
+records its checkpoint SHA256; restart and offline audit require the identical
+checkpoint, even if a replacement contains the same weights. Keep the frozen
+server source and checkpoint together for replay. Source changes require a new
+checkpoint binding and compatibility validation; do not overwrite old bindings.
+The audit command needs the same `CATAN_PARAMETER_MODEL` environment variable.
 These rooms are pilots: the UI does not randomize blinded candidate/control
 assignments, and no experienced-human transfer result has yet been collected.
 
