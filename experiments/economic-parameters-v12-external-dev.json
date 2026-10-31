@@ -1,0 +1,42 @@
+{
+  "name": "economic-parameters-v12-external-dev",
+  "stage": "dev",
+  "candidate": "planner_parameter",
+  "control": "external",
+  "requires_search": false,
+  "seeds_per_panel": 64,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 1690000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 1691000,
+      "opponents": [
+        "builder",
+        "external",
+        "expander"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.12,
+    "planning_sigma": 0.4,
+    "power": 0.8,
+    "note": "Predeclared 2026-10-31 before any v12 game is played, at Jerry's request to rerun the withheld external-control comparison on the repaired comparator before any promotion decision. Source: frozen snapshot of tree 0acb16a (PR #3 head; pure-Python engine), checkpoint runs/economic-parameters-v12-binding-v1/model.json (sha256 899b495b..., same weights as 77c5ebfc...). The snapshot's evaluator predates catan_ai.power, so admission was computed with main's power.py and recorded in experiments/README.md; it is not enforced by the snapshot evaluator. DEV is also the reliability gate: any external fault withholds the lift (evaluator rule) and stops the held-out stage; the fault goes to board row 8. Admission: 52 clusters required, 64 declared."
+  }
+}
