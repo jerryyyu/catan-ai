@@ -129,10 +129,11 @@ def summarize(config, rows):
         panels[panel['name']].update(inference=method, seed_cluster_differences=clusters,
                                     suggested_heldout_seeds=planned_seeds(clusters, alpha=.05 / len(config['panels'])) if len(clusters) > 1 and lift is not None else None)
         if len(clusters) > 1:
-            # Descriptive only: how small a true lift this panel's design could have seen.
+            # Descriptive only: smallest lift a one-sided test against zero sees at 80%
+            # power. It is not the power to clear this receipt's own pass bar.
             sigma = cluster_sigma(clusters)
             panels[panel['name']]['cluster_sd'] = sigma
-            panels[panel['name']]['minimum_detectable_effect_80'] = minimum_detectable_effect(
+            panels[panel['name']]['zero_null_mde_80'] = minimum_detectable_effect(
                 sigma, len(clusters), .05 / len(config['panels']))
         for arm in ('candidate', 'baseline'):
             steps = sorted(t for r in selected for t in r[arm].get('step_seconds', [[], [], [], []])[r['seat']])

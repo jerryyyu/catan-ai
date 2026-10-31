@@ -231,6 +231,45 @@
    "stage": null
   },
   {
+   "bytes": 1195,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "economic-parameters-confirmatory-supervisor-v1/readout",
+   "panels": {
+    "external/mixed": {
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pass": false
+    },
+    "external/tactical": {
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pass": false
+    },
+    "tactical/mixed": {
+     "paired_seed_lcb": 0.20847407875338658,
+     "paired_win_lift": 0.2265625,
+     "pass": true
+    },
+    "tactical/tactical": {
+     "paired_seed_lcb": 0.09583498295246909,
+     "paired_win_lift": 0.10984375,
+     "pass": true
+    }
+   },
+   "pass": false,
+   "path": "runs/economic-parameters-confirmatory-supervisor-v1/readout.json",
+   "process_cap": null,
+   "sha256": "1861ab227e3ada5c36cf8616703af868852cc536aba28aae1ce5a5a19e0dceb4",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
    "bytes": 24024656,
    "candidate": "planner_parameter",
    "checkpoint_sha256": "77c5ebfc5b148e8d9a22aa07732df2b62b428fe6b8dc3767be8276447206fc92",
@@ -575,6 +614,24 @@
    "stage": null
   },
   {
+   "bytes": 17411,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-heldout-fault-triage-codex-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/external-heldout-fault-triage-codex-v1.json",
+   "process_cap": null,
+   "sha256": "1e08ea020b3e3106a6e59dfbbd242c1184a2dda7c97d43af971536781980d56a",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
    "bytes": 3083,
    "candidate": null,
    "checkpoint_sha256": null,
@@ -816,23 +873,23 @@
      "cluster_sd": 0.07063727078134814,
      "external_faults": 0,
      "match_truncations": 0,
-     "minimum_detectable_effect_80": 0.008745864969325765,
      "p95_seconds": 0.01582370698451996,
      "paired_seed_lcb": -0.10050909891499009,
      "paired_win_lift": 0.01953125,
      "pairs": 2048,
-     "pass": false
+     "pass": false,
+     "zero_null_mde_80": 0.008745864969325765
     },
     "tactical": {
      "cluster_sd": 0.08022090928872207,
      "external_faults": 0,
      "match_truncations": 0,
-     "minimum_detectable_effect_80": 0.009932451135144266,
      "p95_seconds": 0.014755625277757645,
      "paired_seed_lcb": -0.09464972391499009,
      "paired_win_lift": 0.025390625,
      "pairs": 2048,
-     "pass": false
+     "pass": false,
+     "zero_null_mde_80": 0.009932451135144266
     }
    },
    "pass": false,
@@ -1594,23 +1651,23 @@
      "cluster_sd": 0.256000974653296,
      "external_faults": 0,
      "match_truncations": 0,
-     "minimum_detectable_effect_80": 0.03169643916826855,
      "p95_seconds": 0.009686291217803955,
      "paired_seed_lcb": -0.07707159891499009,
      "paired_win_lift": 0.04296875,
      "pairs": 2048,
-     "pass": false
+     "pass": false,
+     "zero_null_mde_80": 0.03169643916826855
     },
     "tactical": {
      "cluster_sd": 0.2969259920999607,
      "external_faults": 0,
      "match_truncations": 0,
-     "minimum_detectable_effect_80": 0.036763518806208643,
      "p95_seconds": 0.010592956095933914,
      "paired_seed_lcb": 0.03572136983500991,
      "paired_win_lift": 0.15576171875,
      "pairs": 2048,
-     "pass": true
+     "pass": true,
+     "zero_null_mde_80": 0.036763518806208643
     }
    },
    "pass": false,
@@ -1727,23 +1784,23 @@
      "cluster_sd": 0.3190203399152836,
      "external_faults": 0,
      "match_truncations": 0,
-     "minimum_detectable_effect_80": 0.03949910273294716,
      "p95_seconds": 0.019997000694274902,
      "paired_seed_lcb": -0.09025519266499009,
      "paired_win_lift": 0.02978515625,
      "pairs": 2048,
-     "pass": false
+     "pass": false,
+     "zero_null_mde_80": 0.03949910273294716
     },
     "tactical": {
      "cluster_sd": 0.30440214439468877,
      "external_faults": 0,
      "match_truncations": 0,
-     "minimum_detectable_effect_80": 0.037689169213374035,
      "p95_seconds": 0.021169457584619522,
      "paired_seed_lcb": -0.07072394266499009,
      "paired_win_lift": 0.04931640625,
      "pairs": 2048,
-     "pass": false
+     "pass": false,
+     "zero_null_mde_80": 0.037689169213374035
     }
    },
    "pass": false,

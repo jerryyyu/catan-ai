@@ -8,9 +8,10 @@ submit the same actions and may not reimplement legality.
   truncation count, uncertainty interval, and elapsed time.
 - Give a new policy idea a cheap DEV comparison and a numeric pass bar before it
   runs. A failed bar is a result; do not tune the bar after seeing it.
-- Declare a screen's `power` block (target effect, planning sigma) and size it so
-  the bar is detectable; the evaluator refuses underpowered designs. Check past
-  signal with `scripts/screen_power.py`.
+- Declare a screen's `power` block (`alternative_effect` above the bar,
+  `planning_sigma`, `power`) and size it so the configured gate passes at that
+  alternative; the evaluator refuses underpowered designs. Check past signal
+  with `scripts/screen_power.py`.
 - Rotate candidate policies through all seats on the same seed block. Separate
   gameplay-strength, correctness, latency, and calibration claims.
 - Never expose hidden resources through player-facing state. Add a boundary test
@@ -35,6 +36,11 @@ receipts under `runs/`. Read the target before acting.
   `run-ended`, `result-ready`, `fyi`, `blocker`.
 - The ask comment exists on the PR before `ask-ready` is sent. A PASS covers
   only its head; a pushed commit needs a new ask with `--supersedes`.
+- Ownership lives in the "Active ownership and handoffs" table on board issue
+  #1. Claim a row there before editing its files, then send a `decision`
+  whose note starts `claim:`; send `release:` the same way when done or
+  handing back. Offer work with `task-ready`. Do not
+  edit files or checkouts in a peer's claimed scope.
 - Merges, promotions and deploys are Jerry's call. Bus silence is not consent.
 
 Current state: `docs/CONTRACT.md`. Plan: `docs/PLAN.md`. Receipt index:

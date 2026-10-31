@@ -23,8 +23,9 @@ bars below are the honest steps toward it.
 - Thirty-plus lanes have run; three passed. All were hand-written changes to a
   shallow public-information planner with a hand-weighted leaf. The one strength
   success is the lane where a fit, not a person, chose the numbers.
-- The standard DEV screen (8 or 16 boards per panel) had a minimum detectable
-  effect of 7 to 22 pp against a 5 pp bar. Many parked lanes were never
+- The standard DEV screen (8 or 16 boards per panel) had a zero-null minimum
+  detectable effect of 7 to 22 pp against a 5 pp bar, and far less than even
+  odds of clearing the bar at a true +10 pp. Many parked lanes were never
   measurable. A game costs one to two seconds, so a 5 pp screen is an hour.
 - The learned baseline that regressed trained on 1,408 games with a linear
   model. The field's reference result used hundreds of millions of decisions.
@@ -42,10 +43,16 @@ bars below are the honest steps toward it.
 
 ### 1. Fix the instrument (this week)   DONE in code, pending first use
 
-- `catan_ai.power` computes cluster SD, minimum detectable effect and required
-  clusters; `search_eval` refuses a config whose `power` block it cannot meet
-  and records both numbers in every summary. `scripts/screen_power.py` reports
-  the signal of past receipts.
+- `catan_ai.power` admits a screen only if, at its declared
+  `alternative_effect` and `planning_sigma`, every panel clears the configured
+  gate (point bar, plus the LCB margin when an LCB gate is set) with family
+  probability at least `power`. Summaries record cluster SD and a zero-null
+  MDE as descriptive sensitivity only. `scripts/screen_power.py` reports past
+  receipts and recommends cluster counts with the same admission rule.
+- Correction after Codex's review of PR #2: the first version planned against
+  zero and was used by the three rescreens below. Their verdicts stand as
+  declared; their `power` blocks overstated power to clear +5 pp, and the
+  evaluator now refuses that legacy block.
 - Predeclared rescreens of two parked but unchanged candidates under a powered
   design: `experiments/finish-powered-dev.json` and
   `experiments/opening-search-powered-dev.json` (512 clusters per panel, fresh
@@ -92,11 +99,11 @@ bars below are the honest steps toward it.
 - When any player reaches eight points, enumerate purchase and build sequences
   over the next two to three turns under the dice distribution with the belief
   sampler, and pick the sequence maximizing win probability.
-- Pass 1 of lane 2 found only 14% to 19% of candidate losses are by one
-  point, so this lane's ceiling is small; it ranks below lanes 4, 6 and 7.
-- The earlier finish lane failed at 8 clusters with a 7 pp minimum detectable
-  effect. Lane 1 rescreens the unchanged candidate first; the exact search is a
-  new candidate with its own config.
+- The powered rescreen measured the existing finish candidate at about +2 to
+  +2.5 pp, with approximate intervals below +5 pp. That measured effect, not
+  the terminal-margin share from loss attribution, is why this lane ranks
+  below lanes 4, 6 and 7. The exact search is a new candidate with its own
+  config.
 
 ### 6. Trading as negotiation
 
@@ -126,8 +133,10 @@ bars below are the honest steps toward it.
 
 ## Repository hygiene done in this pass
 
-- Ruff configuration, `.python-version`, GitHub Actions CI (lint, pytest, web
-  build and unit tests). The remote and branch protection are the owner's call.
+- Ruff configuration, `.python-version`, GitHub Actions CI: lint and pytest on
+  the pure Python engine, pytest on the forced Cython engine, web ESLint, build
+  and unit tests, and Playwright browser tests. Solver-group tests (z3) still
+  skip in CI. The remote and branch protection are the owner's call.
 - Vitest scoped to unit tests; trade-form logic extracted and tested.
 - `docs/results/registry.json` and `LADDER.md` generated from receipts;
   rebuild after every completed run.
@@ -136,7 +145,6 @@ bars below are the honest steps toward it.
 
 ## Not yet done
 
-- ESLint for the web client.
 - Archiving completed runs with SHA256SUMS outside the working tree.
 - Splitting the historical ladder out of `experiments/README.md`; the generated
   ladder covers receipts, not the prose decisions around them.

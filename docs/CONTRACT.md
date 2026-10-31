@@ -2,7 +2,8 @@
 
 What is served, what has been shown, and what has not. This page is the
 current state; the chronological research record is `experiments/README.md`
-and every receipt is indexed in [results/LADDER.md](results/LADDER.md).
+and top-level receipts plus run-directory summaries and readouts are indexed in
+[results/LADDER.md](results/LADDER.md).
 
 ## Served default
 
@@ -51,13 +52,17 @@ not met and the served default is unchanged until the owner decides otherwise.
 - A new idea gets a config with a numeric bar before it runs. A failed bar is a
   result. Changing the producer or the config means a new run and a new
   receipt; old receipts are preserved.
-- **Power.** A screen declares `power.target_effect` and `power.planning_sigma`
-  and the evaluator refuses a design whose seed count cannot detect that
-  effect at 80% power (`catan_ai.power.check_design`). Every summary records the
-  panel's cluster SD and minimum detectable effect. Historical 8- and 16-cluster
-  screens had minimum detectable effects of 7 to 22 pp against a 5 pp bar;
-  their failures stand, but an unchanged candidate may be rescreened under a
-  new, powered, predeclared config.
+- **Power.** A screen declares `power.alternative_effect` (a true lift above the
+  bar), `power.planning_sigma` and optional `power.power` (default .8). The
+  evaluator refuses a design unless every panel clears the configured gate at
+  that alternative with at least that family probability; the gate is the
+  point bar plus the LCB margin when an LCB gate is set
+  (`catan_ai.power.check_design`). A legacy `target_effect` block planned
+  against zero and is refused. Summaries record the panel's cluster SD and a
+  zero-null MDE, which is descriptive sensitivity, not power to clear the bar.
+  Historical 8- and 16-cluster screens had zero-null MDEs of 7 to 22 pp against
+  a 5 pp bar; their failures stand, but an unchanged candidate may be
+  rescreened under a new, powered, predeclared config.
 - Hidden information never crosses the player boundary. Bots see their own hand,
   public counts and the observed event stream only. Adding private state
   requires a boundary test.

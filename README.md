@@ -8,7 +8,7 @@ for external Catan AI approaches, primary sources, evidence limits, and how they
 inform the competitive-agent plan.
 
 Current state and claim limits: [docs/CONTRACT.md](docs/CONTRACT.md). Plan:
-[docs/PLAN.md](docs/PLAN.md). Every receipt: [docs/results/LADDER.md](docs/results/LADDER.md).
+[docs/PLAN.md](docs/PLAN.md). Receipt index: [docs/results/LADDER.md](docs/results/LADDER.md).
 
 A small, reproducible research stack for a Catan-like four-player game:
 

@@ -1,13 +1,16 @@
 """Loss attribution, pass 2: replay swing boards and diff the two arms event by event.
 
-Takes the pass-1 report (``scripts/loss_attribution.py``) and the evaluator
-config that produced the receipt, replays each listed swing board in both arms
+Takes a pass-1 report (``scripts/loss_attribution.py``, schema v2), which binds
+the receipt's sha256, config, source hashes and checkpoint, and replays each
+sampled swing row in both arms
 with the exact game construction ``search_eval`` uses (same names, same policy
 seeds), and records per-seat trajectories: production received, cards lost to
 the robber and to discards, robber moves aimed at each seat, trades accepted,
 development cards bought, builds by turn, awards held at the end, and public
-points per turn. It then aggregates candidate-seat metrics across boards where
-the control won and the candidate lost, versus the reverse.
+points at turns 40 and 60. It then aggregates candidate-seat metrics across
+rows where the control won and the candidate lost, versus the reverse, weighting
+each row by its pass-1 sampling weight. The aggregates describe what differs on
+these boards; they do not by themselves establish what caused the outcome.
 
 Run it against the frozen source snapshot that produced the receipt, because
 checkpointed policies refuse a source mismatch:
@@ -15,25 +18,39 @@ checkpointed policies refuse a source mismatch:
     PYTHONPATH=runs/economic-parameters-confirmatory-source-v1/src \
     CATAN_PARAMETER_MODEL=runs/economic-parameters-v1/model.json \
     uv run python scripts/replay_swing_boards.py \
-        --report runs/loss-attribution-tactical-heldout-v1.json \
-        --config runs/economic-parameters-confirmatory-source-v1/experiments/economic-parameters-tactical-heldout.json \
-        --panel tactical --limit 50 --output runs/swing-replay-tactical-v1.json
+        --report runs/loss-attribution-tactical-heldout-v2.json \
+        --panel tactical --output runs/swing-replay-tactical-v2.json
 
-Replays confirm determinism: a replayed terminal outcome that differs from the
-receipt's row is reported as a mismatch and excluded, never silently kept.
+The replay refuses to start unless the running source hashes and checkpoint
+equal the ones the receipt recorded. Each replayed arm's winner, turn count,
+final points and truncation must equal the receipt's terminal record; any
+difference is reported as a mismatch with the differing fields and excluded.
 """
 
 import argparse
 from collections import Counter
 import json
+import math
 from pathlib import Path
-import statistics
 import sys
 import time
 
 from catan_ai.bots import make_policy
 from catan_ai.engine import Game
 from catan_ai.observation import Observation
+
+TERMINAL = ('winner', 'turns', 'points', 'truncated')
+
+
+def points_at(points_by_turn, cutoff):
+    """Public points at the latest observation at or before ``cutoff`` (0 before any)."""
+    turns = [t for t in points_by_turn if t <= cutoff]
+    return points_by_turn[max(turns)] if turns else 0
+
+
+def terminal_differences(stored, replayed):
+    """Fields of a receipt terminal record that a replay does not reproduce."""
+    return {k: {'receipt': stored.get(k), 'replay': replayed.get(k)} for k in TERMINAL if stored.get(k) != replayed.get(k)}
 
 
 def replay(policy_names, seed, max_turns, watch_seat):
@@ -95,87 +112,133 @@ def replay(policy_names, seed, max_turns, watch_seat):
             break
     me = game.players[watch_seat]
     track['final'] = {'winner': game.winner, 'turns': game.turn, 'points': [p.points for p in game.players],
+                      'truncated': game.winner is None,
                       'longest_road': game.longest_road_holder == watch_seat,
                       'largest_army': game.largest_army_holder == watch_seat,
                       'settlements': len(me.settlements), 'cities': len(me.cities), 'roads': len(me.roads),
                       'knights': me.knights, 'hand': sum(me.resources.values()), 'my_points': me.points}
     track['production'] = dict(track['production'])
     track['builds'] = dict(track['builds'])
-    track['points_at_turn_40'] = max((p for t, p in track['points_by_turn'].items() if t <= 40), default=0)
-    track['points_at_turn_60'] = max((p for t, p in track['points_by_turn'].items() if t <= 60), default=0)
+    track['points_at_turn_40'] = points_at(track['points_by_turn'], 40)
+    track['points_at_turn_60'] = points_at(track['points_by_turn'], 60)
     del track['points_by_turn']
     return track
 
 
-def aggregate(tracks):
+def wmean(pairs):
+    """Weighted mean of (value, weight) pairs; None when no weight."""
+    pairs = [(v, w) for v, w in pairs if v is not None]
+    total = sum(w for _, w in pairs)
+    return sum(v * w for v, w in pairs) / total if total else None
+
+
+def aggregate(tracks, weights):
+    """Weighted candidate-seat means; weights are pass-1 sampling weights."""
+    if not tracks:
+        return {}
     keys = ['stolen_from', 'stole', 'discarded', 'robber_on_my_tile', 'trades_accepted_mine', 'trades_accepted_theirs',
             'offers_made', 'bank_trades', 'dev_bought', 'points_at_turn_40', 'points_at_turn_60']
-    out = {k: statistics.fmean(t[k] for t in tracks) for k in keys} if tracks else {}
-    if tracks:
-        out['production_total'] = statistics.fmean(sum(t['production'].values()) for t in tracks)
-        out['first_city_turn'] = statistics.fmean(t['first_city_turn'] for t in tracks if t['first_city_turn'] is not None) \
-            if any(t['first_city_turn'] is not None for t in tracks) else None
-        out['no_city_share'] = sum(t['first_city_turn'] is None for t in tracks) / len(tracks)
-        out['longest_road_share'] = sum(t['final']['longest_road'] for t in tracks) / len(tracks)
-        out['largest_army_share'] = sum(t['final']['largest_army'] for t in tracks) / len(tracks)
-        out['final_points'] = statistics.fmean(t['final']['my_points'] for t in tracks)
+    out = {k: wmean((t[k], w) for t, w in zip(tracks, weights)) for k in keys}
+    out['production_total'] = wmean((sum(t['production'].values()), w) for t, w in zip(tracks, weights))
+    out['first_city_turn'] = wmean((t['first_city_turn'], w) for t, w in zip(tracks, weights))
+    out['no_city_share'] = wmean((float(t['first_city_turn'] is None), w) for t, w in zip(tracks, weights))
+    out['longest_road_share'] = wmean((float(t['final']['longest_road']), w) for t, w in zip(tracks, weights))
+    out['largest_army_share'] = wmean((float(t['final']['largest_army']), w) for t, w in zip(tracks, weights))
+    out['final_points'] = wmean((t['final']['my_points'], w) for t, w in zip(tracks, weights))
     return out
+
+
+def check_identity(report, source, checkpoint):
+    """Refuse a report whose producer is not the code and checkpoint running now."""
+    if report.get('schema') != 'loss-attribution/v2':
+        raise SystemExit('report predates schema v2 (no receipt binding or terminal records); rerun pass 1')
+    for key in ('receipt_sha256', 'config', 'source'):
+        if not report.get(key):
+            raise SystemExit(f'report lacks {key}; rerun pass 1')
+    if report['source'] != source:
+        changed = sorted(k for k in set(report['source']) | set(source) if report['source'].get(k) != source.get(k))
+        raise SystemExit(f'running source differs from the receipt producer: {changed[:8]}')
+    if report.get('checkpoint') != checkpoint:
+        raise SystemExit('running checkpoint differs from the receipt producer')
+
+
+def replay_row(config, panel, row, replay_fn=None):
+    """Replay one sampled row in both arms; return (arms, differences by arm)."""
+    replay_fn = replay_fn or replay
+    seed, seat = row['seed'], row['seat']
+    arms, differences = {}, {}
+    for arm, name in (('candidate', config['candidate']), ('control', config['control'])):
+        lineup = list(panel['opponents'])
+        lineup.insert(seat, name)
+        arms[arm] = replay_fn(lineup, seed, config['max_turns'], seat)
+        diff = terminal_differences(row[arm], arms[arm]['final'])
+        if diff:
+            differences[arm] = diff
+    return arms, differences
+
+
+def run(report, panel_name, replay_fn=None, limit=None, progress=None):
+    config = report['config']
+    panel = next(p for p in config['panels'] if p['name'] == panel_name)
+    results = {}
+    mismatches = []
+    for direction, block in report['panels'][panel_name]['swing'].items():
+        results[direction] = []
+        for row in block['selected'][:limit]:
+            arms, differences = replay_row(config, panel, row, replay_fn)
+            if differences:
+                mismatches.append({'seed': row['seed'], 'seat': row['seat'], 'direction': direction,
+                                   'differences': differences})
+                continue
+            results[direction].append({'seed': row['seed'], 'seat': row['seat'], 'weight': row['weight'],
+                                       'candidate': arms['candidate'], 'control': arms['control']})
+            if progress:
+                progress(direction, row)
+    summary = {}
+    for direction, rows in results.items():
+        weights = [r['weight'] for r in rows]
+        summary[direction] = {'boards': len(rows),
+                              'eligible_rows': report['panels'][panel_name]['swing'][direction]['eligible_rows'],
+                              'candidate_seat_in_candidate_arm': aggregate([r['candidate'] for r in rows], weights),
+                              'candidate_seat_in_control_arm': aggregate([r['control'] for r in rows], weights)}
+    return results, mismatches, summary
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--report', type=Path, required=True)
-    parser.add_argument('--config', type=Path, required=True)
     parser.add_argument('--panel', required=True)
-    parser.add_argument('--limit', type=int, default=50, help='boards per direction')
+    parser.add_argument('--limit', type=int, help='replay only the first N sampled rows per direction (smoke tests)')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
+    if args.output and args.output.exists():
+        raise SystemExit('output exists; choose a new path')
+    from catan_ai.experiments import source_files
+    from catan_ai.search_eval import model_identity
     report = json.loads(args.report.read_text())
-    config = json.loads(args.config.read_text())
-    panel = next(p for p in config['panels'] if p['name'] == args.panel)
-    swing = report['panels'][args.panel]['swing_boards']
-    results = {'control_won_candidate_lost': [], 'candidate_won_control_lost': []}
-    mismatches = []
+    check_identity(report, source_files(), model_identity(report['config']))
     started = time.monotonic()
-    for direction, boards in swing.items():
-        for board in boards[:args.limit]:
-            seed, seat = board['seed'], board['seat']
-            arms = {}
-            for arm, name in (('candidate', config['candidate']), ('control', config['control'])):
-                lineup = list(panel['opponents'])
-                lineup.insert(seat, name)
-                arms[arm] = replay(lineup, seed, config['max_turns'], seat)
-            cand_won = arms['candidate']['final']['winner'] == seat
-            ctrl_won = arms['control']['final']['winner'] == seat
-            expected = direction == 'candidate_won_control_lost'
-            if (cand_won, ctrl_won) != ((True, False) if expected else (False, True)):
-                mismatches.append({'seed': seed, 'seat': seat, 'direction': direction,
-                                   'replayed': {'candidate_won': cand_won, 'control_won': ctrl_won}})
-                continue
-            results[direction].append({'seed': seed, 'seat': seat, 'candidate': arms['candidate'], 'control': arms['control']})
-            print(json.dumps({'direction': direction, 'seed': seed, 'seat': seat,
-                              'elapsed': round(time.monotonic() - started, 1)}), flush=True)
-    summary = {}
-    for direction, rows in results.items():
-        summary[direction] = {'boards': len(rows),
-                              'candidate_seat_in_candidate_arm': aggregate([r['candidate'] for r in rows]),
-                              'candidate_seat_in_control_arm': aggregate([r['control'] for r in rows])}
-    out = {'report': str(args.report), 'config': str(args.config), 'panel': args.panel, 'limit': args.limit,
+    results, mismatches, summary = run(report, args.panel, limit=args.limit, progress=lambda d, r: print(json.dumps(
+        {'direction': d, 'seed': r['seed'], 'seat': r['seat'], 'elapsed': round(time.monotonic() - started, 1)}), flush=True))
+    out = {'schema': 'swing-replay/v2', 'report': str(args.report), 'receipt': report['receipt'],
+           'receipt_sha256': report['receipt_sha256'], 'sampling': report['sampling'], 'panel': args.panel,
+           'limit': args.limit, 'source': report['source'], 'checkpoint': report.get('checkpoint'),
            'mismatches': mismatches, 'summary': summary, 'boards': results,
            'elapsed_seconds': time.monotonic() - started}
     for direction, block in summary.items():
-        print(f"\n== {direction}: {block['boards']} boards (replay mismatches excluded: {sum(m['direction'] == direction for m in mismatches)})")
+        excluded = sum(m['direction'] == direction for m in mismatches)
+        print(f"\n== {direction}: {block['boards']} sampled rows of {block['eligible_rows']} eligible "
+              f"(replay mismatches excluded: {excluded}); weighted means")
         a, b = block['candidate_seat_in_candidate_arm'], block['candidate_seat_in_control_arm']
         for key in sorted(set(a) | set(b)):
             va, vb = a.get(key), b.get(key)
-            fa = 'none' if va is None else f'{va:.2f}'
-            fb = 'none' if vb is None else f'{vb:.2f}'
+            fa = 'none' if va is None or (isinstance(va, float) and math.isnan(va)) else f'{va:.2f}'
+            fb = 'none' if vb is None or (isinstance(vb, float) and math.isnan(vb)) else f'{vb:.2f}'
             print(f"  {key:<26} candidate-arm {fa:>7}   control-arm {fb:>7}")
     if args.output:
-        if args.output.exists():
-            raise SystemExit('output exists; choose a new path')
-        args.output.write_text(json.dumps(out, indent=1))
-    return 0
+        with args.output.open('x') as stream:
+            json.dump(out, stream, indent=1)
+    return 1 if mismatches else 0
 
 
 if __name__ == '__main__':
