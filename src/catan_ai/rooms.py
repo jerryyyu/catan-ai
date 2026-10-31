@@ -31,7 +31,7 @@ class Room:
 
 
 class CreateRoom(BaseModel):
-    bot: Literal['tactical', 'heuristic'] = 'tactical'
+    bot: Literal['tactical', 'heuristic', 'planner_parameter'] = 'tactical'
     bot_seat: int = Field(default=0, ge=0, le=3, strict=True)
 
 
@@ -52,6 +52,15 @@ def save(room_id, room):
     pilot_store.save('room_' + room_id, room.record)
 
 
+def replay_bot(record):
+    """Refuse a changed challenger even if it happens to choose the same actions."""
+    bot = make_policy(record['bot'], record['seed'] * 31 + record['bot_seat'])
+    if record['bot'] == 'planner_parameter':
+        if not record.get('model_sha256') or record['model_sha256'] != bot.model_hash:
+            raise ValueError('Room checkpoint differs; record is preserved')
+    return bot
+
+
 def load(room_id):
     if room_id in rooms:
         return rooms[room_id]
@@ -63,7 +72,10 @@ def load(room_id):
         raise HTTPException(409, 'Room uses a different program version; its record is preserved')
     game = Game.new(record['names'], record['seed'])
     seat = record['bot_seat']
-    bot = make_policy(record['bot'], record['seed'] * 31 + seat)
+    try:
+        bot = replay_bot(record)
+    except (KeyError, OSError, ValueError) as exc:
+        raise HTTPException(409, 'Room checkpoint unavailable or changed; record is preserved') from exc
     for row in record['trace']:
         if row['seat'] == seat:
             chosen = bot.choose(Observation.for_policy(game, seat, bot), seat)
@@ -122,7 +134,13 @@ def create(body: CreateRoom):
               'source': source_files(), 'created_at': datetime.now(timezone.utc).isoformat(),
               'participants': {}, 'trace': [],
               'seat_hashes': {s: hashlib.sha256(t.encode()).hexdigest() for s, t in tokens.items()}}
-    room = Room(game, make_policy(body.bot, seed * 31 + body.bot_seat), record)
+    try:
+        bot = make_policy(body.bot, seed * 31 + body.bot_seat)
+    except (KeyError, OSError, ValueError) as exc:
+        raise HTTPException(503, 'Requested bot checkpoint is not configured for this server version') from exc
+    if body.bot == 'planner_parameter':
+        record['model_sha256'] = bot.model_hash
+    room = Room(game, bot, record)
     with lock:
         save(room_id, room)
         rooms[room_id] = room

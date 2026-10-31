@@ -19,8 +19,8 @@ def client(monkeypatch):
     rooms.rooms.clear()
 
 
-def create(client, bot_seat=0):
-    result = client.post('/api/rooms', json={'bot_seat': bot_seat}).json()
+def create(client, bot_seat=0, bot='tactical'):
+    result = client.post('/api/rooms', json={'bot_seat': bot_seat, 'bot': bot}).json()
     room_id = result['room_id']
     headers = {int(s): {'Authorization': 'Bearer ' + token} for s, token in result['invitations'].items()}
     return room_id, headers
@@ -78,8 +78,9 @@ def test_action_revision_wrong_seat_and_restart_replay(client):
     assert restored.json() == expected
 
 
-def test_complete_three_client_match_is_fixture_not_human_evidence(client):
-    room_id, headers = create(client, bot_seat=2)
+@pytest.mark.parametrize('bot', ['tactical', 'planner_parameter'])
+def test_complete_three_client_match_is_fixture_not_human_evidence(client, parameter_model, bot):
+    room_id, headers = create(client, bot_seat=2, bot=bot)
     join_all(client, room_id, headers)
     drivers = {seat: make_policy('heuristic', 7 + seat) for seat in headers}
     for _ in range(5000):
@@ -102,3 +103,58 @@ def test_complete_three_client_match_is_fixture_not_human_evidence(client):
     assert restored.json()['state'] == expected
     replay = client.get(f'/api/rooms/{room_id}/replay', headers=headers[0]).json()
     assert replay['state'] == expected
+
+
+@pytest.fixture
+def parameter_model(tmp_path, monkeypatch):
+    from catan_ai.experiments import source_files
+    from catan_ai.parameter_planner import DEFAULT
+    path = tmp_path / 'fixture-model.json'
+    path.write_text(json.dumps({'schema': 1, 'weights': DEFAULT, 'source': source_files()}))
+    monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
+    return path
+
+
+def test_challenger_checkpoint_pinned_private_and_auditable(client, parameter_model):
+    import hashlib
+    import runpy
+    from pathlib import Path
+    audit = runpy.run_path(str(Path(__file__).resolve().parents[1] / 'scripts/audit_human_pilot.py'))['audit']
+    room_id, headers = create(client, bot='planner_parameter')
+    join_all(client, room_id, headers)
+    record = pilot_store.load('room_' + room_id)
+    assert record['model_sha256'] == hashlib.sha256(parameter_model.read_bytes()).hexdigest()
+    assert audit(record)['replay_valid']
+    for seat, header in headers.items():
+        for endpoint in ('', '/replay'):
+            data = client.get(f'/api/rooms/{room_id}{endpoint}', headers=header).json()
+            assert 'model_sha256' not in data and 'source' not in data
+            for player in data['state']['players']:
+                assert (player['resources'] is not None) == (player['seat'] == seat)
+                assert (player['development'] is not None) == (player['seat'] == seat)
+    rooms.rooms.clear()
+    assert client.get(f'/api/rooms/{room_id}', headers=headers[1]).status_code == 200
+    # A metadata-only checkpoint change must fail even with identical weights/actions.
+    model = json.loads(parameter_model.read_text())
+    model['lineage'] = 'different checkpoint'
+    parameter_model.write_text(json.dumps(model))
+    rooms.rooms.clear()
+    assert client.get(f'/api/rooms/{room_id}', headers=headers[1]).status_code == 409
+    with pytest.raises(ValueError, match='checkpoint differs'):
+        audit(record)
+    assert pilot_store.load('room_' + room_id) == record
+
+
+def test_challenger_missing_configuration_fails_without_creating_room(client, monkeypatch):
+    monkeypatch.delenv('CATAN_PARAMETER_MODEL', raising=False)
+    assert client.post('/api/rooms', json={'bot': 'planner_parameter'}).status_code == 503
+    assert not rooms.rooms
+    assert client.post('/api/rooms', json={}).status_code == 200
+
+
+def test_challenger_missing_record_identity_rejected(client, parameter_model):
+    room_id, _ = create(client, bot='planner_parameter')
+    record = pilot_store.load('room_' + room_id)
+    del record['model_sha256']
+    with pytest.raises(ValueError, match='checkpoint differs'):
+        rooms.replay_bot(record)
