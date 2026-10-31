@@ -91,7 +91,7 @@ class ExternalSearchBot:
         self.diagnostics.append({'seconds': elapsed, 'phase': view.phase, 'turn': view.turn,
                                  'fallback': error is not None, 'error': error,
                                  'budget_failure': elapsed > budget or budget <= 0,
-                                 'backend': 'catanatron-adapted-depth2-guided-solver-v12',
+                                 'backend': 'catanatron-adapted-depth2-guided-solver-v13',
                                  'belief': belief})
         return action
 

@@ -3,6 +3,28 @@ from .engine import RESOURCES, Resource
 from .belief import BeliefTracker, BeliefFailure, Particle
 
 
+
+def constrain_year_of_plenty(solver, view, bank):
+    """Match bank-dependent card choices revealed to the acting observer."""
+    import z3
+    if getattr(view, 'phase', None) not in ('roll', 'actions'):
+        return
+    own = view.players[view.seat]
+    eligible = any(card == 'year_of_plenty' and bought < view.turn
+                   for card, bought in zip(own.development, own.development_turns))
+    if not eligible or view.played_development:
+        return
+    observed = {tuple(a['resources']) for a in view.actions
+                if a['type'] == 'play_development' and a['card'] == 'year_of_plenty'}
+    for i, first in enumerate(RESOURCES):
+        for j in range(i, len(RESOURCES)):
+            resources = (first.value, RESOURCES[j].value)
+            available = z3.And(bank[i] >= 1 + (i == j), bank[j] >= 1)
+            solver.add(available == (resources in observed))
+        singleton = z3.And(sum(bank) == 1, bank[i] >= 1)
+        solver.add(singleton == ((first.value,) in observed))
+
+
 def solve_resources(view, seed=0, timeout_ms=500):
     import z3
     solver = z3.Solver()
@@ -66,6 +88,7 @@ def solve_resources(view, seed=0, timeout_ms=500):
                     continue
                 available = 19 - sum(hand[r] for hand in hands)
                 solver.add((available > 0) == ((give.value, receive.value) in observed_trades))
+    constrain_year_of_plenty(solver, view, [19 - sum(hand[r] for hand in hands) for r in range(5)])
     status = solver.check()
     if status != z3.sat:
         raise RuntimeError(f'{status}: {solver.reason_unknown()}')
