@@ -1050,6 +1050,24 @@
    "stage": null
   },
   {
+   "bytes": 46280,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "loss-attribution-tactical-heldout-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/loss-attribution-tactical-heldout-v1.json",
+   "process_cap": null,
+   "sha256": "12dba5d2da5b36e8915e29dac6e278a1609583336af68b972e52a00e7d9279ea",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
    "bytes": 6996,
    "candidate": null,
    "checkpoint_sha256": null,

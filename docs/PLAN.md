@@ -54,7 +54,7 @@ bars below are the honest steps toward it.
 - Cost: about 8,200 games per rescreen, under an hour at cap 4 after the
   family finishes.
 
-### 2. Loss attribution from games already played (days)
+### 2. Loss attribution from games already played (days)   PASS 1 DONE 2026-10-31
 
 - Read the 12,800 completed tactical-panel games in
   `runs/economic-parameters-tactical-heldout-v1.json` and the external panel
@@ -92,6 +92,8 @@ bars below are the honest steps toward it.
 - When any player reaches eight points, enumerate purchase and build sequences
   over the next two to three turns under the dice distribution with the belief
   sampler, and pick the sequence maximizing win probability.
+- Pass 1 of lane 2 found only 14% to 19% of candidate losses are by one
+  point, so this lane's ceiling is small; it ranks below lanes 4, 6 and 7.
 - The earlier finish lane failed at 8 clusters with a 7 pp minimum detectable
   effect. Lane 1 rescreens the unchanged candidate first; the exact search is a
   new candidate with its own config.

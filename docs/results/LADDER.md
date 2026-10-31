@@ -61,6 +61,7 @@ panel design could detect at 80% power (present only for receipts written after 
 | learned-test-v1 |  |  |  |  |  |  |  |  |  |  |
 | learned-validation-v1 |  |  |  |  |  |  |  |  |  |  |
 | learning-pilot-v1 |  |  |  |  |  |  |  |  |  |  |
+| loss-attribution-tactical-heldout-v1 |  |  |  |  |  |  |  |  |  |  |
 | match-capacity-v10 |  |  |  | summary |  |  |  |  |  |  |
 | match-capacity-v11 |  |  |  | summary |  |  |  |  |  |  |
 | mc-benchmark-940000 |  |  |  | summary |  |  |  |  |  |  |

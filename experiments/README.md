@@ -2,6 +2,41 @@
 
 ## Research: competitive four-player Catan AI
 
+### Loss attribution, pass 1 (2026-10-31)
+
+`scripts/loss_attribution.py` streams a receipt and attributes candidate losses
+from terminal fields only (winner, turns, final points). Run on the sealed
+tactical-control panel of the frozen economic-parameters family, 6,400 games per
+arm per panel (`runs/loss-attribution-tactical-heldout-v1.json`). This reads a
+completed panel of a running family for diagnosis; no tuning or stopping follows.
+
+| Panel | Cand. win | Ctrl win | Losses by 1 / 2 / 3+ pts | Second-place share | Turns win / loss (cand.) | Turns (ctrl) |
+|---|---:|---:|---|---:|---|---|
+| tactical | .360 | .250 | .14 / .17 / .69 | .48 | 89.8 / 91.9 | 95.8 / 95.8 |
+| mixed | .578 | .351 | .19 / .21 / .59 | .67 | 94.8 / 100.1 | 105.8 / 109.8 |
+
+Readings, descriptive only:
+
+- Most candidate losses are by three or more points. One-point losses are 14%
+  to 19% of losses, so an exact finish search can address at most that slice;
+  the mid-game economy and tempo gap is the larger target. The finish lane
+  stays predeclared but drops below lanes that act on the whole game.
+- Win rate by seat is flat within 6 pp for the candidate (.34 to .40 tactical,
+  .56 to .61 mixed); seat is not a loss cause.
+- In the mixed lineup (builder, expander, tactical, inserted around the
+  candidate's seat), the opponent at seat offset 2 wins 41% of candidate losses
+  against 31% and 28% for the others. Which style occupies offset 2 varies with
+  the candidate's seat, so this points at a lineup effect to resolve in pass 2,
+  not at a named style yet.
+- The candidate wins faster than the control (89.8 vs 95.8 turns) and its losses
+  are only slightly longer than its wins. It is not losing long games.
+- 200 swing boards per direction per panel are listed for pass 2 replay.
+
+Pass 2 replays swing boards deterministically from seed to attribute causes at
+the event level (robber targeting, discards, award swings, trade refusals). It
+waits for the family to finish and will use the powered-screen seeds policy for
+anything it proposes.
+
 ### Opening-placement research (2026-10-30)
 
 Opening-search v1 DEV is now specified in `opening-search-dev.json`: fresh
