@@ -56,3 +56,18 @@ def test_summary_reports_descriptive_power_without_changing_the_verdict():
     assert panel['cluster_sd'] == pytest.approx(cluster_sigma([1.0, 0.0]))
     assert panel['minimum_detectable_effect_80'] > .5
     assert before['pass'] is True
+
+
+def test_parallel_shards_drop_the_power_block_and_the_parent_checks_it():
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location('parallel_search_eval', Path('scripts/parallel_search_eval.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    config = {'stage': 'dev', 'seeds_per_panel': 600, 'panels': [{'name': 'a', 'seed': 100}, {'name': 'b', 'seed': 200}],
+              'power': {'target_effect': .05, 'planning_sigma': .40}}
+    shard = module.shard_config(config, 3)
+    assert 'power' not in shard and shard['seeds_per_panel'] == 1 and shard['panels'][0]['seed'] == 103
+    assert check_design(config) == 503
+    with pytest.raises(ValueError, match='underpowered'):
+        check_design({**config, 'seeds_per_panel': 8})

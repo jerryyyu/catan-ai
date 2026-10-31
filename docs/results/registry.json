@@ -1050,6 +1050,24 @@
    "stage": null
   },
   {
+   "bytes": 46308,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "loss-attribution-external-heldout-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/loss-attribution-external-heldout-v1.json",
+   "process_cap": null,
+   "sha256": "900aa09e7483e61320e9b01011fe17a5bd9089b2bc745996546e759773d212ef",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
    "bytes": 46280,
    "candidate": null,
    "checkpoint_sha256": null,
@@ -2852,6 +2870,11 @@
  ],
  "schema": 1,
  "skipped": [
+  {
+   "bytes": 2377799673,
+   "path": "runs/economic-parameters-external-heldout-v1.json",
+   "reason": "config or over size cap"
+  },
   {
    "bytes": 1337116883,
    "path": "runs/economic-parameters-tactical-heldout-v1.json",

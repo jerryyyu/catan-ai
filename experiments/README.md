@@ -2,6 +2,37 @@
 
 ## Research: competitive four-player Catan AI
 
+### Frozen economic-parameters confirmatory family: sealed, FAIL (2026-10-31)
+
+The detached supervisor finished both comparisons and the reader wrote
+`runs/economic-parameters-confirmatory-supervisor-v1/readout.json` (plan sha
+e6a01ab0…, reader sha 0a2fe4b5…). 51,200 games, zero truncations.
+
+| Control | Panel | Paired lift | Simultaneous LCB (alpha .0125) | External faults | Panel verdict |
+|---|---|---:|---:|---:|---|
+| tactical | tactical | +.1098 | +.0958 | 0 | pass |
+| tactical | mixed | +.2266 | +.2085 | 0 | pass |
+| external | tactical | withheld | withheld | 5 | fail |
+| external | mixed | withheld | withheld | 23 | fail |
+
+Family verdict: **FAIL**, as predeclared: every panel had to pass. The two
+Tactical-control panels pass with lower bounds far above the +.05 target, so
+`planner_parameter` is stronger than the served Tactical default on this engine
+over 1,600 fresh boards per lineup. The two external-control panels fail on the
+zero-fault rule: 28 external-worker faults in 12,800 games (0.2%) withhold the
+lift estimate. Descriptively only, the candidate's raw win rate on those panels
+was .376 vs .305 and .568 vs .411 over 6,400 games each. Candidate decision p95
+was under 10 ms; the external baseline's worst step was 1.768 s against the 2 s
+gate and its worst turn 3.452 s against 10 s.
+
+Nothing is retuned on these boards. The external result is about comparator
+reliability, not strength; fixing the fault cause or predeclaring a fault budget
+precedes any external-control claim. Promotion of `planner_parameter` to the
+served default is a separate decision; the plan's criterion was not met.
+Loss attribution pass 1 on the sealed external panel
+(`runs/loss-attribution-external-heldout-v1.json`) matches the tactical panel:
+69% / 60% of candidate losses by three or more points, seat flat within 9 pp.
+
 ### Loss attribution, pass 1 (2026-10-31)
 
 `scripts/loss_attribution.py` streams a receipt and attributes candidate losses

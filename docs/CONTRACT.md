@@ -16,16 +16,18 @@ and every receipt is indexed in [results/LADDER.md](results/LADDER.md).
   observation, belief, adapter, search and validation. A timeout plays a legal
   deterministic fallback and counts as a budget failure.
 
-## Challenger under test
+## Challenger: held-out family sealed, FAIL on comparator faults
 
 `planner_parameter`: the bounded public-information planner with eight economic
 leaf weights fitted on complete-game outcomes
-(`runs/economic-parameters-v1/model.json`). It passed its Tactical and external
-DEV screens and is in a frozen held-out family of 51,200 games
-(`experiments/economic-parameters-confirmatory-family-v1.json`). The family
-requires positive lift and positive lower bound in all four panels at
-Bonferroni alpha .0125, zero truncations and zero external faults. The final
-reader decides; interim outcomes are not read for tuning.
+(`runs/economic-parameters-v1/model.json`). Its frozen held-out family of
+51,200 games (`experiments/economic-parameters-confirmatory-family-v1.json`)
+sealed on 2026-10-31 with verdict FAIL: both Tactical-control panels passed
+(+.110 and +.227 lift, simultaneous lower bounds +.096 and +.208 at alpha
+.0125), both external-control panels were withheld on 28 external-worker faults
+in 12,800 games against a zero-fault rule. The candidate is therefore shown
+stronger than the served default on this engine, but the family criterion was
+not met and the served default is unchanged until the owner decides otherwise.
 
 ## What is not claimed
 
