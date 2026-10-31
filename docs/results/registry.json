@@ -1253,6 +1253,24 @@
    "stage": null
   },
   {
+   "bytes": 183549,
+   "candidate": "planner_parameter",
+   "checkpoint_sha256": "77c5ebfc5b148e8d9a22aa07732df2b62b428fe6b8dc3767be8276447206fc92",
+   "control": "tactical",
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "loss-attribution-tactical-heldout-v2",
+   "panels": {},
+   "pass": null,
+   "path": "runs/loss-attribution-tactical-heldout-v2.json",
+   "process_cap": null,
+   "sha256": "bf9f824c8d1ceda06ccbdb1c081878954c17339476782228de7e01457ddebdf8",
+   "source_hash": "8ac320ee84952b83",
+   "source_revision": null,
+   "stage": "heldout"
+  },
+  {
    "bytes": 6996,
    "candidate": null,
    "checkpoint_sha256": null,
@@ -3042,6 +3060,26 @@
    "process_cap": null,
    "sha256": "371fa505ee6dc09b2788bbdb949129ad306d6236424f30f4df0ed0f69afa742d",
    "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 385801,
+   "candidate": null,
+   "checkpoint_sha256": "77c5ebfc5b148e8d9a22aa07732df2b62b428fe6b8dc3767be8276447206fc92",
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "swing-replay-tactical-v2",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/swing-replay-tactical-v2.json",
+   "process_cap": null,
+   "sha256": "b401ef30d7b17d024d94e83143ee384fde1c4328e4625df4b354ae3bba83f907",
+   "source_hash": "8ac320ee84952b83",
    "source_revision": null,
    "stage": null
   },

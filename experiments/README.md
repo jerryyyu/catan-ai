@@ -2,6 +2,48 @@
 
 ## Research: competitive four-player Catan AI
 
+### Loss attribution, pass 2 v2: seeded sample, fail-closed replay (2026-10-31)
+
+Rerun after Codex's HOLD on PR #2 with the corrected tools. Pass 1 v2
+(`runs/loss-attribution-tactical-heldout-v2.json`, sample seed 20261031) bound
+the sealed tactical-control receipt by sha256, config, source and checkpoint,
+excluded no rows (0 truncated, 0 faulted), and drew 100 board seeds per direction
+uniformly from all eligible swing rows: 946 rows where Tactical won and the
+fitted planner lost, 1,649 the reverse. Pass 2 v2
+(`runs/swing-replay-tactical-v2.json`) replayed both arms under the frozen
+snapshot after its identity check passed: 400 games, 474 s, zero mismatches on
+winner, turns, final points and truncation in either arm. Means are weighted by
+eligible seats per board; points at turn 40/60 are the value at that turn.
+
+| Metric (candidate seat), candidate arm / control arm | Control won, candidate lost | Candidate won, control lost |
+|---|---|---|
+| final points | 6.4 / 10.1 | 10.1 / 6.4 |
+| points at turn 40 | 3.5 / 4.0 | 4.1 / 3.4 |
+| points at turn 60 | 4.3 / 5.3 | 5.9 / 4.1 |
+| production received | 67 / 85 | 83 / 68 |
+| cards discarded | 13.3 / 6.2 | 12.3 / 4.9 |
+| development cards bought | 2.2 / 5.8 | 2.7 / 4.4 |
+| largest army at end | .02 / .43 | .11 / .18 |
+| longest road at end | .18 / .53 | .60 / .25 |
+| player offers made | 0 / 22.0 | 0 / 22.9 |
+| bank trades | 4.5 / 11.2 | 6.7 / 9.5 |
+| first city turn | 55.8 / 46.4 | 44.6 / 58.6 |
+| never built a city | .27 / .07 | .05 / .34 |
+
+Readings, descriptive only; these say what differs on swing boards, not what
+caused the outcome:
+
+- The fitted planner discards two to two and a half times as many cards as
+  Tactical on the same boards in both directions, including boards it won.
+- It buys fewer development cards and rarely holds Largest Army; Longest Road
+  follows whoever won the board.
+- It never offers; Tactical makes about 22 offers a game.
+- Production and first-city timing move with the winner in both directions.
+
+The v1 directions all survive the corrected sample and checks. Rows 9
+(discard-aware hand value) and 10 (award races) on board #1 remain lane
+proposals that need a powered config and a bar before any run.
+
 ### Loss attribution, pass 2 v1: prefix case study, superseded (2026-10-31)
 
 **Superseded by pass 2 v2 above.** Codex's review of PR #2 found four defects in
