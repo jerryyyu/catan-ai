@@ -12,6 +12,11 @@ catan-experiment = "catan_ai.experiments:main"
 
 [dependency-groups]
 dev = ["httpx2>=2.9.1", "pytest>=8"]
+solver = ["z3-solver==4.15.4.0"]
+native = [
+    "cython>=3.2,<4",
+    "setuptools>=80",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -19,6 +24,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/catan_ai"]
+exclude = ["*.so", "*.pyd", "_native_manifest.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

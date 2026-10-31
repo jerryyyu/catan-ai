@@ -2,16 +2,24 @@ from __future__ import annotations
 
 import os
 import secrets
-from dataclasses import dataclass
+import time
+from copy import deepcopy
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from threading import RLock
 from pathlib import Path
+from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from .bots import HeuristicBot
+from .bots import Policy, make_policy
 from .engine import Game, IllegalAction
+from .observation import Observation
+from . import pilot_store
+from .experiments import source_files
 
 
 app = FastAPI(title="Catan AI")
@@ -27,15 +35,55 @@ app.add_middleware(
 class Session:
     game: Game
     human_seat: int
-    bots: dict[int, HeuristicBot]
+    bots: dict[int, Policy]
+    game_id: str | None = None
+    metadata: dict = field(default_factory=dict)
+    trace: list = field(default_factory=list)
 
 
 sessions: dict[str, Session] = {}
+session_lock = RLock()
+
+
+def persist(session):
+    if session.game_id is not None:
+        pilot_store.save(session.game_id, {**session.metadata, 'trace': session.trace,
+                                          'winner': session.game.winner, 'turn': session.game.turn})
+
+
+def load_session(game_id):
+    if game_id in sessions:
+        return sessions[game_id]
+    try:
+        record = pilot_store.load(game_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, 'game not found') from exc
+    if record['source'] != source_files():
+        raise HTTPException(409, 'Saved match uses a different program version; its record is preserved.')
+    if record['opponent'] not in ('heuristic', 'tactical'):
+        raise HTTPException(409, 'Restart recovery currently supports Tactical and Heuristic pilots only.')
+    game = Game.new(record['names'], record['seed'])
+    human_seat = record.get('human_seat', 0)
+    bots = {seat: make_policy(record['opponent'], record['seed'] * 31 + seat)
+            for seat in range(4) if seat != human_seat}
+    for row in record['trace']:
+        seat = row['seat']
+        if seat != human_seat:
+            chosen = bots[seat].choose(Observation.for_policy(game, seat, bots[seat]), seat)
+            if chosen != row['action']:
+                raise HTTPException(409, 'Saved bot decisions do not replay; record is preserved.')
+        game.apply(seat, row['action'])
+    session = Session(game, human_seat, bots, game_id,
+                      {k: v for k, v in record.items() if k not in ('trace', 'winner', 'turn')}, record['trace'])
+    sessions[game_id] = session
+    return session
 
 
 class NewGame(BaseModel):
     name: str = "You"
     seed: int | None = None
+    human_seat: int = Field(default=0, ge=0, le=3, strict=True)
+    opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned'] = 'tactical'
 
 
 class ActionBody(BaseModel):
@@ -46,7 +94,11 @@ def advance_bots(session: Session, decision_cap: int = 200) -> None:
     decisions = 0
     while session.game.winner is None and session.game.current != session.human_seat:
         seat = session.game.current
-        session.game.apply(seat, session.bots[seat].choose(session.game, seat))
+        started = time.perf_counter()
+        action = session.bots[seat].choose(Observation.for_policy(session.game, seat, session.bots[seat]), seat)
+        session.game.apply(seat, action)
+        session.trace.append({'seat': seat, 'action': deepcopy(action),
+                              'seconds': time.perf_counter() - started, 'actor': 'bot'})
         decisions += 1
         if decisions >= decision_cap:
             raise RuntimeError("bot decision cap reached")
@@ -61,35 +113,81 @@ def health() -> dict:
 def create_game(body: NewGame) -> dict:
     seed = body.seed if body.seed is not None else secrets.randbits(31)
     game_id = secrets.token_urlsafe(8)
-    game = Game.new([body.name.strip() or "You", "Ada", "Mina", "Lin"], seed)
+    names = ["Ada", "Mina", "Lin"]
+    names.insert(body.human_seat, body.name.strip() or "You")
+    game = Game.new(names, seed)
     session = Session(
         game=game,
-        human_seat=0,
-        bots={seat: HeuristicBot(__import__("random").Random(seed * 31 + seat)) for seat in (1, 2, 3)},
+        human_seat=body.human_seat,
+        bots={seat: make_policy(body.opponent, seed * 31 + seat)
+              for seat in range(4) if seat != body.human_seat},
+        game_id=game_id,
+        metadata={'schema': 2, 'seed': seed, 'human_seat': body.human_seat,
+                  'names': [p.name for p in game.players],
+                  'opponent': body.opponent, 'source': source_files(),
+                  'created_at': datetime.now(timezone.utc).isoformat(),
+                  'purpose': 'local pilot; not confirmatory human transfer'},
     )
-    sessions[game_id] = session
-    return {"game_id": game_id, "seat": 0, "seed": seed, "state": game.public_state(0)}
+    with session_lock:
+        persist(session)
+        sessions[game_id] = session
+        try:
+            advance_bots(session)
+        finally:
+            persist(session)
+    return {"game_id": game_id, "seat": body.human_seat, "state": game.public_state(body.human_seat),
+            "opponent": body.opponent,
+            "model_loaded": (all(getattr(bot, 'model', None) is not None for bot in session.bots.values())
+                             if body.opponent == 'learned' else None)}
 
 
 @app.get("/api/games/{game_id}")
 def get_game(game_id: str) -> dict:
-    session = sessions.get(game_id)
-    if session is None:
-        raise HTTPException(404, "game not found")
-    return session.game.public_state(session.human_seat)
+    with session_lock:
+        session = load_session(game_id)
+        advance_bots(session)
+        persist(session)
+        return session.game.public_state(session.human_seat)
+
+
+@app.get('/api/games/{game_id}/replay')
+def export_replay(game_id: str, step: int | None = Query(default=None, ge=0)) -> dict:
+    with session_lock:
+        session = load_session(game_id)
+        total_steps = len(session.trace)
+        selected = total_steps if step is None else step
+        if selected > total_steps:
+            raise HTTPException(422, 'Replay step exceeds the recorded match.')
+        game = session.game
+        if selected != total_steps:
+            game = Game.new(session.metadata['names'], session.metadata['seed'])
+            for row in session.trace[:selected]:
+                game.apply(row['seat'], row['action'])
+        return {'schema': 1, 'purpose': session.metadata['purpose'],
+                'opponent': session.metadata['opponent'], 'created_at': session.metadata['created_at'],
+                'human_seat': session.human_seat,
+                'step': selected, 'total_steps': total_steps,
+                'completed': game.winner is not None, 'state': game.public_state(session.human_seat),
+                'events': game.observed_events(session.human_seat),
+                'timings': [{'seat': r['seat'], 'actor': r['actor'], 'seconds': r['seconds']}
+                            for r in session.trace[:selected]]}
 
 
 @app.post("/api/games/{game_id}/actions")
 def take_action(game_id: str, body: ActionBody) -> dict:
-    session = sessions.get(game_id)
-    if session is None:
-        raise HTTPException(404, "game not found")
-    try:
-        session.game.apply(session.human_seat, body.action)
-        advance_bots(session)
-    except IllegalAction as exc:
-        raise HTTPException(400, str(exc)) from exc
-    return session.game.public_state(session.human_seat)
+    with session_lock:
+        session = load_session(game_id)
+        try:
+            started = time.perf_counter()
+            session.game.apply(session.human_seat, body.action)
+            session.trace.append({'seat': session.human_seat, 'action': deepcopy(body.action),
+                                  'seconds': time.perf_counter() - started, 'actor': 'human'})
+            advance_bots(session)
+        except IllegalAction as exc:
+            raise HTTPException(400, str(exc)) from exc
+        finally:
+            persist(session)
+        return session.game.public_state(session.human_seat)
 
 
 def _mount_web() -> None:
@@ -99,6 +197,9 @@ def _mount_web() -> None:
         app.mount("/", StaticFiles(directory=root, html=True), name="web")
 
 
+from .rooms import router as room_router
+
+app.include_router(room_router)
 _mount_web()
 
 

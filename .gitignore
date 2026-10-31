@@ -6,3 +6,10 @@ __pycache__/
 web/node_modules/
 web/dist/
 runs/
+web/test-results/
+web/playwright-report/
+build/
+*.egg-info/
+src/catan_ai/*.so
+src/catan_ai/*.pyd
+src/catan_ai/_native_manifest.json
