@@ -4,11 +4,11 @@ from itertools import product
 
 import pytest
 
-z3 = pytest.importorskip('z3')
-
 from catan_ai.constraint_belief import constrain_year_of_plenty, solve_resources
 from catan_ai.engine import Game, RESOURCES, Resource
 from catan_ai.observation import Observation
+
+z3 = pytest.importorskip('z3')
 
 
 def position(bank, phase='roll', bought=0, played=False):
