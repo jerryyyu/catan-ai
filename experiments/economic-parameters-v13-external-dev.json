@@ -1,0 +1,42 @@
+{
+  "name": "economic-parameters-v13-external-dev",
+  "stage": "dev",
+  "candidate": "planner_parameter",
+  "control": "external",
+  "requires_search": false,
+  "seeds_per_panel": 64,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 1690000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 1691000,
+      "opponents": [
+        "builder",
+        "external",
+        "expander"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.12,
+    "planning_sigma": 0.4,
+    "power": 0.8,
+    "note": "Predeclared 2026-10-31 before any game of this v13 evaluation, at Jerry's request to rerun the withheld external-control comparison on the repaired comparator before any promotion decision. Source: frozen snapshot runs/economic-parameters-v13-source-v1 of tree 93bc3f2 (PR #5 head on merged main: bank-trade and Year of Plenty legality repairs, comparator v13; pure-Python engine), checkpoint runs/economic-parameters-v13-binding-v1/model.json (sha256 b1785ccb..., same weights as 77c5ebfc...; 8/8 trace-identical to the v12 binding). The snapshot evaluator enforces this power block. DEV is also the reliability gate: any external fault withholds the lift (evaluator rule) and stops the held-out stage; the fault goes to board row 8. Admission: 52 clusters required, 64 declared."
+  }
+}
