@@ -144,6 +144,9 @@ if __name__ == '__main__':
     parser.add_argument('--split', choices=list(SPLITS), default='train')
     parser.add_argument('--limit', type=int)
     args = parser.parse_args()
-    if args.mode == 'generate': generate(args.split, args.limit)
-    elif args.mode == 'train': train()
-    else: evaluate()
+    if args.mode == 'generate':
+        generate(args.split, args.limit)
+    elif args.mode == 'train':
+        train()
+    else:
+        evaluate()

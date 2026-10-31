@@ -28,3 +28,12 @@ exclude = ["*.so", "*.pyd", "_native_manifest.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["build", "runs", "web", "scripts/__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = ["E501", "E731", "E741", "B008", "B011", "B905"]

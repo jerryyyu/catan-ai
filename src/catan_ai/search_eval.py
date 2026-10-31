@@ -13,6 +13,7 @@ import time
 from .experiments import source_files
 from .sim import play_game
 from .inference import paired_normal_lcb, planned_seeds
+from .power import check_design, cluster_sigma, minimum_detectable_effect
 
 
 def model_identity(config):
@@ -127,6 +128,12 @@ def summarize(config, rows):
                                'rollouts': rollouts, 'pass': passed}
         panels[panel['name']].update(inference=method, seed_cluster_differences=clusters,
                                     suggested_heldout_seeds=planned_seeds(clusters, alpha=.05 / len(config['panels'])) if len(clusters) > 1 and lift is not None else None)
+        if len(clusters) > 1:
+            # Descriptive only: how small a true lift this panel's design could have seen.
+            sigma = cluster_sigma(clusters)
+            panels[panel['name']]['cluster_sd'] = sigma
+            panels[panel['name']]['minimum_detectable_effect_80'] = minimum_detectable_effect(
+                sigma, len(clusters), .05 / len(config['panels']))
         for arm in ('candidate', 'baseline'):
             steps = sorted(t for r in selected for t in r[arm].get('step_seconds', [[], [], [], []])[r['seat']])
             turns = sorted(t['seconds'] for r in selected for t in r[arm].get('turn_timings', [])
@@ -162,6 +169,7 @@ def main():
     source = source_files()
     checkpoint = model_identity(config)
     audit = config.get('stage') == 'regression_audit'
+    check_design(config)
     if audit and (config.get('inference') != 'paired_normal' or config['seeds_per_panel'] < 128):
         raise ValueError('regression audit requires calibrated seed-cluster inference and >=128 seeds')
     if config.get('requires_dev_pass') or audit:

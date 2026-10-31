@@ -1,0 +1,2848 @@
+{
+ "receipts": [
+  {
+   "bytes": 23224,
+   "candidate": "heuristic",
+   "checkpoint_sha256": null,
+   "control": "random",
+   "games": 200,
+   "host": null,
+   "kind": "search_eval",
+   "name": "base-actions-dev-20261029T170200644839Z",
+   "panels": {
+    "summary": {
+     "candidate_wins": 99,
+     "completed": 100,
+     "duration_seconds": 1.7784085404127836,
+     "interval_method": "two-sided Hoeffding bound on independent seed averages",
+     "pass": true,
+     "pass_rule": "all games complete, source unchanged, seed-cluster lower bound >= 0.35",
+     "scheduled": 100,
+     "truncated": 0,
+     "win_rate": 0.99
+    }
+   },
+   "pass": true,
+   "path": "runs/base-actions-dev-20261029T170200644839Z.json",
+   "process_cap": null,
+   "sha256": "a47c9420858260e7b81ed1035f02ce2c7721bca5697527c0f12147a6519968f7",
+   "source_hash": null,
+   "source_revision": "f4b66a23342fa437c203d4e8133bc058d0e76cbe",
+   "stage": null
+  },
+  {
+   "bytes": 3544816,
+   "candidate": "heuristic",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 64,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "builder-repair-dev-v2",
+   "panels": {
+    "builders": {
+     "match_truncations": 0,
+     "p95_seconds": 2.4124979972839355e-05,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.15625,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/builder-repair-dev-v2.json",
+   "process_cap": 1,
+   "sha256": "41961d92af7d83f135902337be016aee8d3a05ce71b75d7fdcc76eb860f7f8b3",
+   "source_hash": "5af57379ce0f27e4",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 403324,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 22,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "builder-repair-regression-v2",
+   "panels": {},
+   "pass": null,
+   "path": "runs/builder-repair-regression-v2.json",
+   "process_cap": null,
+   "sha256": "0003378cb6a4353e164ef549a8ad777d2a4b774489e17439b5bf58764f52532a",
+   "source_hash": "5af57379ce0f27e4",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6323611,
+   "candidate": "planner_card_timing",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "card-timing-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.007245583459734917,
+     "paired_seed_lcb": -0.9603227913199207,
+     "paired_win_lift": 0.0,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.012864749878644943,
+     "paired_seed_lcb": -0.9915727913199207,
+     "paired_win_lift": -0.03125,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/card-timing-dev-v1.json",
+   "process_cap": 2,
+   "sha256": "9ce31305364128d547132a70e1e81b404de38b547dcc652a9d2a189bdabc4512",
+   "source_hash": "1e16e8d2525194bc",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 6513543,
+   "candidate": "planner_chain",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "chain-planner-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.017578918486833572,
+     "paired_seed_lcb": -0.9603227913199207,
+     "paired_win_lift": 0.0,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.018870791420340538,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.09375,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/chain-planner-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "b3b08bc974244dae58493a2294c143d09caf97e9de58cdc3114f014914f90ee8",
+   "source_hash": "d2b7f269e928b332",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 2437,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "continuation-streams-dev-v1",
+   "panels": {
+    "summary": {
+     "maximum_position_seconds": 16.258038334548473,
+     "noise_ratio": 1.0714285714285714,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/continuation-streams-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "24eb9e31aa960b08bee59b2f8d49260bd6e0bfe795c8edf786ba6a737f5280b9",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6220551,
+   "candidate": "planner_dev_sequence",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "development-sequence-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.010944752022624016,
+     "paired_seed_lcb": -0.9915727913199207,
+     "paired_win_lift": -0.03125,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.011537833139300346,
+     "paired_seed_lcb": -0.8978227913199207,
+     "paired_win_lift": 0.0625,
+     "pairs": 32,
+     "pass": true
+    }
+   },
+   "pass": false,
+   "path": "runs/development-sequence-dev-v1.json",
+   "process_cap": 2,
+   "sha256": "63d95ba12556928109e1b4ce5ff11e3fe8bbf3315d84e29a3737050f49ce6c32",
+   "source_hash": "53b3c2eae7c37411",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 12220,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "economic-parameters-capacity-v1",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/economic-parameters-capacity-v1/summary.json",
+   "process_cap": null,
+   "sha256": "a5498e81f66a2be3add2162bf8c40816226c1241990a301ac313f722ddd6412b",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 24024656,
+   "candidate": "planner_parameter",
+   "checkpoint_sha256": "77c5ebfc5b148e8d9a22aa07732df2b62b428fe6b8dc3767be8276447206fc92",
+   "control": "external",
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "economic-parameters-external-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.009214334189891815,
+     "paired_seed_lcb": -0.5071757578703098,
+     "paired_win_lift": 0.171875,
+     "pairs": 64,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.008951539173722267,
+     "paired_seed_lcb": -0.5071757578703098,
+     "paired_win_lift": 0.171875,
+     "pairs": 64,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/economic-parameters-external-dev-v1.json",
+   "process_cap": 2,
+   "sha256": "04680f1dfeb2c3c95e84666a0a3f2ec1a3506a9cbf9928b170e56bda75878ca5",
+   "source_hash": "8ac320ee84952b83",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 5180,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "economic-parameters-run-calibration-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/economic-parameters-run-calibration-v1.json",
+   "process_cap": null,
+   "sha256": "dee98a9b4fdda93e5462678891fec63f4a60c6b082b5f790a17577f62084a7ff",
+   "source_hash": "8ac320ee84952b83",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 13722899,
+   "candidate": "planner_parameter",
+   "checkpoint_sha256": "77c5ebfc5b148e8d9a22aa07732df2b62b428fe6b8dc3767be8276447206fc92",
+   "control": "tactical",
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "economic-parameters-tactical-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.009267415851354599,
+     "paired_seed_lcb": -0.3821757578703098,
+     "paired_win_lift": 0.296875,
+     "pairs": 64,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.009087542071938515,
+     "paired_seed_lcb": -0.4446757578703098,
+     "paired_win_lift": 0.234375,
+     "pairs": 64,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/economic-parameters-tactical-dev-v1.json",
+   "process_cap": 2,
+   "sha256": "9b1d4969b657f3e6eb31220b85e00c4866ec467ae4944f854df3a79dcc80b22d",
+   "source_hash": "8ac320ee84952b83",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 49144,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-actions-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/external-actions-v1.json",
+   "process_cap": null,
+   "sha256": "9a68172c00eb0645858f0c2a71fd2248e31ce61f5294650b534a2709868dfa52",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 49144,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-actions-v2",
+   "panels": {},
+   "pass": null,
+   "path": "runs/external-actions-v2.json",
+   "process_cap": null,
+   "sha256": "a52fe40b0cadb25d23074af644324b2c81c4c38a17779f97f4d66f70ab60443d",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 7205,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-belief-repair-v10",
+   "panels": {
+    "summary": {
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-belief-repair-v10/summary.json",
+   "process_cap": null,
+   "sha256": "7aef5549e5dbf8faa9d2558288d105d5fbae9b06a7dd4872043d455147936080",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 7569,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-belief-repair-v11",
+   "panels": {
+    "summary": {
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-belief-repair-v11/summary.json",
+   "process_cap": null,
+   "sha256": "a96cc3a06d8bafbd8d81c6f0980c403ab2241ece6ff04b9aefcf76c7f6545ebe",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 4092,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-belief-repair-v3",
+   "panels": {
+    "summary": {
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-belief-repair-v3/summary.json",
+   "process_cap": null,
+   "sha256": "8d86cf62c242f6541d31f13aadb7b3d38da0c4007a5523242c8e7a94ae6d23e0",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 4897,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-belief-repair-v4",
+   "panels": {
+    "summary": {
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-belief-repair-v4/summary.json",
+   "process_cap": null,
+   "sha256": "edae7a7857c468c7288a0e301145896f77abbdff17518eb62176882d8c1916c6",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 5367,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-belief-repair-v5",
+   "panels": {
+    "summary": {
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-belief-repair-v5/summary.json",
+   "process_cap": null,
+   "sha256": "ce73bbc383db14db1694b9408dcc0bf82e2b29febc75fb6c6b31e8a7875d3748",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6380,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-belief-repair-v6",
+   "panels": {
+    "summary": {
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/external-belief-repair-v6/summary.json",
+   "process_cap": null,
+   "sha256": "7b0fa19a1bbf1630683bc0ed68ba98d8895912aed3355cbcac045a0fa6b7bf31",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6282,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-belief-repair-v7",
+   "panels": {
+    "summary": {
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-belief-repair-v7/summary.json",
+   "process_cap": null,
+   "sha256": "a6c198ea93cfd4d615c706864cfdcd95ec2f5f94271fc87e745deca1521cdfcd",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6644,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-belief-repair-v8",
+   "panels": {
+    "summary": {
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-belief-repair-v8/summary.json",
+   "process_cap": null,
+   "sha256": "9a6d55b59d4112067167df8773a200b0ff3e7d712d8785c3620bdeb5efce155d",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6838,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-belief-repair-v9",
+   "panels": {
+    "summary": {
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-belief-repair-v9/summary.json",
+   "process_cap": null,
+   "sha256": "73d4bb22b2e710561da54ed0414b5ca0bf7be19bb13ae2df87bc3805328a7f22",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 74566,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-game-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/external-game-v1.json",
+   "process_cap": null,
+   "sha256": "c4ac005f0ad14f0804c9e9ae849b0dd40ac2c0ad1e6093c1db696d63dee4799b",
+   "source_hash": "059c875d72e9d1e6",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 3083,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-integration-v1",
+   "panels": {
+    "summary": {
+     "complete": 16,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-integration-v1/summary.json",
+   "process_cap": null,
+   "sha256": "c7919753c55b98a8360755797d4ebaeb3665988a9d1befede6e48bb3713066fb",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 49923,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-observations-512-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/external-observations-512-v1.json",
+   "process_cap": null,
+   "sha256": "adcf3d27273055aef2b47d7ad59b1bacb09539d34664c0a1f62ab400540dc8dc",
+   "source_hash": "da3b3b70d55064e3",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 50310,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-observations-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/external-observations-v1.json",
+   "process_cap": null,
+   "sha256": "e86f31bc21a346841465ee99ce3f47a3e5673b3a31f22d601aa6db9fe989c2cf",
+   "source_hash": "da3b3b70d55064e3",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6772296,
+   "candidate": "planner_external_opening",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "external-opening-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.017127668485045433,
+     "paired_seed_lcb": -0.7728227913199207,
+     "paired_win_lift": 0.1875,
+     "pairs": 32,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.01684112474322319,
+     "paired_seed_lcb": -0.8978227913199207,
+     "paired_win_lift": 0.0625,
+     "pairs": 32,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-opening-dev-v1.json",
+   "process_cap": 2,
+   "sha256": "b96250455f5332ba1b91279f625cd3ee9ceada139367bf92bce1bdadaaaff6a8",
+   "source_hash": "f6bae862fe5b6e1d",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 14199981,
+   "candidate": "planner_external_opening",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "external-opening-tactical-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.017241915687918663,
+     "paired_seed_lcb": -0.5540507578703098,
+     "paired_win_lift": 0.125,
+     "pairs": 64,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.018507499247789383,
+     "paired_seed_lcb": -0.7884257578703098,
+     "paired_win_lift": -0.109375,
+     "pairs": 64,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/external-opening-tactical-dev-v1.json",
+   "process_cap": 2,
+   "sha256": "719443476ce69b00f3109a85011dd988b16257564090e13886e63bd758f6a188",
+   "source_hash": "f6bae862fe5b6e1d",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 1553,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-reliability-v2",
+   "panels": {
+    "summary": {
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/external-reliability-v2/summary.json",
+   "process_cap": null,
+   "sha256": "b98c67b0ded953c1f1c76f78813d5ed8efda5fd88c3d5c97b5b2f4f6b764ef3a",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 31553,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 16,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "external-setup-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/external-setup-v1.json",
+   "process_cap": 1,
+   "sha256": "bb1fc416233d0e69774b67b9094f452c5a924ea87b46964f399b8b41f0b619da",
+   "source_hash": "e4ec5e9137c0dc2a",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 117881,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "external-timeout-copy-repair-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/external-timeout-copy-repair-v1.json",
+   "process_cap": null,
+   "sha256": "23ffa7cc505fcc6f19b667af474047cf509875894b75b3080e45518cfd436929",
+   "source_hash": "0e9a6c3dc465e879",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6476814,
+   "candidate": "planner_finish",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "finish-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.014722375199198723,
+     "paired_seed_lcb": -0.9290727913199207,
+     "paired_win_lift": 0.03125,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.010856332257390022,
+     "paired_seed_lcb": -0.9290727913199207,
+     "paired_win_lift": 0.03125,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/finish-dev-v1.json",
+   "process_cap": 2,
+   "sha256": "ea957c00bc46bce01da465d02214da877a6bf065e6e18a35d3102edbbf7e1fdc",
+   "source_hash": "f8fcd40272c881fb",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 4605,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "full-solver-dev-v1",
+   "panels": {
+    "summary": {
+     "pass": true,
+     "script_sha256": "94c575751454e9765dc8855ebcee722841773f8e51531260b2c0a0e8b96a3f17",
+     "solver_version": "4.15.4"
+    }
+   },
+   "pass": true,
+   "path": "runs/full-solver-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "5fe17503d93c571760e2ae65bf2afe1f000031f24658138bee057d1fec381b1c",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 2621,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "inference-calibration-four-panel-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/inference-calibration-four-panel-v1.json",
+   "process_cap": null,
+   "sha256": "8bdaefff84c83cb94cca0b24e697888b1ace165e4433f4a7c3a93b74e6e38309",
+   "source_hash": "2d3ced0efabc7dcc",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 2875,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "inference-calibration-four-panel-v2",
+   "panels": {},
+   "pass": null,
+   "path": "runs/inference-calibration-four-panel-v2.json",
+   "process_cap": null,
+   "sha256": "2a7f33defa913d1fca76780ec474e358b8a26887873ae2452db7e4b16968bf38",
+   "source_hash": "8c7bee344e67040d",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 2354,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "inference-calibration-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/inference-calibration-v1.json",
+   "process_cap": null,
+   "sha256": "7b7bac1666b232eb44748461f41e5a1fd7a6f689cb62f37394e05cec00635898",
+   "source_hash": "ac8892577c80b1bf",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 7027,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "learned-baseline-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/learned-baseline-v1.json",
+   "process_cap": 1,
+   "sha256": "1b724b8e718cb8a3a78d9320751e6da29b95d1fdeb5082de136a5b24ca17fa45",
+   "source_hash": "2d3ced0efabc7dcc",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 7027,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "learned-baseline-v1-replay",
+   "panels": {},
+   "pass": null,
+   "path": "runs/learned-baseline-v1-replay.json",
+   "process_cap": 1,
+   "sha256": "62741915edc64986172d83053c90f63e6eea98ae6945de128f0042943c16fb4b",
+   "source_hash": "2d3ced0efabc7dcc",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 71296,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "learned-capacity-v1",
+   "panels": {
+    "summary": {
+     "attempts": 0,
+     "belief_failures": 0,
+     "elapsed": 0.039616042748093605,
+     "policy_attempt_p95": null,
+     "step_p95": 0.00021749921143054962,
+     "truncated": false,
+     "turn_p95": 0.0010196678340435028
+    }
+   },
+   "pass": null,
+   "path": "runs/learned-capacity-v1.json",
+   "process_cap": 1,
+   "sha256": "fdfc777b442ef54b9793d656b3740dff6137f9cf1736d7dae6add13202ea95bb",
+   "source_hash": "2d3ced0efabc7dcc",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 3603135,
+   "candidate": "learned",
+   "checkpoint_sha256": "1b724b8e718cb8a3a78d9320751e6da29b95d1fdeb5082de136a5b24ca17fa45",
+   "control": "tactical",
+   "games": 64,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "learned-dev-v1",
+   "panels": {
+    "builders": {
+     "match_truncations": 0,
+     "p95_seconds": 0.00012258440256118774,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.25,
+     "pairs": 8,
+     "pass": false
+    },
+    "expanders": {
+     "match_truncations": 0,
+     "p95_seconds": 9.287334978580475e-05,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.75,
+     "pairs": 8,
+     "pass": false
+    },
+    "mixed": {
+     "match_truncations": 0,
+     "p95_seconds": 8.387677371501923e-05,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.125,
+     "pairs": 8,
+     "pass": false
+    },
+    "tactical": {
+     "match_truncations": 0,
+     "p95_seconds": 0.00010087527334690094,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.25,
+     "pairs": 8,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/learned-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "934a306731f6b3f73c2ebb14fee14dadc4c127ead8afc12328ca795ec4f487dd",
+   "source_hash": "2d3ced0efabc7dcc",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 1874,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "learned-test-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/learned-test-v1.json",
+   "process_cap": null,
+   "sha256": "d983a7ef78227ff80efdc29477edd760b0ccf97fed6b974995d62ad46bd3c609",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 2176,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "learned-validation-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/learned-validation-v1.json",
+   "process_cap": null,
+   "sha256": "9d494056dd686d01ec298a4d3d9f474aee2c91954a686735b3e0b61d5fbc57d3",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 4075,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "learning-pilot-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/learning-pilot-v1.json",
+   "process_cap": 1,
+   "sha256": "7c45b475e1e493e5d950c6930b1ed5a881c2d299b79b5d6dab51675f31a585b9",
+   "source_hash": "2d3ced0efabc7dcc",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6996,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "match-capacity-v10",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/match-capacity-v10/summary.json",
+   "process_cap": null,
+   "sha256": "1ce0f84883b914154a65022038aca17b5996f644998889366975eece7e65d8aa",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 11315,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "match-capacity-v11",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/match-capacity-v11/summary.json",
+   "process_cap": null,
+   "sha256": "90c619061ca4027da0cab3b596d1273f5b0413ab4379a25628823687bd9fae07",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 61243,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "mc-benchmark-940000",
+   "panels": {
+    "summary": {
+     "elapsed": 19.989348581060767,
+     "host": "Jerrys-Mac-mini.local",
+     "max": 2.58313762396574,
+     "p95": 1.0170754995197058,
+     "process_cap": 1,
+     "rollouts": 960,
+     "truncated": false,
+     "turns": 85,
+     "winner": 1
+    }
+   },
+   "pass": null,
+   "path": "runs/mc-benchmark-940000.json",
+   "process_cap": null,
+   "sha256": "326f61e1ca60e69e97ba9923aa5a12041bef177175def3008a43d14f19b3e280",
+   "source_hash": "dbdb5e6e4f04037d",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 11820,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "mc-debug-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/mc-debug-v1.json",
+   "process_cap": null,
+   "sha256": "cc2b26f02bd47a10fa27fd318505b40e419ff228249abaaaa86b551cd31fffad",
+   "source_hash": "ecb79943d8a3689b",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 2673746,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 32,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "mc-dev-v1",
+   "panels": {
+    "heuristic": {
+     "match_truncations": 0,
+     "p95_seconds": 2.154770039021969,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.0,
+     "pairs": 8,
+     "pass": false
+    },
+    "mixed": {
+     "match_truncations": 0,
+     "p95_seconds": 1.893543416634202,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.125,
+     "pairs": 8,
+     "pass": true
+    }
+   },
+   "pass": false,
+   "path": "runs/mc-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "bfcd00606325f192abc0415ba7fde91217ef0d3d534924410e0d11f8eed95674",
+   "source_hash": "ecb79943d8a3689b",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 31293681,
+   "candidate": "mc_mean",
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "mc-mean-dev-v1",
+   "panels": {
+    "heuristic": {
+     "match_truncations": 0,
+     "p95_seconds": 2.3497500848025084,
+     "paired_seed_lcb": -0.37020459565057134,
+     "paired_win_lift": 0.0625,
+     "pairs": 128,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/mc-mean-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "ba737d850826836a6f47ba4e7e0c952f4ac2cd8cc2fc3a0f2553d11b172e59d5",
+   "source_hash": "f6bbb4277200565a",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 3183,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "mc-shortlist-debug-v2",
+   "panels": {},
+   "pass": null,
+   "path": "runs/mc-shortlist-debug-v2.json",
+   "process_cap": null,
+   "sha256": "a5d34d30b960bee9b9ab246857d245ba3625d177ef0e782ad47946cb07e3b22d",
+   "source_hash": "ecb79943d8a3689b",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6289601,
+   "candidate": "planner_cards",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "monopoly-history-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.00860925205051899,
+     "paired_seed_lcb": -0.9603227913199207,
+     "paired_win_lift": 0.0,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.009434999898076057,
+     "paired_seed_lcb": -0.9603227913199207,
+     "paired_win_lift": 0.0,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/monopoly-history-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "24048c588bf5cc8c79db9c588620590f8ad6ac45acbe6eeb5863619f3cc530f4",
+   "source_hash": "018a2e1517b6da4e",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 346,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-v1-comparison",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-comparison.json",
+   "process_cap": null,
+   "sha256": "1d38cec297cf6749327fe2d364af5704aa56856f42338b252360c9036655231d",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9730,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "native-v1-cython-1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-cython-1.json",
+   "process_cap": 1,
+   "sha256": "cbe64f26e96de108f53463586773d3135515d9e0e7097008da8714343ddfebc5",
+   "source_hash": "b3695bfea832b609",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9731,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "native-v1-measured-0-cython",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-measured-0-cython.json",
+   "process_cap": 1,
+   "sha256": "8125ba9561b631f4ac38055c6edaa1c1122aebf3da81d41caa0f0a77f54f66de",
+   "source_hash": "b3695bfea832b609",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9641,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "native-v1-measured-0-python",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-measured-0-python.json",
+   "process_cap": 1,
+   "sha256": "9170ed0e7c92454f709fd5724d6f766f5ac249fe13ac2618f31b62fe6e4b8ac0",
+   "source_hash": "3508e124f61da9a3",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9727,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "native-v1-measured-1-cython",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-measured-1-cython.json",
+   "process_cap": 1,
+   "sha256": "44f1b6cbc2339ca6b48c9aa125ab46855d0dc3d5dd8b5bff9ea9c61c71a71f32",
+   "source_hash": "b3695bfea832b609",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9640,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "native-v1-measured-1-python",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-measured-1-python.json",
+   "process_cap": 1,
+   "sha256": "62de9a7358947c4e3acee4e4328bcff14a276d6691485c0c500b7c3546614936",
+   "source_hash": "3508e124f61da9a3",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9730,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "native-v1-measured-2-cython",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-measured-2-cython.json",
+   "process_cap": 1,
+   "sha256": "dbfda994d3aa53484eb03ab507269e368fe38d808a623153e46b0a44178b7000",
+   "source_hash": "b3695bfea832b609",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9641,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "native-v1-measured-2-python",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-measured-2-python.json",
+   "process_cap": 1,
+   "sha256": "bb4eb2e9214e588ed46f156c7f5a8593a8fc8136bbf07e03abdc99acb58c6624",
+   "source_hash": "3508e124f61da9a3",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9732,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "native-v1-profile",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-profile.json",
+   "process_cap": 1,
+   "sha256": "978a66c6a91cc725766c0ecc95c2e775d78b51cb8ac3e7fad10979a84b0d3ac9",
+   "source_hash": "b3695bfea832b609",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9638,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "native-v1-python-1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/native-v1-python-1.json",
+   "process_cap": 1,
+   "sha256": "ff3d513b865ab739ad1c20113724a4a4bf4e13a373c1b081bb0c485cb272fb2c",
+   "source_hash": "3508e124f61da9a3",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 3240,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "opening-components-v1-summary",
+   "panels": {},
+   "pass": null,
+   "path": "runs/opening-components-v1-summary.json",
+   "process_cap": null,
+   "sha256": "8ef68470683f2b6ddf4390cb1805f7b10192cf31ab56d757cb54845e07aa2ac7",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6607871,
+   "candidate": "planner_purchase_opening",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "opening-purchase-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.01960262469947338,
+     "paired_seed_lcb": -0.9290727913199207,
+     "paired_win_lift": 0.03125,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.015127459540963173,
+     "paired_seed_lcb": -0.9915727913199207,
+     "paired_win_lift": -0.03125,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/opening-purchase-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "bbbb57de70e27c54022fc95d5fe09a04067981e7221c14fab608b2ce409306f2",
+   "source_hash": "225a6d620cbc8abc",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 6069777,
+   "candidate": "planner_opening",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "opening-search-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.023772042244672775,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.09375,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.018608124926686287,
+     "paired_seed_lcb": -0.9603227913199207,
+     "paired_win_lift": 0.0,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/opening-search-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "d63f99eb21f12a3d25ac4ddc5795c840ad3a9dfd5b5ffb82fd9198ac2157735c",
+   "source_hash": "e8c65335d3a164d0",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 27733881,
+   "candidate": "heuristic",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "opponent-suite-dev-v1",
+   "panels": {
+    "builders": {
+     "match_truncations": 11,
+     "p95_seconds": 1.7542392015457153e-05,
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pairs": 32,
+     "pass": false
+    },
+    "expanders": {
+     "match_truncations": 0,
+     "p95_seconds": 2.4456530809402466e-05,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.0625,
+     "pairs": 32,
+     "pass": false
+    },
+    "mixed": {
+     "match_truncations": 0,
+     "p95_seconds": 2.4626031517982483e-05,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.09375,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "match_truncations": 0,
+     "p95_seconds": 2.4335458874702454e-05,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.15625,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/opponent-suite-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "892d55e4b2e14edf6bb59213b04f7f1ad3e56217fe1dc54e011e417bd38b9f25",
+   "source_hash": "d15a721deac16eee",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 6349799,
+   "candidate": "planner_value_draw",
+   "checkpoint_sha256": "b55eab9866dce201c28b67b76b5e3a71ad0250854b56e35f125c9baff5b56a0f",
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "outcome-value-draw-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.020505959168076515,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.21875,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.016397500410676003,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.375,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/outcome-value-draw-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "5b79b2fd73d94a0a2634a7ec2d1c8aa1ce34423383bebbcb3243460151bb3066",
+   "source_hash": "000f5ac9c6facc9e",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 6459233,
+   "candidate": "planner_value",
+   "checkpoint_sha256": "b55eab9866dce201c28b67b76b5e3a71ad0250854b56e35f125c9baff5b56a0f",
+   "control": "planner_robber",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "outcome-value-planner-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.024056708440184593,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.34375,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.019253334030508995,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.28125,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/outcome-value-planner-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "0a94129d0c9924b111f8eaedc67019f8fcbb92f8a04c8a090edee80173b320fe",
+   "source_hash": "458f292b1165b86b",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 257,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "paired-value-capacity-v1",
+   "panels": {
+    "summary": {
+     "complete_continuations": 120,
+     "max_position_seconds": 9.084434039890766,
+     "mean_position_seconds": 3.4084849369246513,
+     "pass": true,
+     "positions": 8,
+     "projected_512_positions_serial_seconds": 1745.1442877054214,
+     "seconds": 27.26787949539721
+    }
+   },
+   "pass": true,
+   "path": "runs/paired-value-capacity-v1/summary.json",
+   "process_cap": null,
+   "sha256": "de6193a99913360597903fe7fbcea9868cf02dcf99e868f1b1e46ac7c04bbd19",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 761,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "parallel-runner-smoke-v1",
+   "panels": {
+    "summary": {
+     "identical_outcomes": true,
+     "pass": true,
+     "purpose": "runner correctness and timing; not strength evidence",
+     "same_producer": true,
+     "speedup": 1.734577779832136
+    }
+   },
+   "pass": true,
+   "path": "runs/parallel-runner-smoke-v1/summary.json",
+   "process_cap": null,
+   "sha256": "09505ebf43da97c69da1a97c1e3925b60b4ab586b5d3b99acb4b1144f166b097",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 7891,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "phase3-profile-after",
+   "panels": {},
+   "pass": null,
+   "path": "runs/phase3-profile-after.json",
+   "process_cap": 1,
+   "sha256": "92d406dc0cd6c92f2458b32d79f6aa13502c0b04702407a6871a4f23f02c75fb",
+   "source_hash": "376bc3de82173cb8",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 7886,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "phase3-profile-before",
+   "panels": {},
+   "pass": null,
+   "path": "runs/phase3-profile-before.json",
+   "process_cap": 1,
+   "sha256": "d849d18a1459a48bf374fba012cfd77b9db61651244578b44f7f4c6ef1a807a8",
+   "source_hash": "62676fa5b1daf9fb",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 7885,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 8,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "phase3-profile-before-full",
+   "panels": {},
+   "pass": null,
+   "path": "runs/phase3-profile-before-full.json",
+   "process_cap": 1,
+   "sha256": "53e35a04b2e0490d0f088fe785b91c301ee0e72ca346434ca38d39db63af2b7a",
+   "source_hash": "62676fa5b1daf9fb",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 56980,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "phase3-tactical-timing-probe",
+   "panels": {
+    "summary": {
+     "attempts": 0,
+     "belief_failures": 0,
+     "elapsed": 0.06357975117862225,
+     "policy_attempt_p95": null,
+     "step_p95": 0.0010131672024726868,
+     "truncated": false,
+     "turn_p95": 0.009243873879313469
+    }
+   },
+   "pass": null,
+   "path": "runs/phase3-tactical-timing-probe.json",
+   "process_cap": 1,
+   "sha256": "a3766f2d2c86783d815ef5da3ee36197cc34570249fe61908f3d76c7b64ea9d3",
+   "source_hash": "1be4344478d3c1df",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 256072,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "phase3-timing-probe",
+   "panels": {
+    "summary": {
+     "attempts": 55,
+     "belief_failures": 18,
+     "elapsed": 33.411750331521034,
+     "policy_attempt_p95": 1.574250414967537,
+     "step_p95": 0.9137775842100382,
+     "truncated": false,
+     "turn_p95": 2.379006626084447
+    }
+   },
+   "pass": null,
+   "path": "runs/phase3-timing-probe.json",
+   "process_cap": 1,
+   "sha256": "d812306caa8649fcc45bd94167853cfcf8480a2f3f90e2788ebac324331e768f",
+   "source_hash": "1be4344478d3c1df",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 88261,
+   "candidate": "strategic",
+   "checkpoint_sha256": null,
+   "control": "heuristic",
+   "games": 800,
+   "host": null,
+   "kind": "search_eval",
+   "name": "placement-strategy-dev-20261029T170621734794Z",
+   "panels": {
+    "summary": {
+     "candidate_wins": 104,
+     "completed": 399,
+     "duration_seconds": 15.190280457958579,
+     "interval_method": "two-sided Hoeffding bound on independent seed averages",
+     "pass": false,
+     "pass_rule": "all games complete, source unchanged, seed-cluster lower bound >= 0.25",
+     "scheduled": 400,
+     "seed_cluster_95": null,
+     "truncated": 1,
+     "win_rate": null
+    }
+   },
+   "pass": false,
+   "path": "runs/placement-strategy-dev-20261029T170621734794Z.json",
+   "process_cap": null,
+   "sha256": "056c19e8dd8220fa79667825a607f07bad6b04407434869bb57184ec88cbad6c",
+   "source_hash": null,
+   "source_revision": "f4b66a23342fa437c203d4e8133bc058d0e76cbe",
+   "stage": null
+  },
+  {
+   "bytes": 3825,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "planner-budget-profile-v2",
+   "panels": {
+    "summary": {
+     "decisions_with_candidates": 463,
+     "games": 16,
+     "max_nodes": 128,
+     "pass": false,
+     "root_omissions": 0,
+     "saturated": 32,
+     "saturation_fraction": 0.06911447084233262,
+     "truncations": 0
+    }
+   },
+   "pass": false,
+   "path": "runs/planner-budget-profile-v2/summary.json",
+   "process_cap": null,
+   "sha256": "dc19be83afc776f28de67a2316885b61fe3d66ad5fa712919fcd80a005bf4648",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6599997,
+   "candidate": "planner_coverage",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-coverage-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.008709084242582321,
+     "paired_seed_lcb": -0.9603227913199207,
+     "paired_win_lift": 0.0,
+     "pairs": 32,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.012345584109425545,
+     "paired_seed_lcb": -0.8353227913199207,
+     "paired_win_lift": 0.125,
+     "pairs": 32,
+     "pass": true
+    }
+   },
+   "pass": false,
+   "path": "runs/planner-coverage-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "46f540c5eac25b7a0e078c146a741d444838382dd19892986f890f67c75bd23d",
+   "source_hash": "90f55adba1d9c83e",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 7290851,
+   "candidate": "planner",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.011341167613863945,
+     "paired_seed_lcb": -0.6790727913199207,
+     "paired_win_lift": 0.28125,
+     "pairs": 32,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.012243084609508514,
+     "paired_seed_lcb": -0.9290727913199207,
+     "paired_win_lift": 0.03125,
+     "pairs": 32,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/planner-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "26fe7ac9325527cd5b7b23eb3dc0d59c929e63ecf929f16952f42e145eaacc77",
+   "source_hash": "b2e96cebf9b82b97",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 6826173,
+   "candidate": "planner_development",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-development-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.007163500413298607,
+     "paired_seed_lcb": -0.8978227913199207,
+     "paired_win_lift": 0.0625,
+     "pairs": 32,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.009964166209101677,
+     "paired_seed_lcb": -0.8353227913199207,
+     "paired_win_lift": 0.125,
+     "pairs": 32,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/planner-development-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "9873c98571cf8909711d45b994f4a92e6c0a434479f7355731b94fae34014a19",
+   "source_hash": "e11aa97e6c7ad645",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 1496,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "planner-disagreements-turn-v1",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/planner-disagreements-turn-v1/summary.json",
+   "process_cap": null,
+   "sha256": "9d80eec625eba020138734d89a1ed906d8b1fba3279a63a1ea5e6aeb1ee86429",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 389,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "planner-disagreements-v1",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/planner-disagreements-v1/summary.json",
+   "process_cap": null,
+   "sha256": "6ce8dac4a5b4f27e391c6cbf710cd4bc2cbfd353548330f427972730ef203d2a",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 4941040,
+   "candidate": "planner_development",
+   "checkpoint_sha256": null,
+   "control": "external",
+   "games": 64,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-external-guided-dev-v1",
+   "panels": {
+    "mixed_external": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.01140037551522255,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.3125,
+     "pairs": 16,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.010251041501760483,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.1875,
+     "pairs": 16,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/planner-external-guided-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "56940ec0baab3f7356234914a59426ec40c80a778764d56e2b7aac81600a154c",
+   "source_hash": "511f638014d61bb7",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 4264,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "planner-four-panel-calibration-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/planner-four-panel-calibration-v1.json",
+   "process_cap": null,
+   "sha256": "6af3bffe01bff79d3f803e390ddb5b94acb4904437b37fc0237f4649ade4bc3a",
+   "source_hash": "000f5ac9c6facc9e",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6678,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "planner-joint-calibration-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/planner-joint-calibration-v1.json",
+   "process_cap": null,
+   "sha256": "d359035e529dc580c170ea13d2a7d7b861aa16a5893ecd42154e1b2f58f792bd",
+   "source_hash": "000f5ac9c6facc9e",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 6812843,
+   "candidate": "planner_robber",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-robber-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.008819706737995148,
+     "paired_seed_lcb": -0.7103227913199207,
+     "paired_win_lift": 0.25,
+     "pairs": 32,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.01121504232287407,
+     "paired_seed_lcb": -0.7415727913199207,
+     "paired_win_lift": 0.21875,
+     "pairs": 32,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/planner-robber-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "facae87d0fffeb71cc5cc76ada33c529ed790626b3c0a99e7ed2cfc56081f806",
+   "source_hash": "57d3be9a1ab99565",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 4806447,
+   "candidate": "planner_robber",
+   "checkpoint_sha256": null,
+   "control": "external",
+   "games": 64,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-robber-external-dev-v1",
+   "panels": {
+    "mixed_external": {
+     "external_faults": 11,
+     "match_truncations": 0,
+     "p95_seconds": 0.012094084173440933,
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pairs": 16,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 46,
+     "match_truncations": 0,
+     "p95_seconds": 0.01073203980922699,
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pairs": 16,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/planner-robber-external-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "a2471ff155b96f3db2fba553ad98c4ea6387cc302f75aedd9c450329f7218160",
+   "source_hash": "57d3be9a1ab99565",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 18920346,
+   "candidate": "planner_robber",
+   "checkpoint_sha256": null,
+   "control": "external",
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-robber-external-replication-dev-v1",
+   "panels": {
+    "mixed_external": {
+     "external_faults": 3,
+     "match_truncations": 0,
+     "p95_seconds": 0.010063834488391876,
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pairs": 64,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.011043207719922066,
+     "paired_seed_lcb": -0.5853007578703098,
+     "paired_win_lift": 0.09375,
+     "pairs": 64,
+     "pass": true
+    }
+   },
+   "pass": false,
+   "path": "runs/planner-robber-external-replication-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "807238d6d07d0ff253ec6d52f1a8088c7f07d007681c7ca2b575d70430668763",
+   "source_hash": "000f5ac9c6facc9e",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 23620422,
+   "candidate": "planner_robber",
+   "checkpoint_sha256": null,
+   "control": "external",
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-robber-external-v11-dev",
+   "panels": {
+    "mixed_external": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.010980045422911644,
+     "paired_seed_lcb": -0.5384257578703098,
+     "paired_win_lift": 0.140625,
+     "pairs": 64,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.01077125035226345,
+     "paired_seed_lcb": -0.6478007578703098,
+     "paired_win_lift": 0.03125,
+     "pairs": 64,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/planner-robber-external-v11-dev.json",
+   "process_cap": 1,
+   "sha256": "a2dd91b5ebe094b892127da3104e08480260b36bec578add917a98407aeca892",
+   "source_hash": "1db4b6227f672f2f",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 5079647,
+   "candidate": "planner_robber",
+   "checkpoint_sha256": null,
+   "control": "external",
+   "games": 64,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-robber-external-v4-dev",
+   "panels": {
+    "mixed_external": {
+     "external_faults": 25,
+     "match_truncations": 0,
+     "p95_seconds": 0.008556751534342766,
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pairs": 16,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.010667247697710991,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.0,
+     "pairs": 16,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/planner-robber-external-v4-dev.json",
+   "process_cap": 1,
+   "sha256": "94b06c54f0c48796f45171cea9a18aff2edfd4774ca2cc6e6b93a8760b6a0b60",
+   "source_hash": "a6dad2b13ed12a31",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 4762568,
+   "candidate": "planner_robber",
+   "checkpoint_sha256": null,
+   "control": "external",
+   "games": 64,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-robber-external-v5-dev",
+   "panels": {
+    "mixed_external": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.0109123345464468,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.25,
+     "pairs": 16,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.007795209065079689,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.0625,
+     "pairs": 16,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/planner-robber-external-v5-dev.json",
+   "process_cap": 1,
+   "sha256": "9496668cd27810bab58571409d71d69c8114abfabb4a9c343fb5de36d884c348",
+   "source_hash": "000f5ac9c6facc9e",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 13913828,
+   "candidate": "planner_robber",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-robber-tactical-replication-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.009661249816417694,
+     "paired_seed_lcb": -0.6009257578703098,
+     "paired_win_lift": 0.078125,
+     "pairs": 64,
+     "pass": true
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.010202499106526375,
+     "paired_seed_lcb": -0.5384257578703098,
+     "paired_win_lift": 0.140625,
+     "pairs": 64,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/planner-robber-tactical-replication-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "2684bb3198f258bfcaf616b6fd1f0f3396e6b886d02f405742393d59e3611570",
+   "source_hash": "000f5ac9c6facc9e",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 3344,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "policy-components-dev-v1",
+   "panels": {
+    "mixed": {},
+    "tactical": {}
+   },
+   "pass": null,
+   "path": "runs/policy-components-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "3670e2d1260f674fa38eb54df3abbbf6311e87524364fd5561970d747dc7ada4",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 4512,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "resource-solver-dev-v1",
+   "panels": {
+    "summary": {
+     "pass": true,
+     "script_sha256": "e34c0ec7788f42d4ba01982b6f303b3734aabe7ce59e089a11aabf1a39784a71",
+     "solver_version": "4.15.4"
+    }
+   },
+   "pass": true,
+   "path": "runs/resource-solver-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "ea58db1153ddf553ddcc88ef35ae2003363350ed2ceaddc92aae25fd1258defc",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 4512,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "resource-solver-dev-v2",
+   "panels": {
+    "summary": {
+     "pass": true,
+     "script_sha256": "c5ec6d97c3768ecbed1d9516eda6eb7fc2e87ca096061e5431bc15faafadafad",
+     "solver_version": "4.15.4"
+    }
+   },
+   "pass": true,
+   "path": "runs/resource-solver-dev-v2/summary.json",
+   "process_cap": null,
+   "sha256": "a7031e534adbe8b0bff1e6d3156ee813c74a4c160b3a20e5d9f3490f2a38aa16",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 161908,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "search-alloc-capacity-v1",
+   "panels": {
+    "summary": {
+     "attempts": 36,
+     "belief_failures": 11,
+     "elapsed": 8.770938916131854,
+     "policy_attempt_p95": 0.44717666506767273,
+     "step_p95": 0.3507943730801344,
+     "truncated": false,
+     "turn_p95": 0.9351264163851738
+    }
+   },
+   "pass": null,
+   "path": "runs/search-alloc-capacity-v1.json",
+   "process_cap": 1,
+   "sha256": "5613b534fb01182f259c585e6bf946e45f42d77ee21e126e0bb340d7dfa3e349",
+   "source_hash": "0f6ef36028ef86d4",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 9030382,
+   "candidate": "search_alloc",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 64,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "search-alloc-dev-v1",
+   "panels": {
+    "builders": {
+     "match_truncations": 0,
+     "p95_seconds": 0.4792906232178211,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.125,
+     "pairs": 8,
+     "pass": false
+    },
+    "expanders": {
+     "match_truncations": 0,
+     "p95_seconds": 0.39812362380325794,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.25,
+     "pairs": 8,
+     "pass": true
+    },
+    "mixed": {
+     "match_truncations": 0,
+     "p95_seconds": 0.4821825437247753,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.0,
+     "pairs": 8,
+     "pass": false
+    },
+    "tactical": {
+     "match_truncations": 0,
+     "p95_seconds": 0.41636850126087666,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.0,
+     "pairs": 8,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/search-alloc-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "592d598f6d767c502215609cfb239b29b14786073d831c9abf1a16a1c6ccb4fc",
+   "source_hash": "0f6ef36028ef86d4",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 166900,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "search-fast-capacity-v1",
+   "panels": {
+    "summary": {
+     "attempts": 37,
+     "belief_failures": 0,
+     "elapsed": 3.837384209036827,
+     "policy_attempt_p95": 0.39446275122463703,
+     "step_p95": 0.1273635420948267,
+     "truncated": false,
+     "turn_p95": 0.5311932079494
+    }
+   },
+   "pass": null,
+   "path": "runs/search-fast-capacity-v1.json",
+   "process_cap": 1,
+   "sha256": "ed383ba8b0c69152a2ef3a8a17fc2123d65494ff293451100765f99aec1b65b6",
+   "source_hash": "0f6ef36028ef86d4",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 8899739,
+   "candidate": "search_fast",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 64,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "search-fast-dev-v1",
+   "panels": {
+    "builders": {
+     "match_truncations": 0,
+     "p95_seconds": 0.487569835036993,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.125,
+     "pairs": 8,
+     "pass": false
+    },
+    "expanders": {
+     "match_truncations": 0,
+     "p95_seconds": 0.400948042050004,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.375,
+     "pairs": 8,
+     "pass": true
+    },
+    "mixed": {
+     "match_truncations": 0,
+     "p95_seconds": 0.37072562240064144,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.25,
+     "pairs": 8,
+     "pass": false
+    },
+    "tactical": {
+     "match_truncations": 0,
+     "p95_seconds": 0.36322070844471455,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.125,
+     "pairs": 8,
+     "pass": true
+    }
+   },
+   "pass": false,
+   "path": "runs/search-fast-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "7d2be2d15c31e6f145b0bd3cc4f46076b62d93d9be6f49d163688411a501fd4e",
+   "source_hash": "0f6ef36028ef86d4",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 166762,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "search-sequence-capacity-v1",
+   "panels": {
+    "summary": {
+     "attempts": 37,
+     "belief_failures": 0,
+     "elapsed": 3.9436819180846214,
+     "policy_attempt_p95": 0.3982717078179121,
+     "step_p95": 0.12998608499765396,
+     "truncated": false,
+     "turn_p95": 0.5414292886853218
+    }
+   },
+   "pass": null,
+   "path": "runs/search-sequence-capacity-v1.json",
+   "process_cap": 1,
+   "sha256": "f5f7ed83f9c4060d5e9c4e873f222bf254d3b1b27fe7b04d6e1e88633cbc39de",
+   "source_hash": "0f6ef36028ef86d4",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 8959955,
+   "candidate": "search_sequence",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 64,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "search-sequence-dev-v1",
+   "panels": {
+    "builders": {
+     "match_truncations": 0,
+     "p95_seconds": 0.5014477521181107,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.125,
+     "pairs": 8,
+     "pass": true
+    },
+    "expanders": {
+     "match_truncations": 0,
+     "p95_seconds": 0.4014238305389881,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.375,
+     "pairs": 8,
+     "pass": true
+    },
+    "mixed": {
+     "match_truncations": 0,
+     "p95_seconds": 0.3742070831358433,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": -0.25,
+     "pairs": 8,
+     "pass": false
+    },
+    "tactical": {
+     "match_truncations": 0,
+     "p95_seconds": 0.36075374856591225,
+     "paired_seed_lcb": -1,
+     "paired_win_lift": 0.0,
+     "pairs": 8,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/search-sequence-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "10150439c73379a7d1f3ee158ce1d37d3ba1aa8f730af234468187023ca07fe5",
+   "source_hash": "0f6ef36028ef86d4",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 3023,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "search-sequence-trigger-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/search-sequence-trigger-v1.json",
+   "process_cap": null,
+   "sha256": "6f0197587480a43fb29ad64dd8fec928a8060b98c0b666190cbb26c4c3773480",
+   "source_hash": "0f6ef36028ef86d4",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 14606,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "solver-onehot-dev-v1",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/solver-onehot-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "68b2d00a3ca89714de4e40e10d7752f8b9839234c427d34eee8a1bc05bf934e0",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 12625,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "solver-tactics-dev-v1",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/solver-tactics-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "f6508df04f9dd466cec51213a84461953e99e203eefac68f0b13f725f9b58143",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 4191,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "other",
+   "name": "strength-cost-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/strength-cost-v1.json",
+   "process_cap": null,
+   "sha256": "b9ef2d24a363245bbca3c17aedd726313093ab98e03756f36b6dac0e82e1191c",
+   "source_hash": "ac8892577c80b1bf",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 5382928,
+   "candidate": "tactical",
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "tactical-dev-v1",
+   "panels": {
+    "heuristic": {
+     "match_truncations": 0,
+     "p95_seconds": 0.0021395422518253326,
+     "paired_seed_lcb": -0.33114209565057134,
+     "paired_win_lift": 0.1015625,
+     "pairs": 128,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/tactical-dev-v1.json",
+   "process_cap": 1,
+   "sha256": "5c046f329c42565966472b66f9bc2e44e0ebce1da9cbb53f502db283fb0c39f3",
+   "source_hash": "f6bbb4277200565a",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 27260111,
+   "candidate": "tactical",
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 1240,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "tactical-heldout-v1",
+   "panels": {
+    "heuristic": {
+     "match_truncations": 0,
+     "p95_seconds": 0.0023629553616046906,
+     "paired_seed_lcb": 0.08471247982430091,
+     "paired_win_lift": 0.11774193548387096,
+     "pairs": 620,
+     "pass": true
+    }
+   },
+   "pass": true,
+   "path": "runs/tactical-heldout-v1.json",
+   "process_cap": 1,
+   "sha256": "10b1bbd9cf378a09a9044747f29d25ee21fdccc11008788a7419fc909efeab70",
+   "source_hash": "f6bbb4277200565a",
+   "source_revision": null,
+   "stage": "heldout"
+  },
+  {
+   "bytes": 14005330,
+   "candidate": "tactical_planner_opening",
+   "checkpoint_sha256": null,
+   "control": "tactical",
+   "games": 256,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "tactical-planner-opening-tactical-dev-v1",
+   "panels": {
+    "mixed": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.005655542016029358,
+     "paired_seed_lcb": -0.6321757578703098,
+     "paired_win_lift": 0.046875,
+     "pairs": 64,
+     "pass": false
+    },
+    "tactical": {
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.005065331235527992,
+     "paired_seed_lcb": -0.7415507578703098,
+     "paired_win_lift": -0.0625,
+     "pairs": 64,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/tactical-planner-opening-tactical-dev-v1.json",
+   "process_cap": 2,
+   "sha256": "f4b1003864154466cdbb34cac6678d8bf35c4f620897b8dbbc616bddcb48fb03",
+   "source_hash": "8a474268eb06693f",
+   "source_revision": null,
+   "stage": "dev"
+  }
+ ],
+ "schema": 1,
+ "skipped": [
+  {
+   "bytes": 1337116883,
+   "path": "runs/economic-parameters-tactical-heldout-v1.json",
+   "reason": "config or over size cap"
+  },
+  {
+   "bytes": 232737083,
+   "path": "runs/learned-regression-holdout-v1.json",
+   "reason": "config or over size cap"
+  }
+ ]
+}

@@ -31,7 +31,7 @@ def main():
     source = source_files()
     started = time.perf_counter()
     try:
-        for step in range(15000):
+        for _step in range(15000):
             if game.winner is not None or game.turn >= 300:
                 break
             seat = game.current
