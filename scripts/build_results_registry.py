@@ -22,7 +22,7 @@ import sys
 
 
 def receipt_row(path, data):
-    config = data.get('config') or {}
+    config = data.get('config') if isinstance(data.get('config'), dict) else {}
     summary = data.get('summary')
     row = {'name': path.stem, 'path': str(path), 'bytes': path.stat().st_size,
            'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),

@@ -1160,6 +1160,24 @@
    "stage": null
   },
   {
+   "bytes": 46341,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "loss-attribution-offer-dev-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/loss-attribution-offer-dev-v1.json",
+   "process_cap": null,
+   "sha256": "8f2bedc5e71633e127026bb1239fb8df0d95062641d9030041b1c0336cb64a86",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
    "bytes": 46280,
    "candidate": null,
    "checkpoint_sha256": null,
@@ -2947,6 +2965,26 @@
    "process_cap": null,
    "sha256": "b9ef2d24a363245bbca3c17aedd726313093ab98e03756f36b6dac0e82e1191c",
    "source_hash": "ac8892577c80b1bf",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 366869,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "swing-replay-tactical-v1",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/swing-replay-tactical-v1.json",
+   "process_cap": null,
+   "sha256": "371fa505ee6dc09b2788bbdb949129ad306d6236424f30f4df0ed0f69afa742d",
+   "source_hash": null,
    "source_revision": null,
    "stage": null
   },

@@ -68,6 +68,7 @@ panel design could detect at 80% power (present only for receipts written after 
 | learned-validation-v1 |  |  |  |  |  |  |  |  |  |  |
 | learning-pilot-v1 |  |  |  |  |  |  |  |  |  |  |
 | loss-attribution-external-heldout-v1 |  |  |  |  |  |  |  |  |  |  |
+| loss-attribution-offer-dev-v1 |  |  |  |  |  |  |  |  |  |  |
 | loss-attribution-tactical-heldout-v1 |  |  |  |  |  |  |  |  |  |  |
 | match-capacity-v10 |  |  |  | summary |  |  |  |  |  |  |
 | match-capacity-v11 |  |  |  | summary |  |  |  |  |  |  |
@@ -164,6 +165,7 @@ panel design could detect at 80% power (present only for receipts written after 
 | solver-onehot-dev-v1 |  |  |  | summary |  |  |  |  |  |  |
 | solver-tactics-dev-v1 |  |  |  | summary |  |  |  |  |  |  |
 | strength-cost-v1 |  |  |  |  |  |  |  |  |  |  |
+| swing-replay-tactical-v1 |  |  |  | summary |  |  |  |  |  |  |
 | tactical-dev-v1 | dev | tactical |  | heuristic | 128 | +0.102 | -0.331 |  |  | True |
 | tactical-heldout-v1 | heldout | tactical |  | heuristic | 620 | +0.118 | +0.085 |  |  | True |
 | tactical-planner-opening-tactical-dev-v1 | dev | tactical_planner_opening | tactical | tactical | 64 | -0.062 | -0.742 | 0 |  | False |
