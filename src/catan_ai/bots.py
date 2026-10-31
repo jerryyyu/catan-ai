@@ -179,6 +179,9 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_robber':
         from .planner import ProductionRobberPlanner
         return ProductionRobberPlanner(rng)
+    if name == 'planner_offer':
+        from .planner import OfferPlanner
+        return OfferPlanner(rng)
     if name == 'planner_dev_sequence':
         from .planner import DevelopmentSequencePlanner
         return DevelopmentSequencePlanner(rng)
