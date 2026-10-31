@@ -2,6 +2,27 @@
 
 ## Research: competitive four-player Catan AI
 
+### Powered rescreen: opening search, FAIL but now measured (2026-10-31)
+
+`opening-search-powered-dev.json` reran the unchanged `planner_opening` against
+the unchanged `planner_robber` on 512 fresh boards per panel (seeds 1600000+
+block 1602000 to 1603511), all seats, cap 4, 8,192 games, zero truncations
+(`runs/opening-search-powered-dev-v1.json`).
+
+| Panel | Pairs | Paired lift | Cluster SD | MDE at 80% | Bar | Verdict |
+|---|---:|---:|---:|---:|---:|---|
+| tactical | 2048 | +.0493 | .304 | .038 | +.05 | fail |
+| mixed | 2048 | +.0298 | .319 | .040 | +.05 | fail |
+
+The bar stands and the candidate stays parked. What changed is the knowledge:
+the 8-cluster screen had reported 0 pp and -9.4 pp with a minimum detectable
+effect near 11 pp; the powered screen puts the true effect of this bounded
+opening search in the +3 to +5 pp range, positive but below the bar, with a
+design that could see 4 pp. Candidate worst step 0.991 s against the 2 s gate.
+Opening search is therefore a small real gain, not a null, and a candidate
+for combination with lanes that act on the whole game rather than a lane to
+deepen on its own.
+
 ### Frozen economic-parameters confirmatory family: sealed, FAIL (2026-10-31)
 
 The detached supervisor finished both comparisons and the reader wrote

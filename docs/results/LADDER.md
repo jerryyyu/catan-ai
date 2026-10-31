@@ -58,6 +58,10 @@ panel design could detect at 80% power (present only for receipts written after 
 | learned-dev-v1 | dev | learned | tactical | builders | 8 | -0.250 | -1 |  |  | False |
 | learned-dev-v1 | dev | learned | tactical | expanders | 8 | -0.750 | -1 |  |  | False |
 | learned-dev-v1 | dev | learned | tactical | mixed | 8 | -0.125 | -1 |  |  | False |
+| learned-regression-holdout-v1 | regression_audit | learned | tactical | tactical | 512 | -0.250 | -0.300 |  |  | False |
+| learned-regression-holdout-v1 | regression_audit | learned | tactical | builders | 512 | -0.250 | -0.300 |  |  | False |
+| learned-regression-holdout-v1 | regression_audit | learned | tactical | expanders | 512 | -0.490 | -0.547 |  |  | False |
+| learned-regression-holdout-v1 | regression_audit | learned | tactical | mixed | 512 |  |  |  |  | False |
 | learned-test-v1 |  |  |  |  |  |  |  |  |  |  |
 | learned-validation-v1 |  |  |  |  |  |  |  |  |  |  |
 | learning-pilot-v1 |  |  |  |  |  |  |  |  |  |  |
@@ -88,6 +92,8 @@ panel design could detect at 80% power (present only for receipts written after 
 | opening-purchase-dev-v1 | dev | planner_purchase_opening | planner_robber | mixed | 32 | +0.031 | -0.929 | 0 |  | False |
 | opening-search-dev-v1 | dev | planner_opening | planner_robber | tactical | 32 | +0.000 | -0.960 | 0 |  | False |
 | opening-search-dev-v1 | dev | planner_opening | planner_robber | mixed | 32 | -0.094 | -1 | 0 |  | False |
+| opening-search-powered-dev-v1 | dev | planner_opening | planner_robber | tactical | 2048 | +0.049 | -0.071 | 0 | +0.038 | False |
+| opening-search-powered-dev-v1 | dev | planner_opening | planner_robber | mixed | 2048 | +0.030 | -0.090 | 0 | +0.039 | False |
 | opponent-suite-dev-v1 | dev | heuristic | tactical | tactical | 32 | -0.156 | -1 |  |  | False |
 | opponent-suite-dev-v1 | dev | heuristic | tactical | builders | 32 |  |  |  |  | False |
 | opponent-suite-dev-v1 | dev | heuristic | tactical | expanders | 32 | -0.062 | -1 |  |  | False |

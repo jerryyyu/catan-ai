@@ -996,6 +996,57 @@
    "stage": "dev"
   },
   {
+   "bytes": 232737083,
+   "candidate": "learned",
+   "checkpoint_sha256": "1b724b8e718cb8a3a78d9320751e6da29b95d1fdeb5082de136a5b24ca17fa45",
+   "control": "tactical",
+   "games": 4096,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "learned-regression-holdout-v1",
+   "panels": {
+    "builders": {
+     "match_truncations": 0,
+     "p95_seconds": 0.00011654198169708252,
+     "paired_seed_lcb": -0.2995284708768588,
+     "paired_win_lift": -0.25,
+     "pairs": 512,
+     "pass": false
+    },
+    "expanders": {
+     "match_truncations": 0,
+     "p95_seconds": 0.00010220706462860107,
+     "paired_seed_lcb": -0.5466549930830162,
+     "paired_win_lift": -0.490234375,
+     "pairs": 512,
+     "pass": false
+    },
+    "mixed": {
+     "match_truncations": 1,
+     "p95_seconds": 0.00011337362229824066,
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pairs": 512,
+     "pass": false
+    },
+    "tactical": {
+     "match_truncations": 0,
+     "p95_seconds": 0.00011320970952510834,
+     "paired_seed_lcb": -0.2995284708768588,
+     "paired_win_lift": -0.25,
+     "pairs": 512,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/learned-regression-holdout-v1.json",
+   "process_cap": 1,
+   "sha256": "20eac21a37c4c60caabedabd60d2e4a4b65eb901fa197ae51895e221b2a39b79",
+   "source_hash": "8c7bee344e67040d",
+   "source_revision": null,
+   "stage": "regression_audit"
+  },
+  {
    "bytes": 1874,
    "candidate": null,
    "checkpoint_sha256": null,
@@ -1559,6 +1610,47 @@
    "process_cap": 1,
    "sha256": "d63f99eb21f12a3d25ac4ddc5795c840ad3a9dfd5b5ffb82fd9198ac2157735c",
    "source_hash": "e8c65335d3a164d0",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 404998671,
+   "candidate": "planner_opening",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 8192,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "opening-search-powered-dev-v1",
+   "panels": {
+    "mixed": {
+     "cluster_sd": 0.3190203399152836,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "minimum_detectable_effect_80": 0.03949910273294716,
+     "p95_seconds": 0.019997000694274902,
+     "paired_seed_lcb": -0.09025519266499009,
+     "paired_win_lift": 0.02978515625,
+     "pairs": 2048,
+     "pass": false
+    },
+    "tactical": {
+     "cluster_sd": 0.30440214439468877,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "minimum_detectable_effect_80": 0.037689169213374035,
+     "p95_seconds": 0.021169457584619522,
+     "paired_seed_lcb": -0.07072394266499009,
+     "paired_win_lift": 0.04931640625,
+     "pairs": 2048,
+     "pass": false
+    }
+   },
+   "pass": false,
+   "path": "runs/opening-search-powered-dev-v1.json",
+   "process_cap": 4,
+   "sha256": "c2c9b3ef7a04651cd8f9d6d3fec826a8cbb406370403b97b1d562060ce67322d",
+   "source_hash": "4a64b697769ff475",
    "source_revision": null,
    "stage": "dev"
   },
@@ -2878,11 +2970,6 @@
   {
    "bytes": 1337116883,
    "path": "runs/economic-parameters-tactical-heldout-v1.json",
-   "reason": "config or over size cap"
-  },
-  {
-   "bytes": 232737083,
-   "path": "runs/learned-regression-holdout-v1.json",
    "reason": "config or over size cap"
   }
  ]
