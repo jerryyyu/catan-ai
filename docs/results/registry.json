@@ -1563,6 +1563,47 @@
    "stage": null
   },
   {
+   "bytes": 412106242,
+   "candidate": "planner_offer",
+   "checkpoint_sha256": null,
+   "control": "planner_robber",
+   "games": 8192,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "offer-powered-dev-v1",
+   "panels": {
+    "mixed": {
+     "cluster_sd": 0.256000974653296,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "minimum_detectable_effect_80": 0.03169643916826855,
+     "p95_seconds": 0.009686291217803955,
+     "paired_seed_lcb": -0.07707159891499009,
+     "paired_win_lift": 0.04296875,
+     "pairs": 2048,
+     "pass": false
+    },
+    "tactical": {
+     "cluster_sd": 0.2969259920999607,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "minimum_detectable_effect_80": 0.036763518806208643,
+     "p95_seconds": 0.010592956095933914,
+     "paired_seed_lcb": 0.03572136983500991,
+     "paired_win_lift": 0.15576171875,
+     "pairs": 2048,
+     "pass": true
+    }
+   },
+   "pass": false,
+   "path": "runs/offer-powered-dev-v1.json",
+   "process_cap": 4,
+   "sha256": "2e587c6d85cbdf39caab923f61691e015d32104f41cdc987ebcb0731be76b80d",
+   "source_hash": "4a64b697769ff475",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
    "bytes": 3240,
    "candidate": null,
    "checkpoint_sha256": null,

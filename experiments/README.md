@@ -2,6 +2,31 @@
 
 ## Research: competitive four-player Catan AI
 
+### Row 6 first test: one priced offer per turn, FAIL on the family rule, PASS tactical (2026-10-31)
+
+`offer-powered-dev.json`: `planner_offer` (the `planner_robber` turn search plus
+one economically-priced one-for-one offer to the trailing opponent when the
+search would otherwise end the turn) against unchanged `planner_robber`. 512
+fresh boards per panel (1604000 to 1605511), all seats, cap 4, 8,192 games,
+zero truncations, 15 minutes (`runs/offer-powered-dev-v1.json`).
+
+| Panel | Pairs | Paired lift | Hoeffding LCB | Cluster SD | MDE at 80% | Bar | Verdict |
+|---|---:|---:|---:|---:|---:|---:|---|
+| tactical | 2048 | +.1558 | +.0357 | .297 | .037 | +.05 | pass |
+| mixed | 2048 | +.0430 | -.0771 | .256 | .032 | +.05 | fail |
+
+The predeclared bar required both panels, so the screen **fails** and this
+exact candidate is parked; nothing is retuned on these boards. The tactical
+panel lift of +15.6 pp is the largest single-change DEV effect recorded apart
+from the fitted economic weights, and it was reached with a 0.048 s worst step.
+The mixed panel (builder, expander, tactical) shows +4.3 pp with an MDE of
+3.2 pp: a smaller real gain. The next row should ask why the same offers help
+less at a mixed table before any pricing model is added: candidate hypotheses
+are that heuristic-style partners accept more of the offers that also help
+them, and that the trailing-recipient rule picks a different partner there.
+That diagnosis belongs to loss attribution pass 2 on this receipt's swing
+boards, with its own predeclared config.
+
 ### Powered rescreen: finish search, FAIL, precisely small (2026-10-31)
 
 `finish-powered-dev.json` reran the unchanged `planner_finish` against the

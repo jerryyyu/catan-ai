@@ -89,6 +89,8 @@ panel design could detect at 80% power (present only for receipts written after 
 | native-v1-measured-2-python |  |  |  |  |  |  |  |  |  |  |
 | native-v1-profile |  |  |  |  |  |  |  |  |  |  |
 | native-v1-python-1 |  |  |  |  |  |  |  |  |  |  |
+| offer-powered-dev-v1 | dev | planner_offer | planner_robber | tactical | 2048 | +0.156 | +0.036 | 0 | +0.037 | True |
+| offer-powered-dev-v1 | dev | planner_offer | planner_robber | mixed | 2048 | +0.043 | -0.077 | 0 | +0.032 | False |
 | opening-components-v1-summary |  |  |  |  |  |  |  |  |  |  |
 | opening-purchase-dev-v1 | dev | planner_purchase_opening | planner_robber | tactical | 32 | -0.031 | -0.992 | 0 |  | False |
 | opening-purchase-dev-v1 | dev | planner_purchase_opening | planner_robber | mixed | 32 | +0.031 | -0.929 | 0 |  | False |
