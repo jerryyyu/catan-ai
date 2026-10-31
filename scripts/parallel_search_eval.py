@@ -11,6 +11,7 @@ import subprocess
 import sys
 
 from catan_ai.experiments import source_files
+from catan_ai.power import check_design
 from catan_ai.search_eval import model_identity, summarize
 
 
@@ -22,6 +23,9 @@ def shard_config(config, index):
     if config['stage'] == 'heldout' and not config.get('requires_dev_pass'):
         raise ValueError('held-out shards require DEV admission')
     result = deepcopy(config)
+    # Power is a property of the whole design, checked once by the parent; a
+    # one-board shard would always look underpowered on its own.
+    result.pop('power', None)
     result['seeds_per_panel'] = 1
     for panel in result['panels']:
         panel['seed'] += index
@@ -69,6 +73,8 @@ def main():
     parser.add_argument('--dev-result', type=Path)
     parser.add_argument('--calibration', type=Path)
     args = parser.parse_args()
+    config = json.loads(args.config.read_text())
+    check_design(config)
     if platform.node() != args.host:
         raise ValueError('declared host mismatch')
     config = json.loads(args.config.read_text())

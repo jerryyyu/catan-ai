@@ -1,5 +1,5 @@
 {
-  "status": "frozen held-out family running under detached resumable supervision after DEV and resource rehearsal PASS; Tactical default; no human-transfer results",
+  "status": "frozen held-out family sealed 2026-10-31: FAIL (Tactical-control panels pass +.110/+.227 with LCB +.096/+.208; external-control panels withheld on 28 worker faults); Tactical remains default; no human-transfer results",
   "format": {
     "players": 4,
     "victory_points": 10,
@@ -39,7 +39,7 @@
     ],
     "verification_scope": "pinned adapted comparator, tested rule regressions and privacy boundaries, fresh complete four-player games; not a proof of every possible upstream state or Colonist compatibility",
     "remaining_verification": [
-      "held-out reliability and strength gates on the frozen challenger"
+      "fault cause (28 faults in 12,800 held-out games, 0.2%) or a predeclared fault budget before any external-control strength claim"
     ],
     "requirements": [
       "rules and action mapping parity",
@@ -69,7 +69,7 @@
     "note": "Each changed candidate gets a separate source-pinned config before its first run. DEV passing is screening, not a strength claim."
   },
   "heldout": {
-    "status": "running; Tactical comparison first, external comparison queued sequentially; no interim tuning",
+    "status": "sealed 2026-10-31; readout runs/economic-parameters-confirmatory-supervisor-v1/readout.json; family FAIL on external faults, Tactical-control panels pass",
     "minimum_simultaneous_lower_bound_each_panel": 0.0,
     "target_effect": 0.05,
     "familywise_alpha": 0.05,
@@ -78,7 +78,8 @@
     "maximum_truncated_games": 0,
     "plan": "experiments/economic-parameters-confirmatory-family-v1.json",
     "supervisor": "runs/economic-parameters-confirmatory-supervisor-v1/launch.json",
-    "resource_rehearsal": "runs/confirmatory-resource-rehearsal-v1; repeated DEV records only; aggregation 2.267 GB peak RSS, reader 5.692 GB, no swaps"
+    "resource_rehearsal": "runs/confirmatory-resource-rehearsal-v1; repeated DEV records only; aggregation 2.267 GB peak RSS, reader 5.692 GB, no swaps",
+    "readout": "runs/economic-parameters-confirmatory-supervisor-v1/readout.json"
   },
   "human_transfer": {
     "target_platform": "Colonist",
@@ -127,6 +128,7 @@
     "training_games": 1408,
     "tactical_dev": "runs/economic-parameters-tactical-dev-v1.json",
     "external_dev": "runs/economic-parameters-external-dev-v1.json; PASS +17.1875pp in both panels",
-    "capacity": "runs/economic-parameters-capacity-v1/summary.json; caps 1/2/4 PASS; cap4 speedup 2.92271"
+    "capacity": "runs/economic-parameters-capacity-v1/summary.json; caps 1/2/4 PASS; cap4 speedup 2.92271",
+    "heldout": "runs/economic-parameters-tactical-heldout-v1.json PASS both panels; runs/economic-parameters-external-heldout-v1.json withheld on faults; family FAIL"
   }
 }

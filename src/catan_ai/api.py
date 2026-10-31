@@ -197,7 +197,7 @@ def _mount_web() -> None:
         app.mount("/", StaticFiles(directory=root, html=True), name="web")
 
 
-from .rooms import router as room_router
+from .rooms import router as room_router  # noqa: E402  (router needs `app` defined above)
 
 app.include_router(room_router)
 _mount_web()

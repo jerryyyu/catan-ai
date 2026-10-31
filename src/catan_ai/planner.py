@@ -161,3 +161,59 @@ class ProductionRobberPlanner(DevelopmentPlanner):
 class DevelopmentSequencePlanner(ProductionRobberPlanner):
     buy_after_root = True
     needs_history = True
+
+
+class OfferPlanner(ProductionRobberPlanner):
+    """ProductionRobberPlanner plus one economically-priced player offer per turn.
+
+    Board row 6, first test. When the turn search finds nothing better than
+    ending the turn, try every one-for-one exchange the hand allows, value the
+    hypothetical accepted state with the same economic leaf, and send the best
+    offer if it improves on the current position by more than ``offer_margin``.
+    The recipient is the opponent with the fewest public points, so an accepted
+    trade helps the trailing player rather than the leader. Acceptance is the
+    partner's choice; a rejected offer costs nothing but the one offer per turn.
+    Only the public projection and the planner's own hand are used.
+    """
+
+    offer_margin = .25
+
+    def choose(self, view, seat):
+        action = super().choose(view, seat)
+        if (action.get('type') != 'end_turn' or view.phase != 'actions'
+                or self.last_offer_turn == view.turn):
+            return action
+        offer = self._best_offer(view, seat)
+        if offer is None:
+            return action
+        self.last_offer_turn = view.turn
+        return offer
+
+    def _best_offer(self, view, seat):
+        root = public_projection(view)
+        hand = root.players[seat].resources
+        base = self._value(root, seat)
+        best, best_gain = None, self.offer_margin
+        for give in Resource:
+            if hand[give] < 1:
+                continue
+            for receive in Resource:
+                if receive == give:
+                    continue
+                child = deepcopy(root, {id(root.board): root.board})
+                child.players[seat].resources[give] -= 1
+                child.players[seat].resources[receive] += 1
+                gain = self._value(child, seat) - base
+                if gain > best_gain:
+                    best, best_gain = (give, receive), gain
+        if best is None:
+            return None
+        others = [p for p in view.players if p.seat != seat] if hasattr(view.players[0], 'seat') else None
+        if others is None:
+            points = [(view.players[s].public_points, s) for s in range(4) if s != seat]
+        else:
+            points = [(p.public_points, p.seat) for p in others]
+        lowest = min(points)[0]
+        recipient = self.rng.choice([s for score, s in points if score == lowest])
+        return {'type': 'offer_trade', 'recipient': recipient,
+                'give': {best[0].value: 1}, 'receive': {best[1].value: 1}}
