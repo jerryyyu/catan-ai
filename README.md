@@ -7,6 +7,9 @@ See the [research notes](experiments/README.md#research-competitive-four-player-
 for external Catan AI approaches, primary sources, evidence limits, and how they
 inform the competitive-agent plan.
 
+Current state and claim limits: [docs/CONTRACT.md](docs/CONTRACT.md). Plan:
+[docs/PLAN.md](docs/PLAN.md). Receipt index: [docs/results/LADDER.md](docs/results/LADDER.md).
+
 A small, reproducible research stack for a Catan-like four-player game:
 
 - one authoritative, UI-free Python rules engine;
@@ -262,7 +265,7 @@ heuristic on our engine; they do not establish competitive Colonist strength.
 Full receipts, statistical assumptions and source lineage are recorded in
 `experiments/README.md`. Post-promotion validation passes 101 Python tests and 13
 browser tests. No external deployment was performed.
-# Optional Cython engine
+## Optional Cython engine
 
 The Python rules and road-scoring sources also compile to native extensions:
 

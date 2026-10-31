@@ -73,6 +73,8 @@ print(digest.hexdigest())
 
 def test_native_road_scoring_matches_reference():
     if not (ROOT / 'src/catan_ai/_native_manifest.json').exists():
+        if os.environ.get('CATAN_ENGINE') == 'cython':
+            pytest.fail('compiled test job requires native build')
         pytest.skip('optional native build absent')
     result = run('''
 import random

@@ -13,3 +13,4 @@ build/
 src/catan_ai/*.so
 src/catan_ai/*.pyd
 src/catan_ai/_native_manifest.json
+.claude/settings.local.json

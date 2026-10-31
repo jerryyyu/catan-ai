@@ -2,6 +2,245 @@
 
 ## Research: competitive four-player Catan AI
 
+### Loss attribution, pass 2 v2: seeded sample, fail-closed replay (2026-10-31)
+
+Rerun after Codex's HOLD on PR #2 with the corrected tools. Pass 1 v2
+(`runs/loss-attribution-tactical-heldout-v2.json`, sample seed 20261031) bound
+the sealed tactical-control receipt by sha256, config, source and checkpoint,
+excluded no rows (0 truncated, 0 faulted), and drew 100 board seeds per direction
+uniformly from all eligible swing rows: 946 rows where Tactical won and the
+fitted planner lost, 1,649 the reverse. Pass 2 v2
+(`runs/swing-replay-tactical-v2.json`) replayed both arms under the frozen
+snapshot after its identity check passed: 400 games, 474 s, zero mismatches on
+winner, turns, final points and truncation in either arm. Means are weighted by
+eligible seats per board; points at turn 40/60 are the value at that turn.
+
+| Metric (candidate seat), candidate arm / control arm | Control won, candidate lost | Candidate won, control lost |
+|---|---|---|
+| final points | 6.4 / 10.1 | 10.1 / 6.4 |
+| points at turn 40 | 3.5 / 4.0 | 4.1 / 3.4 |
+| points at turn 60 | 4.3 / 5.3 | 5.9 / 4.1 |
+| production received | 67 / 85 | 83 / 68 |
+| cards discarded | 13.3 / 6.2 | 12.3 / 4.9 |
+| development cards bought | 2.2 / 5.8 | 2.7 / 4.4 |
+| largest army at end | .02 / .43 | .11 / .18 |
+| longest road at end | .18 / .53 | .60 / .25 |
+| player offers made | 0 / 22.0 | 0 / 22.9 |
+| bank trades | 4.5 / 11.2 | 6.7 / 9.5 |
+| first city turn | 55.8 / 46.4 | 44.6 / 58.6 |
+| never built a city | .27 / .07 | .05 / .34 |
+
+Readings, descriptive only; these say what differs on swing boards, not what
+caused the outcome:
+
+- The fitted planner discards two to two and a half times as many cards as
+  Tactical on the same boards in both directions, including boards it won.
+- It buys fewer development cards and rarely holds Largest Army; Longest Road
+  follows whoever won the board.
+- It never offers; Tactical makes about 22 offers a game.
+- Production and first-city timing move with the winner in both directions.
+
+The v1 directions all survive the corrected sample and checks. Rows 9
+(discard-aware hand value) and 10 (award races) on board #1 remain lane
+proposals that need a powered config and a bar before any run.
+
+### Loss attribution, pass 2 v1: prefix case study, superseded (2026-10-31)
+
+**Superseded by pass 2 v2 above.** Codex's review of PR #2 found four defects in
+this version, and the corrected tools reran it as v2: the 100 boards per
+direction were the first rows in receipt file order, not a sample; the replay
+check compared only the two win flags, so a corrupted terminal record could
+pass; "points at turn 40/60" was the peak up to that turn, not the value at it;
+and means were unweighted. The table below stays as a record of what v1 printed;
+use v2 for any reading.
+
+`scripts/replay_swing_boards.py` replayed 100 boards per direction from the
+sealed tactical-control panel (`planner_parameter` vs `tactical`), both arms,
+with the evaluator's exact construction under the frozen snapshot: 400 games,
+zero win-flag mismatches (`runs/swing-replay-tactical-v1.json`). Means are for
+the candidate's seat; "candidate arm" is `planner_parameter` in that seat,
+"control arm" is Tactical in the same seat on the same board.
+
+| Metric (candidate seat) | Boards control won, candidate lost | Boards candidate won, control lost |
+|---|---|---|
+| final points, candidate arm / control arm | 6.5 / 10.1 | 10.1 / 6.3 |
+| production received | 65 / 85 | 85 / 68 |
+| cards discarded | 11.6 / 5.3 | 12.8 / 5.5 |
+| development cards bought | 1.8 / 5.6 | 2.6 / 4.5 |
+| largest army at end | .05 / .44 | .06 / .19 |
+| longest road at end | .20 / .52 | .61 / .18 |
+| player offers made | 0 / 22.4 | 0 / 22.5 |
+| bank trades | 4.8 / 11.3 | 6.9 / 9.1 |
+| first city turn | 46.7 / 48.1 | 48.9 / 57.3 |
+| never built a city | .30 / .05 | .02 / .35 |
+
+v1 readings, kept for the record (descriptive, file-order prefix, superseded):
+
+- **Discards.** The fitted planner discards about twice as many cards as
+  Tactical on the same boards in both directions. Its leaf charges .5 per card
+  over seven; the hand term rewards holding up to three of each resource. A
+  discard-aware hand valuation is a concrete, cheap candidate; whether hoarding
+  causes the losses is untested.
+- **Awards.** On boards the planner lost, Tactical held Largest Army 44% and
+  Longest Road 52% of the time from the same seat; the planner held them 5% and
+  20%. It buys a third as many development cards. Two awards are four points,
+  consistent with, not proof of, losses by three or more. Valuing knights toward Largest Army
+  and roads toward Longest Road as award races, not just as development cards
+  and road count, is the second candidate.
+- **Production.** Production received is the symmetric driver: 65 vs 85 when
+  losing, 85 vs 68 when winning. Placement and expansion already carry most of
+  the fitted weights; the robber lands on the planner's tiles slightly more
+  often in both directions, consistent with it being the apparent leader.
+- **Trading** is zero offers, as already known; row 6 measured what one offer
+  per turn is worth.
+
+Each of these is a lane proposal with a powered config and a bar before it
+runs, not a result.
+
+### Row 6 first test: one priced offer per turn, FAIL on the family rule, PASS tactical (2026-10-31)
+
+`offer-powered-dev.json`: `planner_offer` (the `planner_robber` turn search plus
+one economically-priced one-for-one offer to the trailing opponent when the
+search would otherwise end the turn) against unchanged `planner_robber`. 512
+fresh boards per panel (1604000 to 1605511), all seats, cap 4, 8,192 games,
+zero truncations, 15 minutes (`runs/offer-powered-dev-v1.json`).
+
+| Panel | Pairs | Paired lift | Hoeffding LCB | Cluster SD | Zero-null MDE 80% | Approx. 95% interval | Bar | Verdict |
+|---|---:|---:|---:|---:|---:|---|---:|---|
+| tactical | 2048 | +.1558 | +.0357 | .297 | .037 | +.130 to +.182 | +.05 | pass |
+| mixed | 2048 | +.0430 | -.0771 | .256 | .032 | +.021 to +.065 | +.05 | fail |
+
+Correction after review: the zero-null MDE is the smallest lift a test against
+zero detects, not the power to clear a +5 pp bar. This config's `power` block
+used that zero-null formula, which the evaluator now refuses. The approximate
+intervals are unadjusted paired-normal intervals over board clusters,
+descriptive only. The mixed interval contains +.05, so this screen does not
+show the mixed effect is below the bar; it failed the bar as declared.
+
+The predeclared bar required both panels, so the screen **fails** and this
+exact candidate is parked; nothing is retuned on these boards. The tactical
+panel lift of +15.6 pp is the largest single-change DEV effect recorded apart
+from the fitted economic weights, and it was reached with a 0.048 s worst step.
+The mixed panel (builder, expander, tactical) shows +4.3 pp, smaller than the
+tactical panel. The next row should ask why the same offers help less at a
+mixed table before any pricing model is added. Leading hypothesis, from the
+code rather than a measurement: Builder and Expander (`styles.StyleBot`) reject
+every offer, so at the mixed table two of three possible partners can never
+accept, while Tactical accepts any offer it can pay that gives at least as many
+cards as it asks. A second hypothesis is that the trailing-recipient rule picks
+a different partner there.
+That diagnosis belongs to loss attribution pass 2 on this receipt's swing
+boards, with its own predeclared config.
+
+### Powered rescreen: finish search, FAIL, precisely small (2026-10-31)
+
+`finish-powered-dev.json` reran the unchanged `planner_finish` against the
+unchanged `planner_robber`: 512 fresh boards per panel (1600000 to 1601511),
+all seats, cap 4, 8,192 games, zero truncations
+(`runs/finish-powered-dev-v2.json`; v1 aborted at shard 39 on a source edit and
+is preserved as an aborted run, not a result).
+
+| Panel | Pairs | Paired lift | Cluster SD | Zero-null MDE 80% | Approx. 95% interval | Bar | Verdict |
+|---|---:|---:|---:|---:|---|---:|---|
+| tactical | 2048 | +.0254 | .080 | .010 | +.018 to +.032 | +.05 | fail |
+| mixed | 2048 | +.0195 | .071 | .009 | +.013 to +.026 | +.05 | fail |
+
+The cluster SD is a quarter of the opening lane's because the two arms play
+identical games until someone nears ten points. Both approximate intervals
+(unadjusted paired normal over board clusters, descriptive) lie wholly below
++.05: the finish search is worth roughly +1 to +3 pp on these lineups. Candidate worst turn 1.543 s
+against the 10 s gate. The lane stays parked; the component is cheap and
+combinable.
+
+### Powered rescreen: opening search, FAIL but now measured (2026-10-31)
+
+`opening-search-powered-dev.json` reran the unchanged `planner_opening` against
+the unchanged `planner_robber` on 512 fresh boards per panel (seeds 1600000+
+block 1602000 to 1603511), all seats, cap 4, 8,192 games, zero truncations
+(`runs/opening-search-powered-dev-v1.json`).
+
+| Panel | Pairs | Paired lift | Cluster SD | Zero-null MDE 80% | Approx. 95% interval | Bar | Verdict |
+|---|---:|---:|---:|---:|---|---:|---|
+| tactical | 2048 | +.0493 | .304 | .038 | +.023 to +.076 | +.05 | fail |
+| mixed | 2048 | +.0298 | .319 | .040 | +.002 to +.057 | +.05 | fail |
+
+The bar stands and the candidate stays parked. The point estimates are +4.9 and
++3.0 pp. Both approximate intervals (unadjusted paired normal, descriptive)
+contain +.05, so this screen does not show the true effect is below the bar,
+and with a Bonferroni adjustment the mixed interval reaches zero. Correction
+after review: an earlier version of this entry said the true effect lies in
++3 to +5 pp; the data do not support that. The 8-cluster screen had reported
+0 and -9.4 pp. Candidate worst step 0.991 s against the 2 s gate.
+
+### Frozen economic-parameters confirmatory family: sealed, FAIL (2026-10-31)
+
+The detached supervisor finished both comparisons and the reader wrote
+`runs/economic-parameters-confirmatory-supervisor-v1/readout.json` (plan sha
+e6a01ab0…, reader sha 0a2fe4b5…). 51,200 games, zero truncations.
+
+| Control | Panel | Paired lift | Simultaneous LCB (alpha .0125) | External faults | Panel verdict |
+|---|---|---:|---:|---:|---|
+| tactical | tactical | +.1098 | +.0958 | 0 | pass |
+| tactical | mixed | +.2266 | +.2085 | 0 | pass |
+| external | tactical | withheld | withheld | 5 | fail |
+| external | mixed | withheld | withheld | 23 | fail |
+
+Family verdict: **FAIL**, as predeclared: every panel had to pass. The two
+Tactical-control panels pass with lower bounds far above the +.05 target, so
+`planner_parameter` is stronger than the served Tactical default on this engine
+over 1,600 fresh boards per lineup. The two external-control panels fail on the
+zero-fault rule: 28 external-worker faults in 12,800 games (0.2%) withhold the
+lift estimate. Descriptively only, the candidate's raw win rate on those panels
+was .376 vs .305 and .568 vs .411 over 6,400 games each. Candidate decision p95
+was under 10 ms; the external baseline's worst step was 1.768 s against the 2 s
+gate and its worst turn 3.452 s against 10 s.
+
+Nothing is retuned on these boards. The external result is about comparator
+reliability, not strength; fixing the fault cause or predeclaring a fault budget
+precedes any external-control claim. Promotion of `planner_parameter` to the
+served default is a separate decision; the plan's criterion was not met.
+Loss attribution pass 1 on the sealed external panel
+(`runs/loss-attribution-external-heldout-v1.json`) matches the tactical panel:
+69% / 60% of candidate losses by three or more points, seat flat within 9 pp.
+
+### Loss attribution, pass 1 (2026-10-31)
+
+`scripts/loss_attribution.py` streams a receipt and attributes candidate losses
+from terminal fields only (winner, turns, final points). Run on the sealed
+tactical-control panel of the frozen economic-parameters family, 6,400 games per
+arm per panel (`runs/loss-attribution-tactical-heldout-v1.json`). This reads a
+completed panel of a running family for diagnosis; no tuning or stopping follows.
+
+| Panel | Cand. win | Ctrl win | Losses by 1 / 2 / 3+ pts | Second-place share | Turns win / loss (cand.) | Turns (ctrl) |
+|---|---:|---:|---|---:|---|---|
+| tactical | .360 | .250 | .14 / .17 / .69 | .48 | 89.8 / 91.9 | 95.8 / 95.8 |
+| mixed | .578 | .351 | .19 / .21 / .59 | .67 | 94.8 / 100.1 | 105.8 / 109.8 |
+
+Readings, descriptive only:
+
+- Most candidate losses end three or more points behind; 14% to 19% end one
+  point behind. These are terminal margins, descriptive only. Earlier decisions
+  and award swings change both who wins and the final margin, so they do not
+  bound what a finish search could recover. (An earlier version of this entry
+  claimed that bound; it was removed after review.)
+- Win rate by seat is flat within 6 pp for the candidate (.34 to .40 tactical,
+  .56 to .61 mixed); seat is not a loss cause.
+- In the mixed lineup (builder, expander, tactical, inserted around the
+  candidate's seat), the opponent at seat offset 2 wins 41% of candidate losses
+  against 31% and 28% for the others. Which style occupies offset 2 varies with
+  the candidate's seat, so this points at a lineup effect to resolve in pass 2,
+  not at a named style yet.
+- The candidate wins faster than the control (89.8 vs 95.8 turns) and its losses
+  are only slightly longer than its wins. It is not losing long games.
+- v1 listed the first 200 swing rows per direction in receipt file order. That
+  prefix is superseded by the seeded board sample in pass 1 v2
+  (`runs/loss-attribution-tactical-heldout-v2.json`).
+
+Pass 2 replays swing boards deterministically from seed to attribute causes at
+the event level (robber targeting, discards, award swings, trade refusals). It
+waits for the family to finish and will use the powered-screen seeds policy for
+anything it proposes.
+
 ### Opening-placement research (2026-10-30)
 
 Opening-search v1 DEV is now specified in `opening-search-dev.json`: fresh

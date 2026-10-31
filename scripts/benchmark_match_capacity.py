@@ -95,7 +95,7 @@ def main():
         directory = args.output / str(cap)
         directory.mkdir()
 
-        def run(index):
+        def run(index, directory=directory):
             destination = directory / f'{index}.json'
             subprocess.run([sys.executable, str(Path(__file__).resolve()),
                             '--host', args.host, '--output', str(destination),

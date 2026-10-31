@@ -19,7 +19,7 @@ def test_standard_board_topology_and_materials():
 def test_setup_is_snake_order_and_second_settlement_grants_resources():
     game = Game.new(["a", "b", "c", "d"], 3)
     seen = []
-    for placement in range(8):
+    for _placement in range(8):
         seen.append(game.current)
         settlement = game.legal_actions(game.current)[0]
         game.apply(game.current, settlement)
