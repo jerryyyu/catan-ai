@@ -5,7 +5,7 @@ import json
 import math
 from pathlib import Path
 
-from catan_ai.bots import make_policy
+from catan_ai.rooms import replay_bot
 from catan_ai.engine import Game
 from catan_ai.experiments import source_files
 from catan_ai.observation import Observation
@@ -25,7 +25,7 @@ def audit(record):
         if p['consent'] is not True or type(p['completed_matches']) is not int or p['completed_matches'] < 0:
             raise ValueError('invalid consent or experience registration')
     game = Game.new(record['names'], record['seed'])
-    bot = make_policy(record['bot'], record['seed'] * 31 + seat)
+    bot = replay_bot(record)
     times = []
     human_actions = 0
     for row in record['trace']:

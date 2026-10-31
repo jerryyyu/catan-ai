@@ -12,6 +12,7 @@ export default function Room() {
   const [room, setRoom] = useState<RoomState | null>(null);
   const [invitations, setInvitations] = useState<Record<string, string>>({});
   const [botSeat, setBotSeat] = useState(0);
+  const [bot, setBot] = useState('tactical');
   const [name, setName] = useState('');
   const [matches, setMatches] = useState(0);
   const [platform, setPlatform] = useState('');
@@ -54,7 +55,7 @@ export default function Room() {
 
   async function create() {
     await perform(async () => {
-      const data = await request('/api/rooms', {bot_seat: botSeat});
+      const data = await request('/api/rooms', {bot_seat: botSeat, bot});
       setInvitations(Object.fromEntries(Object.entries(data.invitations).map(([seat, value]) =>
         [seat, `${location.origin}/#room=${encodeURIComponent(data.room_id)}&token=${encodeURIComponent(String(value))}`])));
     });
@@ -65,7 +66,8 @@ export default function Room() {
     await perform(async () => update(await request(`/api/rooms/${id}/actions`, {revision: room.revision, action})));
   }
 
-  if (!id) return <main className="landing"><h1>Private match</h1><p>Three people and one Tactical bot. Share one seat invitation with each player, including yourself.</p>
+  if (!id) return <main className="landing"><h1>Private match</h1><p>Three people and one AI bot. Share one seat invitation with each player, including yourself.</p>
+    <label>Bot <select aria-label="Room bot" value={bot} onChange={e => setBot(e.target.value)}><option value="tactical">Tactical (default)</option><option value="planner_parameter">Trained challenger (pilot)</option><option value="heuristic">Heuristic</option></select></label>
     <label>Bot seat <select aria-label="Bot seat" value={botSeat} onChange={e => setBotSeat(Number(e.target.value))}>{[0, 1, 2, 3].map(s => <option key={s} value={s}>Seat {s + 1}</option>)}</select></label>
     <button disabled={busy} onClick={create}>Create private room</button>
     {Object.entries(invitations).map(([seat, link]) => <p key={seat}><a href={link}>Join seat {Number(seat) + 1}</a><input aria-label={`Seat ${Number(seat) + 1} invitation`} readOnly value={link} onFocus={e => e.target.select()}/></p>)}
