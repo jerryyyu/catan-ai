@@ -1,0 +1,24 @@
+{
+  "stage": "dev",
+  "candidate": "heuristic",
+  "control": "tactical",
+  "requires_search": false,
+  "seeds_per_panel": 8,
+  "max_turns": 2000,
+  "panels": [
+    {
+      "name": "builders",
+      "seed": 1210400,
+      "opponents": [
+        "builder",
+        "builder",
+        "builder"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2
+  }
+}

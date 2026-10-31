@@ -1,0 +1,17 @@
+{
+  "name": "mc-dev",
+  "stage": "dev",
+  "seeds_per_panel": 2,
+  "max_turns": 2000,
+  "panels": [
+    {"name": "heuristic", "seed": 950000, "opponents": ["heuristic", "heuristic", "heuristic"]},
+    {"name": "mixed", "seed": 960000, "opponents": ["heuristic", "strategic", "random"]}
+  ],
+  "gates": {
+    "minimum_paired_win_lift": 0.05,
+    "minimum_search_coverage": 0.8,
+    "maximum_p95_decision_seconds": 2.0,
+    "maximum_rollout_truncation_rate": 0.01,
+    "maximum_match_truncations": 0
+  }
+}

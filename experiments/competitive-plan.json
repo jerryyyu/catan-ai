@@ -1,0 +1,132 @@
+{
+  "status": "frozen held-out family running under detached resumable supervision after DEV and resource rehearsal PASS; Tactical default; no human-transfer results",
+  "format": {
+    "players": 4,
+    "victory_points": 10,
+    "friendly_robber": false,
+    "discard_limit": 7
+  },
+  "time_budget": {
+    "decision_wall_seconds": 2.0,
+    "turn_compute_seconds": 10.0,
+    "includes": [
+      "observation",
+      "belief",
+      "adapter",
+      "search",
+      "action_validation"
+    ],
+    "timeout_action": "legal deterministic fallback, counted as budget failure",
+    "promotion_max_budget_failure_rate": 0.001
+  },
+  "external": {
+    "repository": "https://github.com/bcollazo/catanatron",
+    "commit": "ecf931181b9a65bb4116a2153fb78c16f1438e00",
+    "policy": "AlphaBetaPlayer",
+    "depth": 2,
+    "value_fn": "base",
+    "verified": true,
+    "integration_verified": true,
+    "broader_reliability": "v11 passed 207 tests, twelve known full-game regressions, serial/2/4-match capacity, and 256 fresh DEV games with zero faults across 23,988 external decisions (max full step 1.031380s, turn wall 1.785660s). The challenger failed strength: +0.03125 versus external with Tactical opponents, +0.140625 mixed; +0.05 required in both.",
+    "integration_evidence": "runs/external-integration-v1/summary.json: 16 complete seat-rotated games, no fallbacks, decision/turn budget gates pass",
+    "adaptations": [
+      "512 incremental guided particles with explicitly non-posterior constraint-witness recovery",
+      "split robber and victim decisions",
+      "external leaf evaluation for atomic bilateral trade responses",
+      "road endpoint, on-turn victory and Year-of-Plenty compatibility shims",
+      "fixed Python hash seed 0",
+      "parent-enforced wall deadline"
+    ],
+    "verification_scope": "pinned adapted comparator, tested rule regressions and privacy boundaries, fresh complete four-player games; not a proof of every possible upstream state or Colonist compatibility",
+    "remaining_verification": [
+      "held-out reliability and strength gates on the frozen challenger"
+    ],
+    "requirements": [
+      "rules and action mapping parity",
+      "observation-only input",
+      "hard deadline enforcement",
+      "pinned source and dependencies",
+      "complete four-player replay"
+    ]
+  },
+  "dev": {
+    "seed_start": 1410000,
+    "boards_per_panel": 16,
+    "seats": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "panels": [
+      "tactical",
+      "external",
+      "mixed"
+    ],
+    "minimum_win_rate_lift_each_panel": 0.05,
+    "maximum_truncated_games": 0,
+    "maximum_illegal_actions": 0,
+    "note": "Each changed candidate gets a separate source-pinned config before its first run. DEV passing is screening, not a strength claim."
+  },
+  "heldout": {
+    "status": "running; Tactical comparison first, external comparison queued sequentially; no interim tuning",
+    "minimum_simultaneous_lower_bound_each_panel": 0.0,
+    "target_effect": 0.05,
+    "familywise_alpha": 0.05,
+    "minimum_power": 0.8,
+    "cluster": "board seed; rotate all seats",
+    "maximum_truncated_games": 0,
+    "plan": "experiments/economic-parameters-confirmatory-family-v1.json",
+    "supervisor": "runs/economic-parameters-confirmatory-supervisor-v1/launch.json",
+    "resource_rehearsal": "runs/confirmatory-resource-rehearsal-v1; repeated DEV records only; aggregation 2.267 GB peak RSS, reader 5.692 GB, no swaps"
+  },
+  "human_transfer": {
+    "target_platform": "Colonist",
+    "local_web_role": "development, debugging, and Jerry's initial pilot; not the final platform-transfer test",
+    "platform_integration": {
+      "status": "planned; no live integration or platform authorization established",
+      "first_matches": "private four-player rooms with informed participants",
+      "adapter": "player-visible observations into the existing policy interface; actions mapped to the platform with acknowledgments and resynchronization",
+      "verification": [
+        "rules and room settings parity",
+        "no hidden-information access",
+        "trade protocol mapping",
+        "reconnect recovery",
+        "compute and end-to-end latency recorded separately"
+      ],
+      "data": "keep simulator-generated training data separate; Colonist data use requires the platform's written authorization",
+      "terms_source": "https://colonist.io/terms",
+      "terms_checked": "2026-10-30"
+    },
+    "status": "Jerry volunteered as pilot; confirmatory participants still required",
+    "format": "one frozen candidate or control versus three experienced humans; randomized bot identity and seat",
+    "experience": "self-report at least 50 completed base-game matches, record platform and rating when available",
+    "pilot": "Local web supports one-human/three-bot and private three-human/one-bot pilot rooms with per-seat invitations, consent/experience capture, private replay and source-checked restart. Synthetic integration tests only; no verified participant games yet.",
+    "confirmatory": "predeclare sample size and analysis after pilot, before confirmatory games; report uncertainty and account for repeated participants",
+    "measure": [
+      "win rate versus Tactical control",
+      "timeouts",
+      "illegal actions",
+      "completion",
+      "replay review"
+    ],
+    "consent": "participants know one seat is an AI research bot; no undisclosed public matchmaking"
+  },
+  "native_engine": {
+    "status": "compiled integration and seeded differential/performance checks pass on port+bank batching v2",
+    "performance_evidence": "runs/native-v5/comparison.json",
+    "search_time_reduction": 0.23872042360885581,
+    "performance_target": 0.2,
+    "tests": "262 full-suite tests and 27 compiled-backend checks passed",
+    "claim_limit": "fixed diagnostic workload, not gameplay strength"
+  },
+  "challenger": {
+    "policy": "planner_parameter",
+    "checkpoint": "runs/economic-parameters-v1/model.json",
+    "sha256": "77c5ebfc5b148e8d9a22aa07732df2b62b428fe6b8dc3767be8276447206fc92",
+    "training_games": 1408,
+    "tactical_dev": "runs/economic-parameters-tactical-dev-v1.json",
+    "external_dev": "runs/economic-parameters-external-dev-v1.json; PASS +17.1875pp in both panels",
+    "capacity": "runs/economic-parameters-capacity-v1/summary.json; caps 1/2/4 PASS; cap4 speedup 2.92271"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "economic-planner-dev-v1",
+  "stage": "dev",
+  "candidate": "planner",
+  "control": "tactical",
+  "requires_search": false,
+  "seeds_per_panel": 8,
+  "max_turns": 1000,
+  "panels": [
+    {"name": "tactical", "seed": 1420000, "opponents": ["tactical", "tactical", "tactical"]},
+    {"name": "mixed", "seed": 1420100, "opponents": ["builder", "expander", "tactical"]}
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2
+  }
+}

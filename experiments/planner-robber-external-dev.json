@@ -1,0 +1,15 @@
+{
+  "name": "planner-robber-v-external-dev-v1",
+  "stage": "dev",
+  "candidate": "planner_robber",
+  "control": "external",
+  "requires_search": false,
+  "seeds_per_panel": 4,
+  "max_turns": 1000,
+  "panels": [
+    {"name": "tactical", "seed": 1426000, "opponents": ["tactical", "tactical", "tactical"]},
+    {"name": "mixed_external", "seed": 1426100, "opponents": ["builder", "external", "expander"]}
+  ],
+  "gates": {"maximum_match_truncations": 0, "minimum_paired_win_lift": 0.05,
+            "maximum_p95_decision_seconds": 2}
+}

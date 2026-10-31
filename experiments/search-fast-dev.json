@@ -1,0 +1,53 @@
+{
+  "stage": "dev",
+  "candidate": "search_fast",
+  "control": "tactical",
+  "requires_search": true,
+  "seeds_per_panel": 2,
+  "max_turns": 2000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 1221000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "builders",
+      "seed": 1221100,
+      "opponents": [
+        "builder",
+        "builder",
+        "builder"
+      ]
+    },
+    {
+      "name": "expanders",
+      "seed": 1221200,
+      "opponents": [
+        "expander",
+        "expander",
+        "expander"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 1221300,
+      "opponents": [
+        "heuristic",
+        "builder",
+        "expander"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "minimum_search_coverage": 0.8,
+    "maximum_rollout_truncation_rate": 0.01
+  }
+}

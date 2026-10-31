@@ -1,0 +1,19 @@
+{
+  "stage": "dev",
+  "candidate": "heuristic",
+  "control": "tactical",
+  "requires_search": false,
+  "seeds_per_panel": 8,
+  "max_turns": 2000,
+  "panels": [
+    {"name": "tactical", "seed": 1210000, "opponents": ["tactical", "tactical", "tactical"]},
+    {"name": "builders", "seed": 1210100, "opponents": ["builder", "builder", "builder"]},
+    {"name": "expanders", "seed": 1210200, "opponents": ["expander", "expander", "expander"]},
+    {"name": "mixed", "seed": 1210300, "opponents": ["heuristic", "builder", "expander"]}
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2
+  }
+}

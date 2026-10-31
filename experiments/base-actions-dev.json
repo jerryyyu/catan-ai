@@ -1,0 +1,9 @@
+{
+  "name": "base-actions-dev",
+  "candidate": "heuristic",
+  "control": "random",
+  "games_per_seat": 25,
+  "seed": 740000,
+  "max_turns": 2000,
+  "pass_bar": {"metric": "win_rate", "minimum": 0.35}
+}

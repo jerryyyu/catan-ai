@@ -1,0 +1,9 @@
+{
+  "name": "placement-strategy-dev",
+  "candidate": "strategic",
+  "control": "heuristic",
+  "games_per_seat": 100,
+  "seed": 820000,
+  "max_turns": 2000,
+  "pass_bar": {"metric": "win_rate", "minimum": 0.25}
+}

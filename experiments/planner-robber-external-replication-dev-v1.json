@@ -1,0 +1,36 @@
+{
+  "name": "planner-robber-external-replication-dev-v1",
+  "stage": "dev",
+  "candidate": "planner_robber",
+  "control": "external",
+  "requires_search": false,
+  "seeds_per_panel": 16,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 1448000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed_external",
+      "seed": 1448100,
+      "opponents": [
+        "builder",
+        "external",
+        "expander"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  }
+}

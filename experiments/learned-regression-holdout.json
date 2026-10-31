@@ -1,0 +1,52 @@
+{
+  "stage": "regression_audit",
+  "candidate": "learned",
+  "control": "tactical",
+  "requires_search": false,
+  "seeds_per_panel": 128,
+  "max_turns": 2000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 1300000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "builders",
+      "seed": 1301000,
+      "opponents": [
+        "builder",
+        "builder",
+        "builder"
+      ]
+    },
+    {
+      "name": "expanders",
+      "seed": 1302000,
+      "opponents": [
+        "expander",
+        "expander",
+        "expander"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 1303000,
+      "opponents": [
+        "heuristic",
+        "builder",
+        "expander"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2
+  },
+  "inference": "paired_normal"
+}

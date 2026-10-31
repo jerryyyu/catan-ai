@@ -1,0 +1,36 @@
+{
+  "name": "external-opening-dev",
+  "stage": "dev",
+  "candidate": "planner_external_opening",
+  "control": "planner_robber",
+  "requires_search": false,
+  "seeds_per_panel": 8,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 1470000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 1470100,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  }
+}

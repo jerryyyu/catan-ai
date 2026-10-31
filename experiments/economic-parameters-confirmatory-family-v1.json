@@ -1,0 +1,158 @@
+{
+  "source": {
+    "__init__.py": "b153aefa09a0fbb462215929b2a730c22757b72cf476f8527077712bdedb9c4c",
+    "_engine_py.py": "6160b1b5f86288c1769ca7cb99ab826e9b57dfd1360033535f4da96e4327ce88",
+    "api.py": "3293798b6708d69bebd05bc417a378ffcaae0f35a352c168454fc7ce98690d4f",
+    "belief.py": "ff5f9f71093e7342b3d4802e9e4cc06cfddd30eb14dcbfa5652d776d9a43dd15",
+    "bots.py": "dff811bdf36f84d3f97cd69ef8c5ec13ca5d25b97e78f19254f6b3913571dfae",
+    "card_planner.py": "5ea99ca7dce6b1e8adf32d9737b2bfa0ee3b10b23b1476152621815acee84f50",
+    "card_timing.py": "e200dd709bb96adabca1f222fa7a5b4a87829e13e0d858befb3c3388805fd757",
+    "catanatron_adapter.py": "b54a421a77aa24d9c4dba2c5af180f904bcbfdeb1a76cc683f187254ce5d6297",
+    "chain_planner.py": "982004e403d37e6f2713386d81391f85e97d2227543192646f232827b7e62cb8",
+    "components.py": "28350b5bb7d3de94031a09cd9c3acf632763b87e77fe52dee90721bb1f1f5d97",
+    "constraint_belief.py": "a3710815f83b9e4179e42c4d04da45dcfbf330f3a2662cab018c02b0606bb03b",
+    "development_constraints.py": "573fd98317c9be3c75ac00336b7086802f248f4e1702ac99a42283233045e856",
+    "engine.py": "87c4884046dcd74ce63ed5d93c20ab5df1ca0d34c4948b0d0aebe6f832d08c45",
+    "experiments.py": "bc93fa2e9e78725aa026043e5be30fa682ae0809c249589a5fe7ea22a92c86ec",
+    "external_compatibility.py": "143a7c7b409e25bc86f1aee1da5e729d88ce97922f4e21d8bb754372050d2360",
+    "external_opening.py": "6bcaec160f7a5e41c60f3ce1b41de030e84a99055b303615904fdf66f06c79fa",
+    "external_policy.py": "a8bfade5185e7402e95513693123e2a0231d51da58346dae8246101e4dfc7947",
+    "external_worker.py": "8164c356e1e3d92f7346e17a25036b0d1f7d5b22f8e0fbe9b4fed6ee6bffefbd",
+    "finish.py": "748a2a3ff1c32aa5044ed9e575150dbf61984541b35555caf4e0b864ea8ddc11",
+    "guided_belief.py": "9d1737f7e57d599cc5f53c1bb792f1c212e921abe17d357064827bc0f49578bf",
+    "inference.py": "7bc2891e74b735a634abc96266bc97263945981e03cb4511c5f1b3dd93da5c7b",
+    "learn_pipeline.py": "66a4df435ee41ee3cdc3de12ff2dd73fd5f4d509671292b24c763e926c26b7ae",
+    "learned_planner.py": "064bd2af6bc765f7990da9fdc26f064f5a8f453c4fc2f392c561bed2035154fb",
+    "learning.py": "2d725c89b01e2bfa433fb700c84dae547988854345ef3dea383bf4a9109bbd4c",
+    "observation.py": "ed36014285a33f768abf914d5e091000c24d6f0679e2ccfb96e96ad9e4c09577",
+    "opening.py": "c68c90ccc138758deed5a7c83847f0c1955022f41fbd8c08ff8956c55a87160f",
+    "paired_value.py": "6adc3d7d3c489e4b83cb5406c19eb1d084f5ba6b1d21b91362dfa0eaf0df8d2b",
+    "parameter_planner.py": "52ed53a2e15428ce960045e5a1e3f5e3ff64b17ce02f002e040aecf80c8765d2",
+    "pilot_store.py": "7c7cae32e3ebbe1b6933031033c22479efde70f04b9ad747a41624616d55aae4",
+    "planner.py": "013288a8d37f6c4353d7e56a67a18dc11bd0567b78311d0c7cb3f602bec9363b",
+    "recovery_belief.py": "952c338fa3abc75fbf588e52c735241a3bfe801bff46afa1097f5bd5e0701fc4",
+    "resource_constraints.py": "47ce866dd362355c7a808d5297bbcc7763bf28d9c967328e9526c6319d3b307f",
+    "rooms.py": "87580dfc9cbe4d35642eb2e30fffabf74e83b86f1978bad82d16795fae6b3219",
+    "scoring.py": "dddf319e8bb514d9ac41129b43ff2af3323bac0677b466104a3fcbf85fe6de8a",
+    "search.py": "6e0fb7203c9fcf8c609d2f185fcf76e7c18bf962fd086505608a21f916d94341",
+    "search_eval.py": "fa3ae6d20f9e6e3030af183aea188ba85bf5ef4d6823011e1cf5be595393ec69",
+    "sim.py": "a7f64b552ff0750ea76174a3e3b14e1717f5c58653848f233e29970d8fe9f739",
+    "strategic.py": "a50b41ccf8fea4e3dc411c24eb4be46a55622dcc9f32b80ae5f3b30bc3776117",
+    "styles.py": "a31ff66fc33e86705d0fca2d1048d3c1abc5bd333d4bdce0097512b18182c4e9",
+    "tactical.py": "c709aea25e30d8d2f2e15fe21ed9cb1cbef04a1c63ef49e5fedf22e02560ada7",
+    "value_model.py": "9831225f5e84ecb2457fdb1093dc0c38c8c410d3974fb2b6c5cf9f619a572600",
+    "engine_backend": "11a4a60b518bf24989d481468076e5d5982884626aed9faeb35b8576fcd223e1"
+  },
+  "checkpoint": {
+    "path": "/Users/jerryyu/Projects/catan-ai/runs/economic-parameters-v1/model.json",
+    "sha256": "77c5ebfc5b148e8d9a22aa07732df2b62b428fe6b8dc3767be8276447206fc92",
+    "kind": "economic-parameters"
+  },
+  "runs": [
+    {
+      "config": {
+        "name": "economic-parameters-tactical-heldout",
+        "stage": "heldout",
+        "candidate": "planner_parameter",
+        "control": "tactical",
+        "requires_search": false,
+        "seeds_per_panel": 1600,
+        "max_turns": 1000,
+        "panels": [
+          {
+            "name": "tactical",
+            "seed": 1250000,
+            "opponents": [
+              "tactical",
+              "tactical",
+              "tactical"
+            ]
+          },
+          {
+            "name": "mixed",
+            "seed": 1260000,
+            "opponents": [
+              "builder",
+              "tactical",
+              "expander"
+            ]
+          }
+        ],
+        "gates": {
+          "maximum_match_truncations": 0,
+          "minimum_paired_win_lift": 0,
+          "maximum_p95_decision_seconds": 2,
+          "maximum_step_seconds": 2,
+          "maximum_turn_seconds": 10,
+          "minimum_paired_lcb": 0
+        },
+        "requires_dev_pass": true,
+        "inference": "paired_normal"
+      },
+      "config_path": "/Users/jerryyu/Projects/catan-ai/experiments/economic-parameters-tactical-heldout.json",
+      "result": "/Users/jerryyu/Projects/catan-ai/runs/economic-parameters-tactical-heldout-v1.json",
+      "dev_result": "/Users/jerryyu/Projects/catan-ai/runs/economic-parameters-tactical-dev-v1.json"
+    },
+    {
+      "config": {
+        "name": "economic-parameters-external-heldout",
+        "stage": "heldout",
+        "candidate": "planner_parameter",
+        "control": "external",
+        "requires_search": false,
+        "seeds_per_panel": 1600,
+        "max_turns": 1000,
+        "panels": [
+          {
+            "name": "tactical",
+            "seed": 1270000,
+            "opponents": [
+              "tactical",
+              "tactical",
+              "tactical"
+            ]
+          },
+          {
+            "name": "mixed",
+            "seed": 1280000,
+            "opponents": [
+              "builder",
+              "external",
+              "expander"
+            ]
+          }
+        ],
+        "gates": {
+          "maximum_match_truncations": 0,
+          "minimum_paired_win_lift": 0,
+          "maximum_p95_decision_seconds": 2,
+          "maximum_step_seconds": 2,
+          "maximum_turn_seconds": 10,
+          "minimum_paired_lcb": 0
+        },
+        "requires_dev_pass": true,
+        "inference": "paired_normal"
+      },
+      "config_path": "/Users/jerryyu/Projects/catan-ai/experiments/economic-parameters-external-heldout.json",
+      "result": "/Users/jerryyu/Projects/catan-ai/runs/economic-parameters-external-heldout-v1.json",
+      "dev_result": "/Users/jerryyu/Projects/catan-ai/runs/economic-parameters-external-dev-v1.json"
+    }
+  ],
+  "comparison_count": 4,
+  "family_alpha": 0.05,
+  "planning": {
+    "clusters_per_panel": 1600,
+    "target_effect": 0.05,
+    "assumed_cluster_sd": 0.5,
+    "minimum_joint_power": 0.8,
+    "joint_calibration": "runs/planner-joint-calibration-v1.json",
+    "run_calibration": "runs/economic-parameters-run-calibration-v1.json",
+    "capacity": "runs/economic-parameters-capacity-v1/summary.json",
+    "process_cap": 4,
+    "host": "Jerrys-Mac-mini.local",
+    "total_games": 51200,
+    "engine": "python",
+    "status": "predeclared; not launched; resource-scale terminal rehearsal pending",
+    "inference_limit": "approximate normal bounds; synthetic calibration is diagnostic, not a finite-sample coverage guarantee"
+  }
+}
