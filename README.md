@@ -141,8 +141,10 @@ uv run python scripts/bind_parameter_checkpoint.py --write
 
 It keeps the weights, replays the checkpoint's 8 seeded compatibility games and
 writes the new binding only if every trace, outcome and final RNG state matches
-the evaluated snapshot's games exactly. If they differ, the change alters how the
-promoted bot plays and needs a new evaluation, not a rebind. CI enforces both
+the evaluated snapshot's games exactly. This is bounded regression evidence: it
+catches changes that alter those games, but cannot prove that every future
+action is unchanged. If they differ, the change alters how the promoted bot
+plays and needs a new evaluation, not a rebind. CI enforces both
 checks (`tests/test_served_checkpoint.py`). Solo games support usability
 feedback; they do not measure performance against experienced humans.
 
