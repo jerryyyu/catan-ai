@@ -187,6 +187,21 @@ class Game:
     events: list[dict] = field(default_factory=list)
     record_events: bool = True
 
+    def __deepcopy__(self, memo):
+        result = type(self).__new__(type(self))
+        memo[id(self)] = result
+        # Random.getstate() contains immutable tuples, integers and the cached
+        # Gaussian value. setstate copies the generator state internally, so a
+        # recursive Python deepcopy of its 625-word tuple is unnecessary.
+        # Custom RNG implementations keep their normal deepcopy behavior.
+        if type(self.rng) is random.Random and id(self.rng) not in memo:
+            rng = random.Random.__new__(random.Random)
+            memo[id(self.rng)] = rng
+            rng.setstate(self.rng.getstate())
+            rng.__dict__.update(deepcopy(self.rng.__dict__, memo))
+        result.__dict__.update(deepcopy(self.__dict__, memo))
+        return result
+
     @classmethod
     def new(cls, names: list[str], seed: int) -> "Game":
         if len(names) != 4:
