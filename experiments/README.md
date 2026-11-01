@@ -37,6 +37,21 @@ checkpoint b1785ccb, cap 4, host Jerrys-Mac-mini.local.
   in row 8 scope. A further external comparison needs either a recovery that
   is bounded on long histories or a fault budget declared before any game.
   Tactical remains the served default.
+- **Post-hoc descriptive read, at Jerry's request (2026-11-01).** This is not
+  the predeclared test and does not turn the FAIL into a pass. The per-board
+  differences were recomputed from the shards and match the receipt's
+  `seed_cluster_differences` exactly. The intervals below are plain normal
+  95% intervals over 1,600 boards per panel, not the calibrated predeclared
+  inference.
+
+  | Panel | Win rate: fitted planner / Catanatron | Faulted boards dropped | All as played | Faulted boards scored −1 |
+  |---|---|---|---|---|
+  | tactical | .366 / .306 | +.061 [+.044, +.077] | +.060 [+.044, +.077] | +.060 [+.043, +.077] |
+  | mixed | .562 / .411 | +.151 [+.136, +.167] | +.151 [+.136, +.167] | +.150 [+.134, +.165] |
+
+  The three faulted boards (1700527, 1710353, 1710512) move no estimate by
+  more than .002. Jerry decided on 2026-11-01 to promote `planner_parameter`,
+  using these figures together with the sealed Tactical-control panels.
 - **Compact summary** for the registry:
   `runs/economic-parameters-v13-external-heldout-v1-summary/summary.json`.
 

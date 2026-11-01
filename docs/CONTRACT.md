@@ -36,7 +36,11 @@ predeclared two-stage plan. The 64-board DEV stage passed with zero faults
 verdict FAIL on 27 external faults in 25,600 games, again against a zero-fault
 rule, so its lifts are withheld. The legality mismatches did not recur. The new
 faults are belief-solver timeouts late in very long games, 24 of them in one
-game (`experiments/README.md`, 2026-11-01).
+game (`experiments/README.md`, 2026-11-01). A post-hoc descriptive read,
+requested by the owner, gives lifts of +.061 (tactical) and +.151 (mixed) with
+plain 95% intervals well above zero. Excluding or penalising the three faulted
+boards changes neither by more than .002. The owner decided to promote on
+2026-11-01; the serving change is a separate PR.
 
 ## What is not claimed
 
