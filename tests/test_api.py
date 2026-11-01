@@ -1,3 +1,6 @@
+import json as _json
+
+import pytest as _pytest
 from fastapi.testclient import TestClient
 
 from catan_ai.api import app, sessions
@@ -65,10 +68,6 @@ def test_unbound_checkpoint_falls_back_to_tactical_visibly(tmp_path, monkeypatch
     assert all(isinstance(p, TacticalBot) for p in sessions[created['game_id']].bots.values())
     assert client.post('/api/games', json={'seed': 4, 'opponent': 'planner_parameter'}).status_code == 503
 
-
-import json as _json
-
-import pytest as _pytest
 
 
 @_pytest.mark.parametrize('shape', ['weights_null', 'top_level_list', 'source_missing', 'source_list', 'not_json'])
