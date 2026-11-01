@@ -30,13 +30,22 @@ in 12,800 games against a zero-fault rule. The candidate is therefore shown
 stronger than the served default on this engine, but the family criterion was
 not met and the served default is unchanged until the owner decides otherwise.
 
+The external comparison was rerun on the repaired comparator v13 as a new,
+predeclared two-stage plan. The 64-board DEV stage passed with zero faults
+(+.082 and +.195). The 1,600-board held-out stage sealed on 2026-11-01 with
+verdict FAIL on 27 external faults in 25,600 games, again against a zero-fault
+rule, so its lifts are withheld. The legality mismatches did not recur. The new
+faults are belief-solver timeouts late in very long games, 24 of them in one
+game (`experiments/README.md`, 2026-11-01).
+
 ## What is not claimed
 
 - No competitive strength against ranked online humans. No Colonist
   integration exists or is authorized; its terms restrict automation and data
   use.
 - Beating the depth-2 Catanatron comparator is not beating a strong player.
-  The comparator faults on about 1.4% of held-out clusters.
+  Its belief recovery still faults rarely: on 3 of 3,200 held-out clusters in
+  the v13 rerun, all through solver timeouts in long games.
 - DEV passes are screens. Only a reserved held-out run with a predeclared
   analysis supports a promotion.
 - Correctness, latency, calibration and strength are separate claims. A

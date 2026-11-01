@@ -31,6 +31,26 @@
    "stage": null
   },
   {
+   "bytes": 1948761,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": 128,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "belief-sharpness-v1",
+   "panels": {
+    "summary": {}
+   },
+   "pass": null,
+   "path": "runs/belief-sharpness-v1.json",
+   "process_cap": null,
+   "sha256": "559519cafb97d2bc3f10218c5e7ce10b33f869c2e061bafb9885a5202ee22f82",
+   "source_hash": "4c51c3d9cd55b1f6",
+   "source_revision": null,
+   "stage": null
+  },
+  {
    "bytes": 3544816,
    "candidate": "heuristic",
    "checkpoint_sha256": null,
@@ -360,6 +380,88 @@
    "source_hash": "8ac320ee84952b83",
    "source_revision": null,
    "stage": "dev"
+  },
+  {
+   "bytes": 94384278,
+   "candidate": "planner_parameter",
+   "checkpoint_sha256": "b1785ccb5920c236794b3fa0549ae7835f2cb46776c3d8a8a8a56348e9f9e5a1",
+   "control": "external",
+   "games": 1024,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "economic-parameters-v13-external-dev-v1",
+   "panels": {
+    "mixed": {
+     "cluster_sd": 0.3464912009615107,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.009042708203196526,
+     "paired_seed_lcb": -0.1442128789351549,
+     "paired_win_lift": 0.1953125,
+     "pairs": 256,
+     "pass": true,
+     "zero_null_mde_80": 0.12134057835249727
+    },
+    "tactical": {
+     "cluster_sd": 0.3509325954131897,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.00949879176914692,
+     "paired_seed_lcb": -0.2574941289351549,
+     "paired_win_lift": 0.08203125,
+     "pairs": 256,
+     "pass": true,
+     "zero_null_mde_80": 0.12289594648295138
+    }
+   },
+   "pass": true,
+   "path": "runs/economic-parameters-v13-external-dev-v1.json",
+   "process_cap": 4,
+   "sha256": "c70921083d49d16125b0cb31b5e4f1e4a46d21acf87920d22bb99a88fbd6555a",
+   "source_hash": "4c51c3d9cd55b1f6",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 38992,
+   "candidate": "planner_parameter",
+   "checkpoint_sha256": null,
+   "control": "external",
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "economic-parameters-v13-external-heldout-v1-summary",
+   "panels": {
+    "mixed": {
+     "cluster_sd": 0.31440478083346235,
+     "external_faults": 26,
+     "match_truncations": 0,
+     "p95_seconds": 0.009276457130908966,
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pairs": 6400,
+     "pass": false,
+     "zero_null_mde_80": 0.022020794662176886
+    },
+    "tactical": {
+     "cluster_sd": 0.34260476841945736,
+     "external_faults": 1,
+     "match_truncations": 0,
+     "p95_seconds": 0.009854333475232124,
+     "paired_seed_lcb": null,
+     "paired_win_lift": null,
+     "pairs": 6400,
+     "pass": false,
+     "zero_null_mde_80": 0.023995911371474207
+    }
+   },
+   "pass": false,
+   "path": "runs/economic-parameters-v13-external-heldout-v1-summary/summary.json",
+   "process_cap": null,
+   "sha256": "7db1434250dbc2ef0e951a4f055afe5ad62a9f9ec8ffa09fe2807cf5fca32f31",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": "heldout"
   },
   {
    "bytes": 49144,
@@ -920,6 +1022,30 @@
    "path": "runs/full-solver-dev-v1/summary.json",
    "process_cap": null,
    "sha256": "5fe17503d93c571760e2ae65bf2afe1f000031f24658138bee057d1fec381b1c",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 7228,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "human-challenger-room-integration-v1",
+   "panels": {
+    "summary": {
+     "elapsed_seconds": 16.610083375126123,
+     "pass": true,
+     "scope": "Synthetic full-room integration, not human or strength evidence"
+    }
+   },
+   "pass": true,
+   "path": "runs/human-challenger-room-integration-v1/summary.json",
+   "process_cap": null,
+   "sha256": "b347dc2120bca5b8eadadb2cd6db9a6b668b90535541e5860a4a094feba77b01",
    "source_hash": null,
    "source_revision": null,
    "stage": null
@@ -3185,6 +3311,11 @@
   {
    "bytes": 1337116883,
    "path": "runs/economic-parameters-tactical-heldout-v1.json",
+   "reason": "config or over size cap"
+  },
+  {
+   "bytes": 2381731815,
+   "path": "runs/economic-parameters-v13-external-heldout-v1.json",
    "reason": "config or over size cap"
   }
  ]

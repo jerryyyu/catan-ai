@@ -9,6 +9,7 @@ receipt's own bar (present only for receipts written after the power tooling).
 | receipt | stage | candidate | control | panel | pairs | lift | lcb | faults | zero-null mde80 | pass |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---|
 | base-actions-dev-20261029T170200644839Z |  | heuristic | random | summary |  |  |  |  |  | True |
+| belief-sharpness-v1 |  |  |  | summary |  |  |  |  |  |  |
 | builder-repair-dev-v2 | dev | heuristic | tactical | builders | 32 | -0.156 | -1 |  |  | False |
 | builder-repair-regression-v2 |  |  |  |  |  |  |  |  |  |  |
 | card-timing-dev-v1 | dev | planner_card_timing | planner_robber | tactical | 32 | -0.031 | -0.992 | 0 |  | False |
@@ -28,6 +29,10 @@ receipt's own bar (present only for receipts written after the power tooling).
 | economic-parameters-run-calibration-v1 |  |  |  |  |  |  |  |  |  |  |
 | economic-parameters-tactical-dev-v1 | dev | planner_parameter | tactical | tactical | 64 | +0.234 | -0.445 | 0 |  | True |
 | economic-parameters-tactical-dev-v1 | dev | planner_parameter | tactical | mixed | 64 | +0.297 | -0.382 | 0 |  | True |
+| economic-parameters-v13-external-dev-v1 | dev | planner_parameter | external | tactical | 256 | +0.082 | -0.257 | 0 | +0.123 | True |
+| economic-parameters-v13-external-dev-v1 | dev | planner_parameter | external | mixed | 256 | +0.195 | -0.144 | 0 | +0.121 | True |
+| economic-parameters-v13-external-heldout-v1-summary | heldout | planner_parameter | external | tactical | 6400 |  |  | 1 | +0.024 | False |
+| economic-parameters-v13-external-heldout-v1-summary | heldout | planner_parameter | external | mixed | 6400 |  |  | 26 | +0.022 | False |
 | external-actions-v1 |  |  |  |  |  |  |  |  |  |  |
 | external-actions-v2 |  |  |  |  |  |  |  |  |  |  |
 | external-belief-repair-v10 |  |  |  | summary |  |  |  |  |  | True |
@@ -56,6 +61,7 @@ receipt's own bar (present only for receipts written after the power tooling).
 | finish-powered-dev-v2 | dev | planner_finish | planner_robber | tactical | 2048 | +0.025 | -0.095 | 0 | +0.010 | False |
 | finish-powered-dev-v2 | dev | planner_finish | planner_robber | mixed | 2048 | +0.020 | -0.101 | 0 | +0.009 | False |
 | full-solver-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| human-challenger-room-integration-v1 |  |  |  | summary |  |  |  |  |  | True |
 | inference-calibration-four-panel-v1 |  |  |  |  |  |  |  |  |  |  |
 | inference-calibration-four-panel-v2 |  |  |  |  |  |  |  |  |  |  |
 | inference-calibration-v1 |  |  |  |  |  |  |  |  |  |  |

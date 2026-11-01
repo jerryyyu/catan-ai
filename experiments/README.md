@@ -2,6 +2,75 @@
 
 ## Research: competitive four-player Catan AI
 
+### External-control rerun on comparator v13: stage 1 PASS, stage 2 FAIL on faults (2026-11-01)
+
+Both stages of the predeclared plan below ran on the frozen v13 snapshot and
+checkpoint b1785ccb, cap 4, host Jerrys-Mac-mini.local.
+
+- **Stage 1 DEV, PASS.** `runs/economic-parameters-v13-external-dev-v1.json`,
+  1,024 games, 2026-10-31 14:22–14:53Z. Tactical panel .359 against .277,
+  lift +.082 (Hoeffding LCB −.257); mixed panel .555 against .359, lift
+  +.195 (LCB −.144). Zero external faults, zero truncations; Catanatron's
+  worst step 1.42 s and worst turn 3.36 s.
+- **Stage 2 held out, FAIL.** `runs/economic-parameters-v13-external-heldout-v1.json`
+  (sha256 94b7ebdb…4f98), 25,600 games, 2026-10-31 14:54Z to 2026-11-01
+  04:16Z, zero truncations. External faults: 1 in the tactical panel and 26 in
+  the mixed panel, against a zero-fault rule with no budget. The evaluator
+  withheld both lifts; they were not computed. Candidate step p95 was 9.9 ms
+  and 9.3 ms. Catanatron's worst step was 1.73 s in both panels, and its
+  worst turn was 4.05 s (tactical) and 7.96 s (mixed).
+- **Fault anatomy.** This is a new class; the bank-trade and Year of Plenty
+  legality mismatches repaired in v12 and v13 did not recur. 25 of the 27 faults
+  are z3 belief-recovery timeouts (`unknown: timeout` at the 500 ms solver
+  limit). The other 3 are budget failures: 1 decision timeout and 2 exhausted
+  turn budgets. All occurred at turns 184–199 of unusually long games. 24 are
+  in one game: mixed board 1710353, candidate arm, with Catanatron in opponent
+  seat 1, faulting on every decision from turn 193. The other two are single
+  faults in the control seat on boards 1710512 (turn 184) and 1700527 (turn
+  199). A separate Shengji job used 4 of the host's 10 cores from about
+  18:56Z. The two single faults finished during it, but the 24-fault game
+  finished before it, at 17:48Z.
+- **Reading.** Under the predeclared rule this is a FAIL, and it is not
+  reinterpreted. `planner_parameter` is still shown stronger than Tactical by
+  the sealed Tactical-control panels. No held-out external comparison has
+  passed. Recovery cost growing with history length is a comparator defect
+  in row 8 scope. A further external comparison needs either a recovery that
+  is bounded on long histories or a fault budget declared before any game.
+  Tactical remains the served default.
+- **Compact summary** for the registry:
+  `runs/economic-parameters-v13-external-heldout-v1-summary/summary.json`.
+
+### Belief sharpness: how much of an opponent's hand is inferable (2026-10-31)
+
+A diagnostic, not a strength claim. `runs/belief-sharpness-v1.json` (script
+`runs/belief-sharpness-v1.py`, sha256 b240aa06…) covers 64 mixed-table games
+(planner_parameter, tactical, builder, expander, rotated by seed) on seeds
+2300000–2300063. Every seat was a viewer, giving 5,025 opponent-hand
+checkpoints at turns 10 to 80. Interval card counting gives sound bounds per
+resource; its lower bounds are the cards known for certain. The adapter's
+512-particle `RecoveryBeliefTracker` was updated at each of the viewer's
+decisions and scored against the true hand. Its 172 checkpoints after a
+solver recovery are excluded, because one solved hand copied 512 times is not
+a posterior.
+
+| Turn | Cards per opponent | Unseen steals and discards | Cards certain | Whole hand certain | With public discards | Particle mass on true hand |
+|---|---|---|---|---|---|---|
+| 10 | 4.1 | 0.8 | 83% | 57% | 59% | .83 |
+| 20 | 4.2 | 2.2 | 74% | 42% | 46% | .75 |
+| 40 | 4.4 | 5.1 | 71% | 36% | 40% | .69 |
+| 60 | 4.9 | 8.3 | 72% | 34% | 41% | .66 |
+| 80 | 5.4 | 12.0 | 75% | 36% | 43% | .66 |
+
+The bounds contained the truth at every checkpoint. Across all checkpoints,
+the particles misplaced 0.32 cards on average and held only the true hand in
+56% of them. The truth was missing from every particle in 0.7% of them.
+Sharpness falls with the number of unseen events that touch the opponent:
+none gives an exact hand, 1–2 leave 82% of cards certain, and 11 or more
+leave 62%. The fitted planner's hands are the hardest to read (5.3 cards, 69%
+certain, particle mass .63). Our two planners never consult this information.
+A belief-aware robber, trade target or Monopoly timing is a candidate lane,
+and each needs its own powered, predeclared config.
+
 ### Predeclared: external-control rerun on the repaired comparator (v13) (2026-10-31)
 
 Jerry asked to rerun the withheld external-control comparison on the repaired
