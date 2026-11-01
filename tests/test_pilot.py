@@ -157,8 +157,8 @@ def test_fitted_solo_restart_privacy_and_checkpoint_identity(client, parameter_m
     assert pilot_store.record_path(game_id).read_bytes() == before
 
 
-def test_fitted_solo_requires_checkpoint_before_saving(client, monkeypatch):
-    monkeypatch.delenv('CATAN_PARAMETER_MODEL', raising=False)
+def test_fitted_solo_requires_checkpoint_before_saving(client, monkeypatch, tmp_path):
+    monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(tmp_path / 'missing.json'))
     assert client.post('/api/games', json={'opponent': 'planner_parameter'}).status_code == 503
     assert not sessions
 
