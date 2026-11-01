@@ -126,6 +126,12 @@ not be shared during play. Human timings measure action processing, not thinking
 time; bot timings include observation, decision and application. These local
 one-human/three-bot pilots support debugging, not a human-transfer strength claim.
 
+Solo play also offers **Trained challenger (pilot)** against three fitted bots.
+It requires a source-compatible `CATAN_PARAMETER_MODEL` on the server and records
+its checkpoint SHA256 for restart recovery. All three opponents must load the
+same checkpoint. This mode supports usability feedback; it does not measure
+performance against three experienced human opponents.
+
 For a private three-human match, open **Private three-human match** (or `/#room`),
 choose the bot and its seat, and create a room. Tactical remains the default. Share one invitation with each
 human, including yourself. Each invitation grants access to that seat; keep it
