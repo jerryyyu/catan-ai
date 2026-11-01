@@ -126,8 +126,10 @@ not be shared during play. Human timings measure action processing, not thinking
 time; bot timings include observation, decision and application. These local
 one-human/three-bot pilots support debugging, not a human-transfer strength claim.
 
-Solo play defaults to the **Trained planner** (`planner_parameter`), promoted
-on 2026-11-01. The server loads `checkpoints/planner_parameter.json` unless
+Solo play defaults to the **Trained planner** (`planner_unified`: the fitted
+`planner_parameter` build search, with robber, steal, discard,
+development-card and trade-answer moves chosen by one shared position score;
+served since 2026-11-01 after its held-out PASS). The server loads `checkpoints/planner_parameter.json` unless
 `CATAN_PARAMETER_MODEL` names another checkpoint. A game records the checkpoint's
 SHA256 for restart recovery, and all three opponents must load the same
 checkpoint. The checkpoint pins every source file and the engine backend. It is
@@ -147,6 +149,21 @@ action is unchanged. If they differ, the change alters how the promoted bot
 plays and needs a new evaluation, not a rebind. CI enforces both
 checks (`tests/test_served_checkpoint.py`). Solo games support usability
 feedback; they do not measure performance against experienced humans.
+
+Saved solo pilots can be checked without changing the record:
+
+```sh
+PYTHONPATH=/path/to/frozen/src CATAN_ENGINE=python \
+  CATAN_PARAMETER_MODEL=/path/to/matching/model.json \
+  uv run python scripts/audit_solo_pilot.py \
+  --record /path/to/saved-game.json --output /path/to/new-audit.json
+```
+
+Use the match's frozen source and exact checkpoint. The audit replays bot
+choices and checks legality, outcome, actor labels and recorded timings. It
+reports a pilot result, not proof of human participation or experience, and
+refuses to overwrite an existing output. Human action timings exclude thinking
+time; unfinished turns can have incomplete timing totals.
 
 For a private three-human match, open **Private three-human match** (or `/#room`),
 choose the bot and its seat, and create a room. Tactical remains the default. Share one invitation with each

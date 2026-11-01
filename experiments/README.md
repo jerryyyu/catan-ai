@@ -2,6 +2,125 @@
 
 ## Research: competitive four-player Catan AI
 
+### Shared-score planner: DEV PASS, held-out PASS (2026-11-01)
+
+Jerry asked for one action-selection system instead of a rule per decision.
+`planner_unified` keeps the served planner's fitted weights and build search.
+Robber placement, steals, discards, development-card play and trade answers
+each choose the legal move that maximises
+S = V(me) − 0.5 · max V(opponent), where:
+
+- opponents' hands come from public card counting;
+- production on the robber's tile is not counted;
+- played Knights keep their held value;
+- for trades and discards, my side is scored as the best value my next turn's
+  builds reach.
+
+λ = 0.5 was fixed before any game. The config `experiments/planner-unified-dev.json`
+was predeclared at `8baedcb`: a +.05 bar on every table, 128 boards per table,
+planning sigma .30 (78 required, family .914).
+
+`runs/planner-unified-dev-v1.json` (sha256 402b4361…), 3,072 games, zero
+truncations, candidate step max 0.15 s:
+
+| Table | Paired lift | Cluster SD |
+|---|---|---|
+| tactical | +.078 | .32 |
+| mixed | +.088 | .26 |
+| self | +.053 | .19 |
+
+PASS on every table. DEV is a screen, not a claim. The held-out run
+`experiments/planner-unified-heldout.json` was predeclared at `b19055d`. It
+uses 600 fresh boards per table, requires a paired-normal LCB > 0 at α .05/3
+on each table, and is calibrated by `runs/planner-unified-calibration-v1.json`.
+
+**Held-out PASS.** `runs/planner-unified-heldout-v1.json` (sha256 e6f02b7d…),
+14,400 games, 2026-11-01 06:51–07:41Z, zero truncations. The source, checkpoint
+and lineups match DEV (enforced by the runner), on fresh seeds 2430000+,
+2431000+ and 2432000+:
+
+| Table | Paired lift | LCB (α .05/3) | Candidate step max / turn max |
+|---|---|---|---|
+| tactical | +.112 | +.085 | 0.23 s / 0.49 s |
+| mixed | +.066 | +.041 | 0.20 s / 0.57 s |
+| self | +.023 | +.001 | 0.22 s / 0.48 s |
+
+Every table clears the predeclared LCB > 0 gate, so `planner_unified` is shown
+stronger than `planner_parameter` on all three tables. The self table, where
+all three opponents are the fitted planner, passes by a margin of .001: the
+gain against our own best is real but small. Promotion is the owner's
+decision.
+
+Red-team probes, run as a diagnostic (`runs/redteam-v2/RESULTS.md`):
+
+| Probe | Served planner | `planner_unified` |
+|---|---|---|
+| Lopsided offers accepted | 138/138 | 93/138 |
+| Accepted offers that broke an affordable build | 39 | 17 |
+| Monopoly haul | 2.8 cards | 5.6 cards |
+| Oracle trade exploiter's gain | +15.9 pp | +3.1 pp |
+
+### Development-card fix: non-inferiority PASS, shipped as served (2026-11-01)
+
+The red team found that the served planner played a random development card in
+the roll phase, so its turn search never used Year of Plenty or Road Building.
+Jerry asked for the fix. `planner_devfix` rolls instead; nothing else changes.
+The config `experiments/planner-devfix-dev.json` was predeclared at `8baedcb` as a
+non-inferiority screen against the served `planner_parameter`: every table's
+paired lift must be at least −.03, with 256 boards per table and planning sigma
+.30 (215 required, family .844).
+
+`runs/planner-devfix-dev-v1.json`, 6,144 games, zero truncations, candidate
+step max 0.084 s:
+
+| Table | Paired lift | Cluster SD |
+|---|---|---|
+| tactical | −.026 | .22 |
+| mixed | +.022 | .24 |
+| self | −.008 | .19 |
+
+PASS on every table as declared. As predeclared, the fix ships as the served
+policy (`planner_devfix`, same checkpoint). This is an observed-lift screen
+against a −.03 floor, not a confidence-bound non-inferiority result. The
+tactical table sits near the floor, and the fix is not shown better. Codex's
+review notes that rolling first also delays pre-roll Knights that could have
+helped: a timing trade-off, not a rules correction.
+
+### Row 9: discard-aware hand value, FAIL, parked (2026-11-01)
+
+The first screen under the standard comparison: control is the served
+`planner_parameter`, on the tactical, mixed and self tables. The config
+`experiments/planner-discard-dev.json` was predeclared at `142e61b` before any
+game. `planner_discard` keeps the fitted weights and makes two changes. Hands
+over seven cards are charged P(7 before next turn) = 1 − (5/6)³ times
+floor(n/2) average weighted card values, instead of a flat 0.5 per card.
+Discards are chosen by leaf value, instead of from the largest pile. Power was
+admitted at a true +.10 with sigma .40: 138 boards required, 160 declared.
+
+`runs/planner-discard-dev-v1.json` (sha256 373d84d8…), 3,840 games, zero
+truncations, candidate step max 0.11 s:
+
+| Table | Paired lift | Cluster SD |
+|---|---|---|
+| tactical | −.002 | .26 |
+| mixed | −.008 | .25 |
+| self | −.017 | .17 |
+
+FAIL on every table against the +.05 bar. The candidate is parked and not
+retuned on these boards. The measured cluster SDs are well below the .40
+planning sigma; later configs may plan at a lower declared sigma.
+
+### Red team of the served planner (2026-11-01)
+
+A read-only diagnostic: `runs/redteam-v1/REPORT.md` and probe scripts, run on
+the frozen v13 snapshot. It found no hidden-information leak, illegal action or
+stall. The largest gaps are trade acceptance by card count (138 of 138 injected
+offers accepted; an oracle exploiter rose from 19.7% to 37.7% wins over 122
+paired games) and development cards played at random before the roll (all 480
+plays). The second also means the search's Year of Plenty and Road Building
+handling never runs. Most gaps sit in fixed rules outside the planner's
+position score. That is the motivation for a unified afterstate candidate.
+
 ### External-control rerun on comparator v13: stage 1 PASS, stage 2 FAIL on faults (2026-11-01)
 
 Both stages of the predeclared plan below ran on the frozen v13 snapshot and

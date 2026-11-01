@@ -69,6 +69,10 @@ class EconomicPlanner(HeuristicBot):
         return (12 * player.points + .55 * production + hand - discard
                 + self._geometry(game, seat) + .5 * ports + development)
 
+    def _fallback(self, view, seat):
+        """Inherited fixed rules for every decision the turn search does not make."""
+        return super().choose(view, seat)
+
     def choose(self, view, seat):
         legal = view.legal_actions(seat)
         root = public_projection(view)
@@ -83,7 +87,7 @@ class EconomicPlanner(HeuristicBot):
                 return self._value(child, seat)
             return max(legal, key=placement)
         if view.phase not in {'actions', 'free_roads'}:
-            return super().choose(view, seat)
+            return self._fallback(view, seat)
         base = self._value(root, seat)
         best_action = next((a for a in legal if a['type'] == 'end_turn'), None)
         best_score = base if best_action else -math.inf
@@ -121,8 +125,8 @@ class EconomicPlanner(HeuristicBot):
         # Special development effects and bilateral negotiation retain the
         # baseline's legal handling until their economic model is measured.
         if any(a['type'] == 'play_development' for a in legal):
-            return super().choose(view, seat)
-        return best_action or super().choose(view, seat)
+            return self._fallback(view, seat)
+        return best_action or self._fallback(view, seat)
 
 
 class DevelopmentPlanner(EconomicPlanner):

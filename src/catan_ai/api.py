@@ -60,14 +60,14 @@ def load_session(game_id):
         raise HTTPException(404, 'game not found') from exc
     if record['source'] != source_files():
         raise HTTPException(409, 'Saved match uses a different program version; its record is preserved.')
-    if record['opponent'] not in ('heuristic', 'tactical', 'planner_parameter'):
+    if record['opponent'] not in ('heuristic', 'tactical') + CHECKPOINT_POLICIES:
         raise HTTPException(409, 'Restart recovery supports Tactical, Heuristic and trained challenger pilots.')
     game = Game.new(record['names'], record['seed'])
     human_seat = record.get('human_seat', 0)
     try:
         bots = {seat: make_policy(record['opponent'], record['seed'] * 31 + seat)
                 for seat in range(4) if seat != human_seat}
-        if record['opponent'] == 'planner_parameter':
+        if record['opponent'] in CHECKPOINT_POLICIES:
             if not record.get('model_sha256') or any(
                     bot.model_hash != record['model_sha256'] for bot in bots.values()):
                 raise ValueError('Saved checkpoint differs')
@@ -86,15 +86,24 @@ def load_session(game_id):
     return session
 
 
+# Policies that load the source-pinned fitted checkpoint; their games record its SHA256.
+CHECKPOINT_POLICIES = ('planner_parameter', 'planner_devfix', 'planner_unified')
+
+
 class NewGame(BaseModel):
     name: str = "You"
     seed: int | None = None
     human_seat: int = Field(default=0, ge=0, le=3, strict=True)
     # None means the served default (see served_default).
-    opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned', 'planner_parameter'] | None = None
+    opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned', 'planner_parameter',
+                      'planner_devfix', 'planner_unified'] | None = None
 
 
-SERVED_POLICY = 'planner_parameter'
+# Since 2026-11-01 (owner-approved): the shared-score planner. It keeps the
+# fitted build search and scores robber, steal, discard, development-card and
+# trade-answer moves with one position score. It passed its predeclared
+# held-out test against planner_parameter (runs/planner-unified-heldout-v1.json).
+SERVED_POLICY = 'planner_unified'
 FALLBACK_POLICY = 'tactical'
 
 
@@ -152,7 +161,7 @@ def create_game(body: NewGame) -> dict:
     try:
         bots = {seat: make_policy(body.opponent, seed * 31 + seat)
                 for seat in range(4) if seat != body.human_seat}
-        hashes = {bot.model_hash for bot in bots.values()} if body.opponent == 'planner_parameter' else set()
+        hashes = {bot.model_hash for bot in bots.values()} if body.opponent in CHECKPOINT_POLICIES else set()
         if hashes and len(hashes) != 1:
             raise ValueError('Checkpoint changed during game creation')
     except (KeyError, OSError, ValueError) as exc:

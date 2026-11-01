@@ -98,9 +98,14 @@ receipt's own bar (present only for receipts written after the power tooling).
 | native-copy-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
 | native-copy-differential-v1 |  |  |  | summary |  |  |  |  |  | True |
 | native-copy-fitted-binding-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-fitted-cython-binding-v1 |  |  |  | summary |  |  |  |  |  | True |
 | native-copy-native-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
 | native-differential-pilot-v1 |  |  |  | summary |  |  |  |  |  | True |
 | native-differential-pilot-v2 |  |  |  | summary |  |  |  |  |  | True |
+| native-rng-copy-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-rng-copy-differential-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-rng-copy-native-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-rng-fitted-cython-binding-v1 |  |  |  | summary |  |  |  |  |  | True |
 | native-v1-comparison |  |  |  |  |  |  |  |  |  |  |
 | native-v1-cython-1 |  |  |  |  |  |  |  |  |  |  |
 | native-v1-measured-0-cython |  |  |  |  |  |  |  |  |  |  |
@@ -143,6 +148,9 @@ receipt's own bar (present only for receipts written after the power tooling).
 | planner-dev-v1 | dev | planner | tactical | mixed | 32 | +0.281 | -0.679 | 0 |  | True |
 | planner-development-dev-v1 | dev | planner_development | tactical | tactical | 32 | +0.125 | -0.835 | 0 |  | True |
 | planner-development-dev-v1 | dev | planner_development | tactical | mixed | 32 | +0.062 | -0.898 | 0 |  | True |
+| planner-devfix-dev-v1 | dev | planner_devfix | planner_parameter | tactical | 1024 | -0.026 | -0.205 | 0 | +0.040 | True |
+| planner-devfix-dev-v1 | dev | planner_devfix | planner_parameter | mixed | 1024 | +0.021 | -0.157 | 0 | +0.045 | True |
+| planner-devfix-dev-v1 | dev | planner_devfix | planner_parameter | self | 1024 | -0.008 | -0.187 | 0 | +0.034 | True |
 | planner-disagreements-turn-v1 |  |  |  | summary |  |  |  |  |  |  |
 | planner-disagreements-v1 |  |  |  | summary |  |  |  |  |  |  |
 | planner-discard-dev-v1 | dev | planner_discard | planner_parameter | tactical | 640 | -0.002 | -0.228 | 0 | +0.061 | False |
@@ -166,6 +174,10 @@ receipt's own bar (present only for receipts written after the power tooling).
 | planner-robber-external-v5-dev | dev | planner_robber | external | mixed_external | 16 | +0.250 | -1 | 0 |  | True |
 | planner-robber-tactical-replication-dev-v1 | dev | planner_robber | tactical | tactical | 64 | +0.141 | -0.538 | 0 |  | True |
 | planner-robber-tactical-replication-dev-v1 | dev | planner_robber | tactical | mixed | 64 | +0.078 | -0.601 | 0 |  | True |
+| planner-unified-calibration-v1 |  |  |  |  |  |  |  |  |  |  |
+| planner-unified-dev-v1 | dev | planner_unified | planner_parameter | tactical | 512 | +0.078 | -0.175 | 0 | +0.083 | True |
+| planner-unified-dev-v1 | dev | planner_unified | planner_parameter | mixed | 512 | +0.088 | -0.165 | 0 | +0.069 | True |
+| planner-unified-dev-v1 | dev | planner_unified | planner_parameter | self | 512 | +0.053 | -0.200 | 0 | +0.050 | True |
 | policy-components-dev-v1 |  |  |  | tactical |  |  |  |  |  |  |
 | policy-components-dev-v1 |  |  |  | mixed |  |  |  |  |  |  |
 | resource-solver-dev-v1 |  |  |  | summary |  |  |  |  |  | True |

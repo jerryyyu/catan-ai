@@ -7,11 +7,22 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Served default
 
-- **Policy:** `planner_parameter`, the fitted economic planner, for new solo web
-  and API games since 2026-11-01 (owner's decision). Tactical is the fallback,
-  and the three-human pilot rooms keep Tactical as their default. `heuristic`
-  remains the frozen comparator.
-- **Why:** both Tactical-control panels of the sealed held-out family passed
+- **Policy:** `planner_unified` for new solo web and API games since
+  2026-11-01 (owner-approved after its held-out PASS). It keeps the fitted
+  build search of `planner_parameter` and scores every other decision (robber,
+  steal, discard, development-card play, answering trade offers) with one
+  position score, `V(me) − 0.5 · max V(opponent)`. Opponents' hands are
+  public card-counting estimates, never hidden state. Held-out test against
+  `planner_parameter` (`runs/planner-unified-heldout-v1.json`, 14,400 games on
+  fresh boards): +.112, +.066 and +.023 paired lift on the tactical, mixed and
+  self tables, lower bounds +.085, +.041 and +.001. The self-table bound is
+  thin and approximate. The test's comparator was `planner_parameter`, not
+  `planner_devfix`, so no direct superiority claim over `planner_devfix` is
+  made. `planner_devfix` (the previous served default, which only removes the
+  random pre-roll development-card play) and `planner_parameter` stay
+  selectable. Tactical is the fallback, the three-human pilot rooms keep
+  Tactical as their default, and `heuristic` remains the frozen comparator.
+- **Why the fitted line (`planner_parameter`) was promoted:** both Tactical-control panels of the sealed held-out family passed
   (+.110 and +.227 paired lift; simultaneous lower bounds +.096 and +.208). The
   external-control panels have twice been withheld on comparator faults. The
   v13 rerun's owner-requested descriptive read is +.061 and +.151 against
@@ -30,6 +41,14 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   observation, belief, adapter, search and validation. A timeout plays a legal
   deterministic fallback and counts as a budget failure. The fitted planner's
   held-out step p95 was about 10 ms.
+
+## Next challenger
+
+None declared. The shared-score planner's held-out PASS is now the served
+default (see above). Remaining red-team gaps that matter most against strong
+opponents: the planner never makes trade offers, does not race for Longest
+Road or Largest Army deliberately, and has no leader-blocking build choice.
+Each would be a change to the shared score with its own predeclared screen.
 
 ## Challenger: held-out family sealed, FAIL on comparator faults
 
