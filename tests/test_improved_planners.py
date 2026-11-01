@@ -64,7 +64,7 @@ def test_discard_choice_keeps_the_more_valuable_card():
     assert choice['resource'] == 'wool'
 
 
-@pytest.mark.parametrize('name', ['planner_devfix', 'planner_unified'])
+@pytest.mark.parametrize('name', ['planner_devfix', 'planner_unified', 'planner_shared', 'planner_race', 'planner_block', 'planner_offer'])
 def test_new_candidates_play_complete_legal_games(name):
     for seed in (2390000, 2390001, 2390002):
         assert play([name, 'planner_parameter', 'tactical', 'builder'], seed).winner is not None
@@ -154,3 +154,63 @@ def test_unified_picks_monopoly_resource_by_counted_holdings():
     view = Observation.from_game(game, 0)
     action = make_policy('planner_unified', 1).choose(view, 0)
     assert action == {'type': 'play_development', 'card': 'monopoly', 'resource': 'ore'}
+
+
+def _city_short_one_ore():
+    game = Game.new(list('abcd'), 11)
+    for seat in (1, 2, 3):
+        game.players[seat].resources = {r: 0 for r in Resource}
+        game.players[seat].resources[Resource.WOOL] = 4
+        game.current, game.phase = seat, 'actions'
+        # Public bank trades give each opponent one known ore.
+        game.apply(seat, {'type': 'bank_trade', 'give': 'wool', 'receive': 'ore'})
+    game.phase, game.turn, game.current, game.rolled = 'actions', 20, 0, 6
+    me = game.players[0]
+    me.settlements.add(0)
+    me.resources = {r: 0 for r in Resource}
+    me.resources.update({Resource.BRICK: 3, Resource.GRAIN: 2, Resource.ORE: 2})
+    return game
+
+
+def test_offering_planner_asks_for_the_card_its_city_needs():
+    game = _city_short_one_ore()
+    view = Observation.from_game(game, 0)
+    assert make_policy('planner_unified', 1).choose(view, 0) == {'type': 'end_turn'}
+    action = make_policy('planner_offer', 1).choose(view, 0)
+    assert action['type'] == 'offer_trade' and action['receive'] == {'ore': 1}
+    assert set(action['give']) <= {'brick'}
+    game.apply(0, action)  # legal
+    assert game.phase == 'trade_response'
+
+
+def test_offering_planner_offers_at_most_once_per_turn():
+    game = _city_short_one_ore()
+    bot = make_policy('planner_offer', 1)
+    first = bot.choose(Observation.from_game(game, 0), 0)
+    game.apply(0, first)
+    game.apply(game.current, {'type': 'reject_trade'})
+    assert bot.choose(Observation.from_game(game, 0), 0) == {'type': 'end_turn'}
+
+
+def _road_path(game, start, length):
+    path, vertex, seen = [], start, {start}
+    while len(path) < length:
+        nxt = next(n for n in game.board.neighbors[vertex] if n not in seen)
+        path.append(tuple(sorted((vertex, nxt))))
+        seen.add(nxt)
+        vertex = nxt
+    return path
+
+
+def test_race_value_grows_as_the_longest_road_gap_closes():
+    bot = make_policy('planner_race', 1)
+    values = []
+    for length in (2, 3, 4):
+        game = Game.new(list('abcd'), 11)
+        game.players[0].settlements.add(0)
+        game.players[0].roads.update(_road_path(game, 0, length))
+        values.append(bot._race_value(game, 0))
+    assert values[0] < values[1] < values[2]
+    game.longest_road_holder = 0
+    # A held award is already in the points; only the Largest Army race remains.
+    assert bot._race_value(game, 0) < values[0]

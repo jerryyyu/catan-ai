@@ -141,6 +141,10 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_unified':
         from .unified_planner import UnifiedPlanner
         return UnifiedPlanner(rng)
+    if name in ('planner_shared', 'planner_race', 'planner_block', 'planner_offer'):
+        from . import unified_planner as u
+        return {'planner_shared': u.SharedScorePlanner, 'planner_race': u.RacePlanner,
+                'planner_block': u.BlockPlanner, 'planner_offer': u.OfferingPlanner}[name](rng)
     if name == 'planner_discard':
         from .improved_planners import DiscardAwarePlanner
         return DiscardAwarePlanner(rng)

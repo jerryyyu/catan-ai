@@ -24,7 +24,7 @@ higher than holding.
 from copy import deepcopy
 
 from .card_planner import resource_estimates
-from .engine import Resource, award_holder
+from .engine import Resource, award_holder, longest_road
 from .parameter_planner import ParameterPlanner
 from .tactical import public_projection
 
@@ -259,3 +259,121 @@ class UnifiedPlanner(ParameterPlanner):
             if end is not None:
                 return end
         return super()._fallback(view, seat)
+
+
+# ---------------------------------------------------------------- version 2
+# Three additions to the same shared score, each switchable so a screen can
+# attribute its effect. All constants were fixed before any game.
+RACE_DISCOUNT = .5   # value of an award reached in k more steps: 2 points * RACE_DISCOUNT**k
+OFFER_MARGIN = .25   # minimum expected score gain before an offer is sent
+
+
+class SharedScorePlanner(UnifiedPlanner):
+    """``planner_unified`` plus award races, opponent-aware builds and trade offers.
+
+    - ``race``: every seat's value counts progress toward Longest Road and
+      Largest Army it does not hold, so building toward an award, and an
+      opponent closing in on one, both move the score.
+    - ``block``: the turn search ranks builds by the shared score
+      ``V(me) - LAMBDA * max V(opponent)`` instead of ``V(me)``, so a road or
+      settlement that takes a leader's best site counts.
+    - ``offers``: when the turn would otherwise end, propose the one-card or
+      two-for-one exchange with the highest expected score gain, weighting
+      each by the card-counted chance the recipient holds the requested card.
+      At most one offer per turn.
+    """
+
+    race = block = offers = True
+
+    # ------------------------------------------------------------ scoring
+    def _road_lengths(self, game):
+        occupied = game.occupied()
+        return [longest_road(p.roads, {v for v, owner in occupied.items() if owner != s})
+                for s, p in enumerate(game.players)]
+
+    def _race_value(self, game, seat):
+        player, points = game.players[seat], self.weights[0]
+        bonus = 0.
+        if game.longest_road_holder != seat and len(player.roads) < 15:
+            lengths = self._road_lengths(game)
+            holder = game.longest_road_holder
+            gap = (5 if holder is None else lengths[holder] + 1) - lengths[seat]
+            if 1 <= gap <= 3:
+                bonus += 2 * points * RACE_DISCOUNT ** gap
+        if game.largest_army_holder != seat:
+            holder = game.largest_army_holder
+            gap = (3 if holder is None else game.players[holder].knights + 1) - player.knights
+            # Only known cards count: estimated opponent cards are placeholders (turn -1).
+            held = sum(card == 'knight' and turn >= 0 for card, turn in player.development)
+            if 1 <= gap <= 3:
+                bonus += 2 * points * RACE_DISCOUNT ** max(gap - held, 0) * .75
+        return bonus
+
+    def _seat_value(self, game, seat):
+        value = super()._seat_value(game, seat)
+        return value + self._race_value(game, seat) if self.race else value
+
+    def _leaf(self, game, seat):
+        if self.block:
+            mine = self._seat_value(game, seat)
+            threat = max(self._seat_value(game, s) for s in range(len(game.players)) if s != seat)
+            return mine - LAMBDA * threat
+        if self.race:
+            return self._value(game, seat) + self._race_value(game, seat)
+        return self._value(game, seat)
+
+    # ------------------------------------------------------------- offers
+    def _best_offer(self, view, seat):
+        game = self._world(view)
+        base = self._hand_score(game, seat)
+        hand = game.players[seat].resources
+        best, best_gain = None, OFFER_MARGIN
+        for receive in _RESOURCES:
+            for give in _RESOURCES:
+                if give == receive:
+                    continue
+                for count in (1, 2):
+                    if hand[give] < count:
+                        continue
+                    for recipient in range(len(game.players)):
+                        if recipient == seat:
+                            continue
+                        held = game.players[recipient].resources[receive]
+                        chance = min(1., held)
+                        if chance <= 0:
+                            continue
+                        offer = {'owner': seat, 'give': {give.value: count}, 'receive': {receive.value: 1}}
+                        child = self._copy(game)
+                        child.players[recipient].resources[receive] = max(held - 1, 0)
+                        child.players[recipient].resources[give] += count
+                        child.players[seat].resources[receive] += 1
+                        child.players[seat].resources[give] -= count
+                        gain = chance * (self._hand_score(child, seat) - base)
+                        if gain > best_gain:
+                            best, best_gain = (recipient, offer), gain
+        if best is None:
+            return None
+        recipient, offer = best
+        return {'type': 'offer_trade', 'recipient': recipient, 'give': offer['give'], 'receive': offer['receive']}
+
+    def choose(self, view, seat):
+        action = super().choose(view, seat)
+        if (self.offers and view.phase == 'actions' and action.get('type') == 'end_turn'
+                and self.last_offer_turn != view.turn):
+            offer = self._best_offer(view, seat)
+            if offer is not None:
+                self.last_offer_turn = view.turn
+                return offer
+        return action
+
+
+class RacePlanner(SharedScorePlanner):
+    block = offers = False
+
+
+class BlockPlanner(SharedScorePlanner):
+    race = offers = False
+
+
+class OfferingPlanner(SharedScorePlanner):
+    race = block = False
