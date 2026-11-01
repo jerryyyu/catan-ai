@@ -2,6 +2,40 @@
 
 ## Research: competitive four-player Catan AI
 
+### Predeclared: external-control rerun on the repaired comparator (v13) (2026-10-31)
+
+Jerry asked to rerun the withheld external-control comparison on the repaired
+comparator before deciding whether to promote `planner_parameter`. Nothing below
+has been run. The sealed family stays FAIL; this is a new run, not a reread.
+First drafted against v12 (PR #3 bank-trade repair) and retargeted to v13
+before any game, once PR #5 closed the remaining bank-dependent legality path
+(Year of Plenty). With both repairs, every engine action whose legality depends
+on the hidden bank is constrained in recovery.
+
+- **Source.** A frozen snapshot of tree `93bc3f2` (PR #5 head on merged main) at
+  `runs/economic-parameters-v13-source-v1`, on the pure-Python engine.
+  Checkpoint `runs/economic-parameters-v13-binding-v1/model.json`
+  (sha256 b1785ccb…) carries the same weights as 77c5ebfc…. On Codex's two
+  diagnostic boards (1620000–1, all seats vs Tactical), its 8 games are
+  identical to the v12 binding's in every action, outcome and final RNG state
+  (`compatibility-summary.json`). The snapshot evaluator enforces the
+  `power` blocks.
+- **Stage 1, DEV and reliability gate.** `economic-parameters-v13-external-dev.json`:
+  64 boards per panel (seeds 1690000+ and 1691000+), all seats, both
+  lineups of the original external comparison. The bar is +.05 paired lift on both panels, zero
+  truncations, zero external faults, 2 s step, 10 s turn. Admission at a true
+  +.12 and sigma .40 requires 52 clusters; family pass probability is .845 at
+  64. Any fault stops the plan before held-out.
+- **Stage 2, held out.** `economic-parameters-v13-external-heldout.json`:
+  1,600 boards per panel (seeds 1700000+ and 1710000+), with the original
+  external held-out design: paired-normal inference with the existing calibration (its
+  `inference.py` hash matches this source), LCB > 0 at alpha .025 per panel,
+  zero faults, no fault budget. Admission at a true +.05 gives family pass
+  probability .998. It runs only if stage 1 passes on the same snapshot.
+- **Reading.** A pass says `planner_parameter` beats the repaired depth-2
+  comparator on fresh boards. Promotion remains Jerry's decision, made together
+  with the sealed Tactical-control panels.
+
 ### Loss attribution, pass 2 v2: seeded sample, fail-closed replay (2026-10-31)
 
 Rerun after Codex's HOLD on PR #2 with the corrected tools. Pass 1 v2
