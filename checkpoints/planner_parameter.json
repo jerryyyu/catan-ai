@@ -1,0 +1,92 @@
+{
+ "schema": 1,
+ "weights": [
+  16.954330814946953,
+  0.6537987321930112,
+  0.641167594927603,
+  1.5499286338795906,
+  0.4445213636185654,
+  1.4479747239779968,
+  7.063402747746514,
+  2.805531684851287
+ ],
+ "source": {
+  "__init__.py": "b153aefa09a0fbb462215929b2a730c22757b72cf476f8527077712bdedb9c4c",
+  "_engine_py.py": "6160b1b5f86288c1769ca7cb99ab826e9b57dfd1360033535f4da96e4327ce88",
+  "api.py": "b2b35afe185b206728297edaf01442708e4fcb0c2392b45bf492c15f69fe756f",
+  "belief.py": "ff5f9f71093e7342b3d4802e9e4cc06cfddd30eb14dcbfa5652d776d9a43dd15",
+  "bots.py": "34596b06725afdaf0f22f5abf0ea0e87be8023c2aae67f878ce4126157292d95",
+  "card_planner.py": "5ea99ca7dce6b1e8adf32d9737b2bfa0ee3b10b23b1476152621815acee84f50",
+  "card_timing.py": "e200dd709bb96adabca1f222fa7a5b4a87829e13e0d858befb3c3388805fd757",
+  "catanatron_adapter.py": "b54a421a77aa24d9c4dba2c5af180f904bcbfdeb1a76cc683f187254ce5d6297",
+  "chain_planner.py": "982004e403d37e6f2713386d81391f85e97d2227543192646f232827b7e62cb8",
+  "components.py": "28350b5bb7d3de94031a09cd9c3acf632763b87e77fe52dee90721bb1f1f5d97",
+  "constraint_belief.py": "b0967934a2e30e9475a5a02106978124a3e6a29419d4fe3f0cd736eba85e9603",
+  "development_constraints.py": "573fd98317c9be3c75ac00336b7086802f248f4e1702ac99a42283233045e856",
+  "engine.py": "87c4884046dcd74ce63ed5d93c20ab5df1ca0d34c4948b0d0aebe6f832d08c45",
+  "experiments.py": "bc93fa2e9e78725aa026043e5be30fa682ae0809c249589a5fe7ea22a92c86ec",
+  "external_compatibility.py": "143a7c7b409e25bc86f1aee1da5e729d88ce97922f4e21d8bb754372050d2360",
+  "external_opening.py": "6bcaec160f7a5e41c60f3ce1b41de030e84a99055b303615904fdf66f06c79fa",
+  "external_policy.py": "83fcaa6cb4a08139d69ce04e85ca85f7f97477e70df12acede1b0cd1210c180c",
+  "external_worker.py": "e8d30abb5b7f935baa5b11098593a0c469071da40e6a8b6f5622c47ca6290fe3",
+  "finish.py": "748a2a3ff1c32aa5044ed9e575150dbf61984541b35555caf4e0b864ea8ddc11",
+  "guided_belief.py": "9d1737f7e57d599cc5f53c1bb792f1c212e921abe17d357064827bc0f49578bf",
+  "inference.py": "7bc2891e74b735a634abc96266bc97263945981e03cb4511c5f1b3dd93da5c7b",
+  "learn_pipeline.py": "66a4df435ee41ee3cdc3de12ff2dd73fd5f4d509671292b24c763e926c26b7ae",
+  "learned_planner.py": "064bd2af6bc765f7990da9fdc26f064f5a8f453c4fc2f392c561bed2035154fb",
+  "learning.py": "2d725c89b01e2bfa433fb700c84dae547988854345ef3dea383bf4a9109bbd4c",
+  "observation.py": "ed36014285a33f768abf914d5e091000c24d6f0679e2ccfb96e96ad9e4c09577",
+  "opening.py": "c68c90ccc138758deed5a7c83847f0c1955022f41fbd8c08ff8956c55a87160f",
+  "paired_value.py": "6adc3d7d3c489e4b83cb5406c19eb1d084f5ba6b1d21b91362dfa0eaf0df8d2b",
+  "parameter_planner.py": "b379961d7e3ce8914fb16deeabe929ccbda6140332a0686bee2dccc4415fdd00",
+  "pilot_store.py": "7c7cae32e3ebbe1b6933031033c22479efde70f04b9ad747a41624616d55aae4",
+  "planner.py": "2209f5fc53175933e05158e0dd1388aad0977d61f6381b7c2b292296080e1a50",
+  "power.py": "e7667445aa79684e9ef6c07ad96205b3f42b2ab628bbfc9339ccb2ed338e00b8",
+  "recovery_belief.py": "952c338fa3abc75fbf588e52c735241a3bfe801bff46afa1097f5bd5e0701fc4",
+  "resource_constraints.py": "47ce866dd362355c7a808d5297bbcc7763bf28d9c967328e9526c6319d3b307f",
+  "rooms.py": "e12749d6bae9c32a2bb3a106c92c09343bbca20e7e31824d3059a005f0624abb",
+  "scoring.py": "dddf319e8bb514d9ac41129b43ff2af3323bac0677b466104a3fcbf85fe6de8a",
+  "search.py": "6e0fb7203c9fcf8c609d2f185fcf76e7c18bf962fd086505608a21f916d94341",
+  "search_eval.py": "483822db1fbec06553e0ca7a9e7c1a628b5debc1450d8e52e018432786b677ef",
+  "sim.py": "a7f64b552ff0750ea76174a3e3b14e1717f5c58653848f233e29970d8fe9f739",
+  "strategic.py": "a50b41ccf8fea4e3dc411c24eb4be46a55622dcc9f32b80ae5f3b30bc3776117",
+  "styles.py": "a31ff66fc33e86705d0fca2d1048d3c1abc5bd333d4bdce0097512b18182c4e9",
+  "tactical.py": "c709aea25e30d8d2f2e15fe21ed9cb1cbef04a1c63ef49e5fedf22e02560ada7",
+  "value_model.py": "9831225f5e84ecb2457fdb1093dc0c38c8c410d3974fb2b6c5cf9f619a572600",
+  "engine_backend": "11a4a60b518bf24989d481468076e5d5982884626aed9faeb35b8576fcd223e1"
+ },
+ "lineage": {
+  "evaluated_checkpoint_sha256": "b1785ccb5920c236794b3fa0549ae7835f2cb46776c3d8a8a8a56348e9f9e5a1",
+  "parent_checkpoint_sha256": "77c5ebfc5b148e8d9a22aa07732df2b62b428fe6b8dc3767be8276447206fc92",
+  "evaluated_source_tree": "93bc3f2 (frozen snapshot runs/economic-parameters-v13-source-v1)",
+  "evidence": [
+   "Tactical-control panels of the sealed confirmatory family (+.110, +.227; simultaneous LCB +.096, +.208)",
+   "v13 external rerun: DEV PASS; held-out FAIL on 27 comparator faults, owner-requested descriptive lifts +.061 and +.151"
+  ],
+  "promotion": "Jerry decided to serve this as the default on 2026-11-01",
+  "change": "Source binding only; weights unchanged from the evaluated checkpoint"
+ },
+ "compatibility": {
+  "plan": {
+   "seeds": [
+    1620000,
+    1620001
+   ],
+   "seats": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "opponents": [
+    "tactical",
+    "tactical",
+    "tactical"
+   ],
+   "max_turns": 1000
+  },
+  "trace_sha256": "898909f56a3333eeb39bcfabf5969c15a2bcb8314fb725d894ed590275fccb65",
+  "reference": "Traces of the evaluated checkpoint on the evaluated snapshot (runs/economic-parameters-v13-binding-v1/v13.json); a binding must reproduce them exactly",
+  "backend": "python"
+ }
+}

@@ -126,11 +126,25 @@ not be shared during play. Human timings measure action processing, not thinking
 time; bot timings include observation, decision and application. These local
 one-human/three-bot pilots support debugging, not a human-transfer strength claim.
 
-Solo play also offers **Trained challenger (pilot)** against three fitted bots.
-It requires a source-compatible `CATAN_PARAMETER_MODEL` on the server and records
-its checkpoint SHA256 for restart recovery. All three opponents must load the
-same checkpoint. This mode supports usability feedback; it does not measure
-performance against three experienced human opponents.
+Solo play defaults to the **Trained planner** (`planner_parameter`), promoted
+on 2026-11-01. The server loads `checkpoints/planner_parameter.json` unless
+`CATAN_PARAMETER_MODEL` names another checkpoint. A game records the checkpoint's
+SHA256 for restart recovery, and all three opponents must load the same
+checkpoint. The checkpoint pins every source file and the engine backend. It is
+bound to the default pure-Python engine, so under `CATAN_ENGINE=cython`, or with
+any unbound source change, `GET /api/bots` reports it unavailable and new games
+fall back to Tactical with a visible notice. After changing `src/catan_ai`, run
+
+```sh
+uv run python scripts/bind_parameter_checkpoint.py --write
+```
+
+It keeps the weights, replays the checkpoint's 8 seeded compatibility games and
+writes the new binding only if every trace, outcome and final RNG state matches
+the evaluated snapshot's games exactly. If they differ, the change alters how the
+promoted bot plays and needs a new evaluation, not a rebind. CI enforces both
+checks (`tests/test_served_checkpoint.py`). Solo games support usability
+feedback; they do not measure performance against experienced humans.
 
 For a private three-human match, open **Private three-human match** (or `/#room`),
 choose the bot and its seat, and create a room. Tactical remains the default. Share one invitation with each

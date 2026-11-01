@@ -90,7 +90,24 @@ class NewGame(BaseModel):
     name: str = "You"
     seed: int | None = None
     human_seat: int = Field(default=0, ge=0, le=3, strict=True)
-    opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned', 'planner_parameter'] = 'tactical'
+    # None means the served default (see served_default).
+    opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned', 'planner_parameter'] | None = None
+
+
+SERVED_POLICY = 'planner_parameter'
+FALLBACK_POLICY = 'tactical'
+
+
+def served_default() -> tuple[str, str | None]:
+    """The policy a new game gets when none is named, and why if it fell back.
+
+    The fitted planner is served when its source-pinned checkpoint loads on this
+    server (pure-Python engine, matching source). Otherwise new games use
+    Tactical, and the reason is reported so the fallback is visible.
+    """
+    from .parameter_planner import served_status
+    available, reason = served_status()
+    return (SERVED_POLICY, None) if available else (FALLBACK_POLICY, reason)
 
 
 class ActionBody(BaseModel):
@@ -116,8 +133,17 @@ def health() -> dict:
     return {"ok": True, "games": len(sessions)}
 
 
+@app.get("/api/bots")
+def bots_info() -> dict:
+    policy, reason = served_default()
+    return {"default": policy, "served": SERVED_POLICY, "served_available": reason is None,
+            "fallback_reason": None if reason is None else "Trained planner checkpoint is not bound to this server version"}
+
+
 @app.post("/api/games")
 def create_game(body: NewGame) -> dict:
+    if body.opponent is None:
+        body = body.model_copy(update={'opponent': served_default()[0]})
     seed = body.seed if body.seed is not None else secrets.randbits(31)
     game_id = secrets.token_urlsafe(8)
     names = ["Ada", "Mina", "Lin"]

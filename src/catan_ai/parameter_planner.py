@@ -14,8 +14,16 @@ DEFAULT = [12., .55, 1., 1., .5, 1., 8., 2.]
 BOUNDS = [(6., 30.), (.2, 1.2), (.2, 2.), (.1, 3.), (.1, 2.), (.2, 3.), (2., 18.), (.2, 5.)]
 
 
+SERVED_CHECKPOINT = Path(__file__).resolve().parents[2] / 'checkpoints' / 'planner_parameter.json'
+
+
 def load_parameters(path=None):
-    path = Path(path or os.environ['CATAN_PARAMETER_MODEL']).resolve()
+    """Load a source-pinned checkpoint.
+
+    The path is, in order: the argument, ``CATAN_PARAMETER_MODEL``, then the
+    served checkpoint committed under ``checkpoints/``. Any mismatch fails closed.
+    """
+    path = Path(path or os.environ.get('CATAN_PARAMETER_MODEL') or SERVED_CHECKPOINT).resolve()
     raw = path.read_bytes()
     data = json.loads(raw)
     weights = data['weights']
@@ -49,3 +57,49 @@ class ParameterPlanner(ProductionRobberPlanner):
         development = sum(6 if card == 'victory_point' else 3 for card, _ in player.development)
         return (w[0] * player.points + w[1] * production + w[2] * hand - discard
                 + w[3] * self._geometry(game, seat) + w[4] * ports + w[5] * development)
+
+
+def served_status():
+    """Return (available, reason) for the checkpoint new games would load."""
+    try:
+        load_parameters()
+    except (KeyError, OSError, ValueError) as exc:
+        return False, type(exc).__name__ + ': ' + str(exc)
+    return True, None
+
+
+def compatibility_games(plan):
+    """Play a checkpoint's seeded compatibility games and return full traces.
+
+    Each game puts the fitted planner in one seat against ``plan['opponents']``.
+    The record shape matches the v13 evaluation binding's trace file, so a
+    rebind can be compared with the games the evaluated snapshot played.
+    """
+    from .bots import make_policy
+    from .engine import Game
+    from .observation import Observation
+    results = []
+    for seed in plan['seeds']:
+        for focal in plan['seats']:
+            names = list(plan['opponents'])
+            names.insert(focal, 'planner_parameter')
+            game = Game.new([f'{name}-{seat}' for seat, name in enumerate(names)], seed)
+            policies = [make_policy(name, seed * 17 + seat + 1) for seat, name in enumerate(names)]
+            trace = []
+            while game.winner is None and game.turn < plan['max_turns'] and len(trace) < 50000:
+                seat = game.current
+                action = policies[seat].choose(Observation.for_policy(game, seat, policies[seat]), seat)
+                game.apply(seat, action)
+                trace.append({'seat': seat, 'action': action})
+            results.append({'seed': seed, 'seat': focal, 'winner': game.winner, 'turn': game.turn,
+                            'points': [p.points for p in game.players], 'trace': trace,
+                            'final_rng': repr(game.rng.getstate())})
+    return results
+
+
+def trace_digest(games):
+    return hashlib.sha256(json.dumps(games, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+
+def compatibility_digest(plan):
+    return trace_digest(compatibility_games(plan))

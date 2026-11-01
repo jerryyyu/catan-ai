@@ -22,9 +22,20 @@ function Pilot() {
   const [state, setState] = useState<State | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [opponent, setOpponent] = useState('tactical');
+  const [opponent, setOpponent] = useState('planner_parameter');
+  const [servedAvailable, setServedAvailable] = useState(true);
   const [humanSeat, setHumanSeat] = useState(0);
   const [showReplay, setShowReplay] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/bots').then(response => response.ok ? response.json() : null).then(data => {
+      if (!active || !data) return;
+      setServedAvailable(Boolean(data.served_available));
+      if (!data.served_available) setOpponent(current => current === 'planner_parameter' ? data.default : current);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('catan-pilot-game');
@@ -67,7 +78,7 @@ function Pilot() {
     finally { setBusy(false); }
   }
 
-  if (!state) return <main className="landing"><div className="eyebrow">A reproducible game lab</div><h1>Catan<br/><em>AI</em></h1><p>Play the bots. Measure the next idea. Keep the engine honest.</p><label>Opponents <select aria-label="Opponents" value={opponent} onChange={e => setOpponent(e.target.value)} disabled={busy}><option value="heuristic">Heuristic</option><option value="mc">Monte Carlo LCB (experimental)</option><option value="tactical">Tactical (default)</option><option value="planner_parameter">Trained challenger (pilot)</option><option value="mc_mean">Monte Carlo mean (experimental, slower)</option><option value="learned">Learned baseline (experimental)</option></select></label><label>Your seat <select aria-label="Your seat" value={humanSeat} onChange={e => setHumanSeat(Number(e.target.value))} disabled={busy}>{[0, 1, 2, 3].map(seat => <option key={seat} value={seat}>Seat {seat + 1}</option>)}</select></label><button onClick={newGame} disabled={busy}>Start a game</button>{error && <p className="error">{error}</p>}</main>;
+  if (!state) return <main className="landing"><div className="eyebrow">A reproducible game lab</div><h1>Catan<br/><em>AI</em></h1><p>Play the bots. Measure the next idea. Keep the engine honest.</p><label>Opponents <select aria-label="Opponents" value={opponent} onChange={e => setOpponent(e.target.value)} disabled={busy}><option value="heuristic">Heuristic</option><option value="mc">Monte Carlo LCB (experimental)</option><option value="planner_parameter" disabled={!servedAvailable}>Trained planner (default)</option><option value="tactical">Tactical (previous default)</option><option value="mc_mean">Monte Carlo mean (experimental, slower)</option><option value="learned">Learned baseline (experimental)</option></select></label><label>Your seat <select aria-label="Your seat" value={humanSeat} onChange={e => setHumanSeat(Number(e.target.value))} disabled={busy}>{[0, 1, 2, 3].map(seat => <option key={seat} value={seat}>Seat {seat + 1}</option>)}</select></label><button onClick={newGame} disabled={busy}>Start a game</button>{!servedAvailable && <p className="error">Trained planner unavailable on this server version. Using Tactical.</p>}{error && <p className="error">{error}</p>}</main>;
 
   if (showReplay && gameId) return <Replay gameId={gameId} close={() => setShowReplay(false)}/>;
   const self = state.players.find(p => p.resources !== null)!;
