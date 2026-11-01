@@ -48,9 +48,9 @@ def test_new_games_default_to_the_served_policy():
     info = client.get('/api/bots').json()
     if BACKEND == 'python':
         # The committed checkpoint is bound to the pure-Python engine.
-        assert created['opponent'] == info['default'] == 'planner_unified' and info['served_available']
-        from catan_ai.unified_planner import UnifiedPlanner
-        assert all(isinstance(p, UnifiedPlanner) for p in bots)
+        assert created['opponent'] == info['default'] == 'planner_unified_offer' and info['served_available']
+        from catan_ai.unified_planner import OfferingPlanner
+        assert all(isinstance(p, OfferingPlanner) for p in bots)
     else:
         assert created['opponent'] == info['default'] == 'tactical' and not info['served_available']
         assert all(isinstance(p, TacticalBot) for p in bots)
@@ -61,12 +61,12 @@ def test_unbound_checkpoint_falls_back_to_tactical_visibly(tmp_path, monkeypatch
     monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(tmp_path / 'missing.json'))
     client = TestClient(app)
     info = client.get('/api/bots').json()
-    assert info == {'default': 'tactical', 'served': 'planner_unified', 'served_available': False,
+    assert info == {'default': 'tactical', 'served': 'planner_unified_offer', 'served_available': False,
                     'fallback_reason': 'Trained planner checkpoint is not bound to this server version'}
     created = client.post('/api/games', json={'seed': 4}).json()
     assert created['opponent'] == 'tactical'
     assert all(isinstance(p, TacticalBot) for p in sessions[created['game_id']].bots.values())
-    assert client.post('/api/games', json={'seed': 4, 'opponent': 'planner_unified'}).status_code == 503
+    assert client.post('/api/games', json={'seed': 4, 'opponent': 'planner_unified_offer'}).status_code == 503
 
 
 
@@ -79,7 +79,7 @@ def test_structurally_invalid_checkpoint_fails_closed(tmp_path, monkeypatch, sha
     client = TestClient(app)
     sessions.clear()
     # A valid game first, so restart behaviour under the broken checkpoint can be checked.
-    good = client.post('/api/games', json={'seed': 4, 'opponent': 'planner_unified'})
+    good = client.post('/api/games', json={'seed': 4, 'opponent': 'planner_unified_offer'})
     if good.status_code == 200:
         game_id = good.json()['game_id']
         before = pilot_store.record_path(game_id).read_bytes()
@@ -106,7 +106,7 @@ def test_structurally_invalid_checkpoint_fails_closed(tmp_path, monkeypatch, sha
     assert all(isinstance(p, TacticalBot) for p in sessions[created.json()['game_id']].bots.values())
     records = tmp_path / 'records'
     count = len(list(records.glob('*.json')))
-    assert client.post('/api/games', json={'seed': 4, 'opponent': 'planner_unified'}).status_code == 503
+    assert client.post('/api/games', json={'seed': 4, 'opponent': 'planner_unified_offer'}).status_code == 503
     assert len(list(records.glob('*.json'))) == count
     if good.status_code == 200:
         sessions.clear()
