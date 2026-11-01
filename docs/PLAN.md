@@ -10,8 +10,9 @@ boards it was opened on.
 
 A frozen bot that, within 2 s per decision on one core:
 
-1. beats the verified external comparator by at least +25 pp paired win rate
-   over its four-seat rotation on reserved boards, and
+1. improves on the served default through successive held-out promotions,
+   each paired against the bot it replaces over a four-seat rotation on reserved
+   boards (now `planner_parameter`, promoted 2026-11-01), and
 2. wins at least 25% of four-player games at a table of three experienced
    humans under a predeclared, randomized candidate/control design.
 
@@ -29,8 +30,28 @@ bars below are the honest steps toward it.
   measurable. A game costs one to two seconds, so a 5 pp screen is an hour.
 - The learned baseline that regressed trained on 1,408 games with a linear
   model. The field's reference result used hundreds of millions of decisions.
-- The only external judge is depth-2 Catanatron, which faults on about 1.4% of
+- The only external judge is depth-2 Catanatron, which faulted on about 1.4% of
   held-out clusters and is not a strong player.
+
+## Standard comparison (from 2026-11-01)
+
+The owner retired Catanatron as a gate on 2026-11-01: "improve vs our best".
+Every new candidate is now screened paired against the served
+`planner_parameter`, which holds the control seat, on three tables:
+
+- **tactical**: three Tactical opponents (continuity with past screens);
+- **mixed**: Builder, Tactical and Expander (style diversity, including players
+  that never trade);
+- **self**: three `planner_parameter` opponents. This is the table that most
+  resembles playing our best, and it tests whether a gain survives against an
+  opponent of the same strength.
+
+Each lane still predeclares its bar, gates and `power` block before any game.
+The default bar is +5 pp paired lift on every table, with zero truncations and
+the 2 s step and 10 s turn limits. A pass on all three tables earns a held-out
+run with LCB > 0 against the served default, and a held-out pass is what a
+promotion needs. Past Catanatron results and the adapter code are kept, but no
+new comparator work or external screen is planned.
 
 ## Lanes in order
 
@@ -89,7 +110,7 @@ bars below are the honest steps toward it.
   planner leaf and as the rollout policy of the existing root search.
 - First bar, offline: held-out AUC for win probability beats the economic
   leaf's ranking on the same positions. Second bar: a powered DEV screen against
-  Tactical and the external comparator at +5 pp. Third: a reserved held-out
+  the served default on the standard tables at +5 pp. Third: a reserved held-out
   family.
 - This is the lane that produced shengji's largest gains. Everything before it
   is preparation.
@@ -121,13 +142,15 @@ bars below are the honest steps toward it.
   value only.
 - Bar: powered DEV screen, +5 pp both panels.
 
-### 8. Judges
+### 8. Judges   RETIRED for Catanatron 2026-11-01
 
-- Fix the external-worker fault cause before the next family, or predeclare a
-  fault budget in the plan. Add Catanatron's deeper configuration under the
-  hard clock and the Settlers-RL checkpoint as a second judge after a rules
-  audit. Stand up a seat-swapped red-team lane that plays the served bot head
-  to head.
+- The owner retired external benchmarking: the standard comparison is the
+  served default (above). The two external held-out runs both failed the
+  zero-fault rule (legality mismatches, then solver timeouts in long games),
+  and the second run's descriptive read showed the fitted planner ahead by
+  +6 and +15 pp. No further Catanatron or Settlers-RL work is planned unless
+  the owner reopens it.
+- The self table is the red-team lane: candidates play against the served bot.
 - Human transfer stays gated on an authorized platform route; local pilots
   continue.
 

@@ -3,6 +3,11 @@ import { test, expect } from '@playwright/test';
 test('human completes setup and plays through real API phases', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
+  // Keep this UI path reproducible; the API still supplies all game semantics.
+  await page.route('**/api/games', async route => {
+    if (route.request().method() !== 'POST') return route.continue();
+    await route.continue({ postData: JSON.stringify({ ...route.request().postDataJSON(), seed: 2500100 }) });
+  });
   await page.goto('/');
   const started = page.waitForResponse(r => r.url().endsWith('/api/games') && r.request().method() === 'POST');
   await page.getByRole('button', { name: 'Start a game' }).click();
@@ -35,7 +40,12 @@ test('human completes setup and plays through real API phases', async ({ page })
     const response = await reply;
     expect(response.status()).toBe(200);
     state = await response.json();
-    expect(state.current).toBe(0);
+    if (state.winner === null) {
+      expect(state.current).toBe(0);
+    } else {
+      expect([0, 1, 2, 3]).toContain(state.winner);
+      expect(state.legal_actions).toEqual([]);
+    }
   }
   expect(state.turn).toBeGreaterThan(4);
   expect(errors).toEqual([]);

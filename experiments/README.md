@@ -2,6 +2,100 @@
 
 ## Research: competitive four-player Catan AI
 
+### External-control rerun on comparator v13: stage 1 PASS, stage 2 FAIL on faults (2026-11-01)
+
+Both stages of the predeclared plan below ran on the frozen v13 snapshot and
+checkpoint b1785ccb, cap 4, host Jerrys-Mac-mini.local.
+
+- **Stage 1 DEV, PASS.** `runs/economic-parameters-v13-external-dev-v1.json`,
+  1,024 games, 2026-10-31 14:22–14:53Z. Tactical panel .359 against .277,
+  lift +.082 (Hoeffding LCB −.257); mixed panel .555 against .359, lift
+  +.195 (LCB −.144). Zero external faults, zero truncations; Catanatron's
+  worst step 1.42 s and worst turn 3.36 s.
+- **Stage 2 held out, FAIL.** `runs/economic-parameters-v13-external-heldout-v1.json`
+  (sha256 94b7ebdb…4f98), 25,600 games, 2026-10-31 14:54Z to 2026-11-01
+  04:16Z, zero truncations. The evaluator counted 27 external fault
+  violations, 1 in the tactical panel and 26 in the mixed panel, against a
+  zero-fault rule with no budget. It withheld both lifts; they were not
+  computed. Candidate step p95 was 9.9 ms and 9.3 ms. In the control seat
+  (`baseline_latency`), Catanatron's worst step was 1.73 s in both panels and
+  its worst turn was 4.05 s (tactical) and 7.96 s (mixed). Those headline
+  figures do not cover Catanatron as an opponent in the candidate arm, where
+  one turn took 10.024 s (below).
+- **Fault anatomy, reconciled with the raw shards** (Codex's review of PR #8,
+  confirmed against shards 353, 512 and 527). The evaluator counts fallback or
+  budget-failure decisions plus step and whole-turn limit violations, so 27 is
+  a violation count. It breaks down as 26 failed decisions and 1 turn
+  violation. The failed decisions are 23 z3 belief-recovery timeouts
+  (`unknown: timeout` at the 500 ms solver limit), 1 decision timeout and 2
+  exhausted turn budgets. The turn violation is turn 197 of mixed board
+  1710353, which took 10.024 s in total. This is a new class: the bank-trade
+  and Year of Plenty legality mismatches repaired in v12 and v13 did not
+  recur. All occurred at turns 184–199 of unusually long games. Mixed board
+  1710353 (candidate arm, Catanatron in opponent seat 1, from turn 193) has 24
+  failed decisions (21 solver timeouts, 1 decision timeout, 2 turn budgets)
+  plus the turn violation. The other two are single solver timeouts in the
+  control seat, on boards 1710512 (turn 184) and 1700527 (turn 199). A separate Shengji job used 4 of the host's 10 cores from about
+  18:56Z. The two single faults finished during it, but the 24-fault game
+  finished before it, at 17:48Z.
+- **Reading.** Under the predeclared rule this is a FAIL, and it is not
+  reinterpreted. `planner_parameter` is still shown stronger than Tactical by
+  the sealed Tactical-control panels. No held-out external comparison has
+  passed. Recovery cost growing with history length is a comparator defect
+  in row 8 scope. A further external comparison needs either a recovery that
+  is bounded on long histories or a fault budget declared before any game.
+  Tactical remains the served default.
+- **Post-hoc descriptive read, at Jerry's request (2026-11-01).** This is not
+  the predeclared test and does not turn the FAIL into a pass. The per-board
+  differences were recomputed from the shards and match the receipt's
+  `seed_cluster_differences` exactly. The intervals below are plain normal
+  95% intervals over 1,600 boards per panel, not the calibrated predeclared
+  inference.
+
+  | Panel | Win rate: fitted planner / Catanatron | Faulted boards dropped | All as played | Faulted boards scored −1 |
+  |---|---|---|---|---|
+  | tactical | .366 / .306 | +.061 [+.044, +.077] | +.060 [+.044, +.077] | +.060 [+.043, +.077] |
+  | mixed | .562 / .411 | +.151 [+.136, +.167] | +.151 [+.136, +.167] | +.150 [+.134, +.165] |
+
+  The three faulted boards (1700527, 1710353, 1710512) move no estimate by
+  more than .002. Jerry decided on 2026-11-01 to promote `planner_parameter`,
+  using these post-hoc figures together with the sealed Tactical-control
+  panels, and confirmed it directly to Codex (board comment 6554097497). The
+  serving change is PR #9.
+- **Compact summary** for the registry:
+  `runs/economic-parameters-v13-external-heldout-v1-summary/summary.json`.
+
+### Belief sharpness: how much of an opponent's hand is inferable (2026-10-31)
+
+A diagnostic, not a strength claim. `runs/belief-sharpness-v1.json` (script
+`runs/belief-sharpness-v1.py`, sha256 b240aa06…) covers 64 mixed-table games
+(planner_parameter, tactical, builder, expander, rotated by seed) on seeds
+2300000–2300063. Every seat was a viewer, giving 5,025 opponent-hand
+checkpoints at turns 10 to 80. Interval card counting gives sound bounds per
+resource; its lower bounds are the cards known for certain. The adapter's
+512-particle `RecoveryBeliefTracker` was updated at each of the viewer's
+decisions and scored against the true hand. Its 172 checkpoints after a
+solver recovery are excluded, because one solved hand copied 512 times is not
+a posterior.
+
+| Turn | Cards per opponent | Unseen steals and discards | Cards certain | Whole hand certain | With public discards | Particle mass on true hand |
+|---|---|---|---|---|---|---|
+| 10 | 4.1 | 0.8 | 83% | 57% | 59% | .83 |
+| 20 | 4.2 | 2.2 | 74% | 42% | 46% | .75 |
+| 40 | 4.4 | 5.1 | 71% | 36% | 40% | .69 |
+| 60 | 4.9 | 8.3 | 72% | 34% | 41% | .66 |
+| 80 | 5.4 | 12.0 | 75% | 36% | 43% | .66 |
+
+The bounds contained the truth at every checkpoint. Across all checkpoints,
+the particles misplaced 0.32 cards on average and held only the true hand in
+56% of them. The truth was missing from every particle in 0.7% of them.
+Sharpness falls with the number of unseen events that touch the opponent:
+none gives an exact hand, 1–2 leave 82% of cards certain, and 11 or more
+leave 62%. The fitted planner's hands are the hardest to read (5.3 cards, 69%
+certain, particle mass .63). Our two planners never consult this information.
+A belief-aware robber, trade target or Monopoly timing is a candidate lane,
+and each needs its own powered, predeclared config.
+
 ### Predeclared: external-control rerun on the repaired comparator (v13) (2026-10-31)
 
 Jerry asked to rerun the withheld external-control comparison on the repaired
