@@ -2,7 +2,7 @@
 
 ## Research: competitive four-player Catan AI
 
-### Shared-score planner: DEV PASS; held-out running (2026-11-01)
+### Shared-score planner: DEV PASS, held-out PASS (2026-11-01)
 
 Jerry asked for one action-selection system instead of a rule per decision.
 `planner_unified` keeps the served planner's fitted weights and build search.
@@ -33,6 +33,23 @@ PASS on every table. DEV is a screen, not a claim. The held-out run
 `experiments/planner-unified-heldout.json` was predeclared at `b19055d`. It
 uses 600 fresh boards per table, requires a paired-normal LCB > 0 at α .05/3
 on each table, and is calibrated by `runs/planner-unified-calibration-v1.json`.
+
+**Held-out PASS.** `runs/planner-unified-heldout-v1.json` (sha256 e6f02b7d…),
+14,400 games, 2026-11-01 06:51–07:41Z, zero truncations. The source, checkpoint
+and lineups match DEV (enforced by the runner), on fresh seeds 2430000+,
+2431000+ and 2432000+:
+
+| Table | Paired lift | LCB (α .05/3) | Candidate step max / turn max |
+|---|---|---|---|
+| tactical | +.112 | +.085 | 0.23 s / 0.49 s |
+| mixed | +.066 | +.041 | 0.20 s / 0.57 s |
+| self | +.023 | +.001 | 0.22 s / 0.48 s |
+
+Every table clears the predeclared LCB > 0 gate, so `planner_unified` is shown
+stronger than `planner_parameter` on all three tables. The self table, where
+all three opponents are the fitted planner, passes by a margin of .001: the
+gain against our own best is real but small. Promotion is the owner's
+decision.
 
 Red-team probes, run as a diagnostic (`runs/redteam-v2/RESULTS.md`):
 

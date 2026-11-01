@@ -41,6 +41,17 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   deterministic fallback and counts as a budget failure. The fitted planner's
   held-out step p95 was about 10 ms.
 
+## Next challenger: shared-score planner, held-out PASS
+
+`planner_unified` keeps the fitted weights and build search. It chooses robber
+placement, steals, discards, development-card play and trade answers by one
+position score, S = V(me) − 0.5 · max V(opponent), using card-counted opponent
+hands. Its held-out run against `planner_parameter` passed on every table,
+with lifts and per-table lower bounds of +.112 (LCB +.085) tactical, +.066
+(+.041) mixed and +.023 (+.001) against three fitted planners
+(`runs/planner-unified-heldout-v1.json`). It is not served until the owner
+decides.
+
 ## Challenger: held-out family sealed, FAIL on comparator faults
 
 `planner_parameter`: the bounded public-information planner with eight economic
