@@ -145,8 +145,8 @@ def test_challenger_checkpoint_pinned_private_and_auditable(client, parameter_mo
     assert pilot_store.load('room_' + room_id) == record
 
 
-def test_challenger_missing_configuration_fails_without_creating_room(client, monkeypatch):
-    monkeypatch.delenv('CATAN_PARAMETER_MODEL', raising=False)
+def test_challenger_missing_configuration_fails_without_creating_room(client, monkeypatch, tmp_path):
+    monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(tmp_path / 'missing.json'))
     assert client.post('/api/rooms', json={'bot': 'planner_parameter'}).status_code == 503
     assert not rooms.rooms
     assert client.post('/api/rooms', json={}).status_code == 200
