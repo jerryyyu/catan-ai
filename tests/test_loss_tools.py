@@ -174,7 +174,10 @@ def test_registry_indexes_nested_readouts_and_legacy_power_fields(tmp_path):
     (runs / 'family-v1' / 'readout.json').write_text(json.dumps({'pass': False, 'panels': [
         {'control': 'tactical', 'panel': 'mixed', 'paired_win_lift': .2, 'simultaneous_lcb': .19, 'pass': True},
         {'control': 'external', 'panel': 'mixed', 'paired_win_lift': None, 'pass': False}]}))
-    (runs / 'screen-v1.json').write_text(json.dumps({'config': {'stage': 'dev'}, 'games': [], 'summary': {
+    (runs / 'diagnostic-v1.json').write_text(json.dumps({'config': {}, 'games': [{'seed': 1}, {'seed': 2}],
+                                                         'summary': {}}))
+    (runs / 'screen-v1.json').write_text(json.dumps({'config': {'stage': 'dev'}, 'games': [
+        {'candidate': {}, 'baseline': {}}], 'summary': {
         'pass': False, 'panels': {'a': {'paired_win_lift': .01, 'minimum_detectable_effect_80': .03, 'pass': False}}}}))
     out = tmp_path / 'out'
     import sys
@@ -190,4 +193,6 @@ def test_registry_indexes_nested_readouts_and_legacy_power_fields(tmp_path):
     assert readout['panels']['tactical/mixed']['paired_seed_lcb'] == .19
     assert readout['panels']['external/mixed']['pass'] is False
     assert names['screen-v1']['panels']['a']['zero_null_mde_80'] == .03
+    assert names['screen-v1']['games'] == 2 and names['screen-v1']['kind'] == 'search_eval'
+    assert names['diagnostic-v1']['games'] == 2 and names['diagnostic-v1']['kind'] == 'diagnostic'
     assert 'zero-null mde80' in (out / 'LADDER.md').read_text()

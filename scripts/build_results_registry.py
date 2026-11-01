@@ -26,15 +26,20 @@ import sys
 def receipt_row(path, data):
     config = data.get('config') if isinstance(data.get('config'), dict) else {}
     summary = data.get('summary')
+    games = data.get('games')
+    paired = (isinstance(games, list) and bool(games) and isinstance(games[0], dict)
+              and 'candidate' in games[0] and 'baseline' in games[0])
     row = {'name': path.stem, 'path': str(path), 'bytes': path.stat().st_size,
            'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
-           'kind': 'search_eval' if 'games' in data and 'summary' in data else 'experiment' if 'aggregate' in data or 'results' in data else 'other',
+           'kind': ('search_eval' if paired else 'diagnostic' if 'games' in data and 'summary' in data
+                    else 'experiment' if 'aggregate' in data or 'results' in data else 'other'),
            'stage': config.get('stage'), 'candidate': config.get('candidate'), 'control': config.get('control'),
            'host': data.get('host'), 'process_cap': data.get('process_cap'),
            'source_revision': data.get('source_revision'),
            'source_hash': hashlib.sha256(json.dumps(data.get('source'), sort_keys=True).encode()).hexdigest()[:16] if data.get('source') else None,
            'checkpoint_sha256': (data.get('checkpoint') or {}).get('sha256'),
-           'games': len(data['games']) * 2 if isinstance(data.get('games'), list) else None,
+           # A paired-screen row holds a candidate and a control game; other receipts count rows as games.
+           'games': (len(data['games']) * (2 if paired else 1)) if isinstance(data.get('games'), list) else None,
            'pass': None, 'panels': {}}
     if isinstance(summary, dict) and isinstance(summary.get('panels'), list):
         summary = {**summary, 'panels': {'/'.join(str(p[k]) for k in ('control', 'panel') if k in p) or str(i): p
