@@ -9,6 +9,7 @@ receipt's own bar (present only for receipts written after the power tooling).
 | receipt | stage | candidate | control | panel | pairs | lift | lcb | faults | zero-null mde80 | pass |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---|
 | base-actions-dev-20261029T170200644839Z |  | heuristic | random | summary |  |  |  |  |  | True |
+| belief-sharpness-v1 |  |  |  | summary |  |  |  |  |  |  |
 | builder-repair-dev-v2 | dev | heuristic | tactical | builders | 32 | -0.156 | -1 |  |  | False |
 | builder-repair-regression-v2 |  |  |  |  |  |  |  |  |  |  |
 | card-timing-dev-v1 | dev | planner_card_timing | planner_robber | tactical | 32 | -0.031 | -0.992 | 0 |  | False |
@@ -26,8 +27,13 @@ receipt's own bar (present only for receipts written after the power tooling).
 | economic-parameters-external-dev-v1 | dev | planner_parameter | external | tactical | 64 | +0.172 | -0.507 | 0 |  | True |
 | economic-parameters-external-dev-v1 | dev | planner_parameter | external | mixed | 64 | +0.172 | -0.507 | 0 |  | True |
 | economic-parameters-run-calibration-v1 |  |  |  |  |  |  |  |  |  |  |
+| economic-parameters-solo-pilot-binding-v1 |  |  |  | summary |  |  |  |  |  | True |
 | economic-parameters-tactical-dev-v1 | dev | planner_parameter | tactical | tactical | 64 | +0.234 | -0.445 | 0 |  | True |
 | economic-parameters-tactical-dev-v1 | dev | planner_parameter | tactical | mixed | 64 | +0.297 | -0.382 | 0 |  | True |
+| economic-parameters-v13-external-dev-v1 | dev | planner_parameter | external | tactical | 256 | +0.082 | -0.257 | 0 | +0.123 | True |
+| economic-parameters-v13-external-dev-v1 | dev | planner_parameter | external | mixed | 256 | +0.195 | -0.144 | 0 | +0.121 | True |
+| economic-parameters-v13-external-heldout-v1-summary | heldout | planner_parameter | external | tactical | 6400 |  |  | 1 | +0.024 | False |
+| economic-parameters-v13-external-heldout-v1-summary | heldout | planner_parameter | external | mixed | 6400 |  |  | 26 | +0.022 | False |
 | external-actions-v1 |  |  |  |  |  |  |  |  |  |  |
 | external-actions-v2 |  |  |  |  |  |  |  |  |  |  |
 | external-belief-repair-v10 |  |  |  | summary |  |  |  |  |  | True |
@@ -56,6 +62,7 @@ receipt's own bar (present only for receipts written after the power tooling).
 | finish-powered-dev-v2 | dev | planner_finish | planner_robber | tactical | 2048 | +0.025 | -0.095 | 0 | +0.010 | False |
 | finish-powered-dev-v2 | dev | planner_finish | planner_robber | mixed | 2048 | +0.020 | -0.101 | 0 | +0.009 | False |
 | full-solver-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| human-challenger-room-integration-v1 |  |  |  | summary |  |  |  |  |  | True |
 | inference-calibration-four-panel-v1 |  |  |  |  |  |  |  |  |  |  |
 | inference-calibration-four-panel-v2 |  |  |  |  |  |  |  |  |  |  |
 | inference-calibration-v1 |  |  |  |  |  |  |  |  |  |  |
@@ -87,6 +94,18 @@ receipt's own bar (present only for receipts written after the power tooling).
 | mc-shortlist-debug-v2 |  |  |  |  |  |  |  |  |  |  |
 | monopoly-history-dev-v1 | dev | planner_cards | planner_robber | tactical | 32 | +0.000 | -0.960 | 0 |  | False |
 | monopoly-history-dev-v1 | dev | planner_cards | planner_robber | mixed | 32 | +0.000 | -0.960 | 0 |  | False |
+| native-campaign-preflight-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-differential-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-fitted-binding-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-fitted-cython-binding-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-native-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-differential-pilot-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-differential-pilot-v2 |  |  |  | summary |  |  |  |  |  | True |
+| native-rng-copy-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-rng-copy-differential-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-rng-copy-native-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-rng-fitted-cython-binding-v1 |  |  |  | summary |  |  |  |  |  | True |
 | native-v1-comparison |  |  |  |  |  |  |  |  |  |  |
 | native-v1-cython-1 |  |  |  |  |  |  |  |  |  |  |
 | native-v1-measured-0-cython |  |  |  |  |  |  |  |  |  |  |
@@ -129,8 +148,14 @@ receipt's own bar (present only for receipts written after the power tooling).
 | planner-dev-v1 | dev | planner | tactical | mixed | 32 | +0.281 | -0.679 | 0 |  | True |
 | planner-development-dev-v1 | dev | planner_development | tactical | tactical | 32 | +0.125 | -0.835 | 0 |  | True |
 | planner-development-dev-v1 | dev | planner_development | tactical | mixed | 32 | +0.062 | -0.898 | 0 |  | True |
+| planner-devfix-dev-v1 | dev | planner_devfix | planner_parameter | tactical | 1024 | -0.026 | -0.205 | 0 | +0.040 | True |
+| planner-devfix-dev-v1 | dev | planner_devfix | planner_parameter | mixed | 1024 | +0.021 | -0.157 | 0 | +0.045 | True |
+| planner-devfix-dev-v1 | dev | planner_devfix | planner_parameter | self | 1024 | -0.008 | -0.187 | 0 | +0.034 | True |
 | planner-disagreements-turn-v1 |  |  |  | summary |  |  |  |  |  |  |
 | planner-disagreements-v1 |  |  |  | summary |  |  |  |  |  |  |
+| planner-discard-dev-v1 | dev | planner_discard | planner_parameter | tactical | 640 | -0.002 | -0.228 | 0 | +0.061 | False |
+| planner-discard-dev-v1 | dev | planner_discard | planner_parameter | mixed | 640 | -0.008 | -0.234 | 0 | +0.058 | False |
+| planner-discard-dev-v1 | dev | planner_discard | planner_parameter | self | 640 | -0.017 | -0.243 | 0 | +0.039 | False |
 | planner-external-guided-dev-v1 | dev | planner_development | external | tactical | 16 | -0.188 | -1 | 0 |  | False |
 | planner-external-guided-dev-v1 | dev | planner_development | external | mixed_external | 16 | +0.312 | -1 | 0 |  | True |
 | planner-four-panel-calibration-v1 |  |  |  |  |  |  |  |  |  |  |
@@ -149,6 +174,10 @@ receipt's own bar (present only for receipts written after the power tooling).
 | planner-robber-external-v5-dev | dev | planner_robber | external | mixed_external | 16 | +0.250 | -1 | 0 |  | True |
 | planner-robber-tactical-replication-dev-v1 | dev | planner_robber | tactical | tactical | 64 | +0.141 | -0.538 | 0 |  | True |
 | planner-robber-tactical-replication-dev-v1 | dev | planner_robber | tactical | mixed | 64 | +0.078 | -0.601 | 0 |  | True |
+| planner-unified-calibration-v1 |  |  |  |  |  |  |  |  |  |  |
+| planner-unified-dev-v1 | dev | planner_unified | planner_parameter | tactical | 512 | +0.078 | -0.175 | 0 | +0.083 | True |
+| planner-unified-dev-v1 | dev | planner_unified | planner_parameter | mixed | 512 | +0.088 | -0.165 | 0 | +0.069 | True |
+| planner-unified-dev-v1 | dev | planner_unified | planner_parameter | self | 512 | +0.053 | -0.200 | 0 | +0.050 | True |
 | policy-components-dev-v1 |  |  |  | tactical |  |  |  |  |  |  |
 | policy-components-dev-v1 |  |  |  | mixed |  |  |  |  |  |  |
 | resource-solver-dev-v1 |  |  |  | summary |  |  |  |  |  | True |

@@ -14,8 +14,11 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   search can use Year of Plenty and Road Building. The fix passed a
   predeclared non-inferiority screen against `planner_parameter`
   (`runs/planner-devfix-dev-v1.json`, 6,144 games: −.026, +.022, −.008 on the
-  tactical, mixed and self tables against a −.03 floor). The tactical table was
-  close to the floor, so the fix is shown not worse, not shown better. Tactical is the fallback,
+  tactical, mixed and self tables against a −.03 floor). This compared
+  observed lifts with the floor; it is not a confidence-bound non-inferiority
+  result, and the tactical table was close to the floor. The fix is not shown
+  better. It also delays pre-roll Knights that could have helped, which is a
+  timing trade-off, not a rules correction. Tactical is the fallback,
   and the three-human pilot rooms keep Tactical as their default. `heuristic`
   remains the frozen comparator.
 - **Why:** both Tactical-control panels of the sealed held-out family passed
@@ -51,13 +54,27 @@ in 12,800 games against a zero-fault rule. The candidate is therefore shown
 stronger than the served default on this engine, but the family criterion was
 not met and the served default is unchanged until the owner decides otherwise.
 
+The external comparison was rerun on the repaired comparator v13 as a new,
+predeclared two-stage plan. The 64-board DEV stage passed with zero faults
+(+.082 and +.195). The 1,600-board held-out stage sealed on 2026-11-01 with
+verdict FAIL on 27 external fault violations (26 failed decisions and one
+turn over 10 s) in 25,600 games, again against a zero-fault
+rule, so its lifts are withheld. The legality mismatches did not recur. The new
+faults are belief-solver timeouts late in very long games, 24 of them in one
+game (`experiments/README.md`, 2026-11-01). A post-hoc descriptive read,
+requested by the owner, gives lifts of +.061 (tactical) and +.151 (mixed) with
+plain 95% intervals well above zero. Excluding or penalising the three faulted
+boards changes neither by more than .002. The owner decided to promote on
+2026-11-01; the serving change is a separate PR.
+
 ## What is not claimed
 
 - No competitive strength against ranked online humans. No Colonist
   integration exists or is authorized; its terms restrict automation and data
   use.
 - Beating the depth-2 Catanatron comparator is not beating a strong player.
-  The comparator faults on about 1.4% of held-out clusters.
+  Its belief recovery still faults rarely: on 3 of 3,200 held-out clusters in
+  the v13 rerun, all through solver timeouts in long games.
 - DEV passes are screens. Only a reserved held-out run with a predeclared
   analysis supports a promotion.
 - Correctness, latency, calibration and strength are separate claims. A
