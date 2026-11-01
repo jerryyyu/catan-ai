@@ -64,7 +64,7 @@ def test_discard_choice_keeps_the_more_valuable_card():
     assert choice['resource'] == 'wool'
 
 
-@pytest.mark.parametrize('name', ['planner_devfix', 'planner_unified', 'planner_shared', 'planner_race', 'planner_block', 'planner_offer'])
+@pytest.mark.parametrize('name', ['planner_devfix', 'planner_unified', 'planner_shared', 'planner_race', 'planner_block', 'planner_unified_offer', 'planner_offer'])
 def test_new_candidates_play_complete_legal_games(name):
     for seed in (2390000, 2390001, 2390002):
         assert play([name, 'planner_parameter', 'tactical', 'builder'], seed).winner is not None
@@ -176,7 +176,7 @@ def test_offering_planner_asks_for_the_card_its_city_needs():
     game = _city_short_one_ore()
     view = Observation.from_game(game, 0)
     assert make_policy('planner_unified', 1).choose(view, 0) == {'type': 'end_turn'}
-    action = make_policy('planner_offer', 1).choose(view, 0)
+    action = make_policy('planner_unified_offer', 1).choose(view, 0)
     assert action['type'] == 'offer_trade' and action['receive'] == {'ore': 1}
     assert set(action['give']) <= {'brick'}
     game.apply(0, action)  # legal
@@ -185,7 +185,7 @@ def test_offering_planner_asks_for_the_card_its_city_needs():
 
 def test_offering_planner_offers_at_most_once_per_turn():
     game = _city_short_one_ore()
-    bot = make_policy('planner_offer', 1)
+    bot = make_policy('planner_unified_offer', 1)
     first = bot.choose(Observation.from_game(game, 0), 0)
     game.apply(0, first)
     game.apply(game.current, {'type': 'reject_trade'})
