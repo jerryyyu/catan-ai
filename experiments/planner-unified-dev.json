@@ -1,0 +1,51 @@
+{
+  "name": "planner-unified-dev",
+  "stage": "dev",
+  "candidate": "planner_unified",
+  "control": "planner_parameter",
+  "requires_search": false,
+  "seeds_per_panel": 128,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2420000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2421000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2422000,
+      "opponents": [
+        "planner_parameter",
+        "planner_parameter",
+        "planner_parameter"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-01 before any game, under the standard comparison (docs/PLAN.md): control is the served planner_parameter (checkpoints/planner_parameter.json, evaluated weights, rebound with identical compatibility traces). Planning sigma .30 from the row 9 screen's measured cluster SDs (.17-.26). Shared-score planner (Jerry: one action-selection system, not per-decision rules). Same fitted weights and build search; robber, steal, discard, development-card play and trade answers choose the legal move maximising S = V(me) - 0.5 * max V(opponent), with card-counted opponent hands, robber-aware income, played knights valued as held, and next-turn build value for hand-shaping decisions. LAMBDA=0.5 fixed before any game. Bar +5 pp on every table. Admission at true +.10: 78 clusters required, 128 declared (family .914). A failed bar parks this version; no retuning on these boards."
+  }
+}

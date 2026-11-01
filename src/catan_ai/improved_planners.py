@@ -6,6 +6,12 @@ behaviour, so a screen against the served planner isolates that change.
 ``planner_discard`` (row 9) prices the risk of losing half of a hand over seven
 cards to a 7 before the next turn, instead of a flat 0.5 per card, and chooses
 which card to discard by the same leaf value instead of "largest pile".
+
+``planner_devfix`` fixes the served planner's random development-card play
+before the roll: the inherited rules played a random card in the roll phase, so
+every card was spent before the turn search could use Year of Plenty or Road
+Building. It rolls instead. Development cards are still played by the inherited
+rules after the search; only the pre-roll play is removed.
 """
 from .engine import Resource
 from .parameter_planner import ParameterPlanner
@@ -50,3 +56,10 @@ class DiscardAwarePlanner(ParameterPlanner):
                 player.resources[resource] += 1
         # max keeps the first of equal values, so ties resolve in legal-action order.
         return max(discards, key=kept_value)
+
+
+class DevelopmentFixPlanner(ParameterPlanner):
+    def _fallback(self, view, seat):
+        if view.phase == 'roll':
+            return next(a for a in view.actions if a['type'] == 'roll')
+        return super()._fallback(view, seat)

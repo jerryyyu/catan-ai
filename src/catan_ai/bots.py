@@ -135,6 +135,12 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_parameter':
         from .parameter_planner import ParameterPlanner
         return ParameterPlanner(rng)
+    if name == 'planner_devfix':
+        from .improved_planners import DevelopmentFixPlanner
+        return DevelopmentFixPlanner(rng)
+    if name == 'planner_unified':
+        from .unified_planner import UnifiedPlanner
+        return UnifiedPlanner(rng)
     if name == 'planner_discard':
         from .improved_planners import DiscardAwarePlanner
         return DiscardAwarePlanner(rng)

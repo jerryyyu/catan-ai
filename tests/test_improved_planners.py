@@ -62,3 +62,95 @@ def test_discard_choice_keeps_the_more_valuable_card():
     assert choice['type'] == 'discard'
     # Wool is the cheapest resource in the leaf, and a third wool adds less than a second grain.
     assert choice['resource'] == 'wool'
+
+
+@pytest.mark.parametrize('name', ['planner_devfix', 'planner_unified'])
+def test_new_candidates_play_complete_legal_games(name):
+    for seed in (2390000, 2390001, 2390002):
+        assert play([name, 'planner_parameter', 'tactical', 'builder'], seed).winner is not None
+
+
+def _roll_phase_with(card):
+    game = Game.new(list('abcd'), 7)
+    game.phase, game.turn, game.current = 'roll', 12, 0
+    game.players[0].settlements.add(0)
+    game.players[0].development = [(card, 0)]
+    return game
+
+
+@pytest.mark.parametrize('card', ['knight', 'year_of_plenty', 'road_building', 'monopoly'])
+def test_devfix_rolls_instead_of_playing_before_the_roll(card):
+    game = _roll_phase_with(card)
+    view = Observation.from_game(game, 0)
+    assert any(a['type'] == 'play_development' for a in view.actions)
+    assert make_policy('planner_devfix', 1).choose(view, 0) == {'type': 'roll'}
+    assert make_policy('planner_parameter', 1).choose(view, 0)['type'] == 'play_development'
+
+
+def test_devfix_lets_the_search_use_year_of_plenty():
+    game = Game.new(list('abcd'), 7)
+    game.phase, game.turn, game.current, game.rolled = 'actions', 12, 0, 6
+    player = game.players[0]
+    player.settlements.add(0)
+    player.resources = {r: 0 for r in Resource}
+    player.resources.update({Resource.ORE: 2, Resource.GRAIN: 1})
+    player.development = [('year_of_plenty', 0)]
+    action = make_policy('planner_devfix', 1).choose(Observation.from_game(game, 0), 0)
+    # A city needs one more ore and one more grain: the search plays Year of Plenty for them.
+    assert action['type'] == 'play_development' and action['card'] == 'year_of_plenty'
+    assert sorted(action['resources']) == ['grain', 'ore']
+
+
+def _offer_position(wool):
+    game = Game.new(list('abcd'), 9)
+    game.phase, game.turn, game.current = 'actions', 20, 1
+    me = game.players[0]
+    me.settlements.add(0)
+    me.roads.update({(0, 1), (1, 2)})
+    me.resources = {r: 0 for r in Resource}
+    me.resources.update({Resource.BRICK: 1, Resource.LUMBER: 1, Resource.WOOL: wool, Resource.GRAIN: 1})
+    game.players[1].resources = {r: 2 for r in Resource}
+    game.apply(1, {'type': 'offer_trade', 'recipient': 0, 'give': {'ore': 1}, 'receive': {'wool': 1}})
+    view = Observation.from_game(game, 0)
+    assert {'type': 'accept_trade'} in view.actions
+    return game, view
+
+
+def test_unified_rejects_a_trade_that_breaks_an_affordable_settlement():
+    game, view = _offer_position(wool=1)
+    probe = Game.new(list('abcd'), 9)
+    probe.players[0].settlements.add(0)
+    probe.players[0].roads.update({(0, 1), (1, 2)})
+    probe.players[0].resources = dict(game.players[0].resources)
+    probe.phase, probe.current = 'actions', 0
+    assert any(a['type'] == 'build_settlement' for a in probe.legal_actions(0))
+    assert make_policy('planner_unified', 1).choose(view, 0) == {'type': 'reject_trade'}
+    # The served planner's count rule accepts it.
+    assert make_policy('planner_parameter', 1).choose(view, 0) == {'type': 'accept_trade'}
+
+
+def test_unified_accepts_a_trade_that_keeps_the_settlement_and_adds_ore():
+    _, view = _offer_position(wool=2)
+    assert make_policy('planner_unified', 1).choose(view, 0) == {'type': 'accept_trade'}
+
+
+def test_unified_picks_monopoly_resource_by_counted_holdings():
+    game = Game.new(list('abcd'), 11)
+    game.phase, game.turn, game.current, game.rolled = 'actions', 20, 0, 6
+    me = game.players[0]
+    me.settlements.add(0)
+    me.resources = {r: 0 for r in Resource}
+    me.development = [('monopoly', 0)]
+    # Public bank trades give the opponents known ore.
+    for seat in (1, 2, 3):
+        game.players[seat].resources = {r: 0 for r in Resource}
+        game.players[seat].resources[Resource.WOOL] = 4
+    game.current = 1
+    for seat in (1, 2, 3):
+        game.current = seat
+        game.phase = 'actions'
+        game.apply(seat, {'type': 'bank_trade', 'give': 'wool', 'receive': 'ore'})
+    game.current, game.phase = 0, 'actions'
+    view = Observation.from_game(game, 0)
+    action = make_policy('planner_unified', 1).choose(view, 0)
+    assert action == {'type': 'play_development', 'card': 'monopoly', 'resource': 'ore'}
