@@ -7,15 +7,29 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Served default
 
-- **Policy:** `tactical` for new web and API games. `heuristic` remains the
-  frozen comparator and is unchanged since its promotion screen.
-- **Why:** on 155 reserved boards, all seats, Tactical beat three heuristics by
-  +11.77 pp paired with a preregistered one-sided 95% seed-cluster lower bound
-  of +8.47 pp, all 1,240 games complete, decision p95 2.36 ms
+- **Policy:** `planner_parameter`, the fitted economic planner, for new solo web
+  and API games since 2026-11-01 (owner's decision). Tactical is the fallback,
+  and the three-human pilot rooms keep Tactical as their default. `heuristic`
+  remains the frozen comparator.
+- **Why:** both Tactical-control panels of the sealed held-out family passed
+  (+.110 and +.227 paired lift; simultaneous lower bounds +.096 and +.208). The
+  external-control panels have twice been withheld on comparator faults. The
+  v13 rerun's owner-requested descriptive read is +.061 and +.151 against
+  Catanatron, and dropping or penalising the three faulted boards changes
+  neither figure by more than .002. The promotion therefore rests on the
+  Tactical-control result, not on a passed external test.
+- **Checkpoint:** `checkpoints/planner_parameter.json` carries the evaluated
+  weights (b1785ccb…, unchanged), bound to the current source on the
+  pure-Python engine. Any source change unbinds it. `scripts/bind_parameter_checkpoint.py`
+  rebinds only if the 8 compatibility games replay the evaluated snapshot's
+  traces exactly. Unbound, `/api/bots` reports it and new games use Tactical.
+- **Previous default:** Tactical, which beat three heuristics by +11.77 pp on
+  155 reserved boards with a one-sided 95% seed-cluster lower bound of +8.47 pp
   (`runs/tactical-heldout-v1.json`).
 - **Budget:** 2 s per decision and 10 s of compute per turn, including
   observation, belief, adapter, search and validation. A timeout plays a legal
-  deterministic fallback and counts as a budget failure.
+  deterministic fallback and counts as a budget failure. The fitted planner's
+  held-out step p95 was about 10 ms.
 
 ## Challenger: held-out family sealed, FAIL on comparator faults
 
@@ -30,13 +44,27 @@ in 12,800 games against a zero-fault rule. The candidate is therefore shown
 stronger than the served default on this engine, but the family criterion was
 not met and the served default is unchanged until the owner decides otherwise.
 
+The external comparison was rerun on the repaired comparator v13 as a new,
+predeclared two-stage plan. The 64-board DEV stage passed with zero faults
+(+.082 and +.195). The 1,600-board held-out stage sealed on 2026-11-01 with
+verdict FAIL on 27 external fault violations (26 failed decisions and one
+turn over 10 s) in 25,600 games, again against a zero-fault
+rule, so its lifts are withheld. The legality mismatches did not recur. The new
+faults are belief-solver timeouts late in very long games, 24 of them in one
+game (`experiments/README.md`, 2026-11-01). A post-hoc descriptive read,
+requested by the owner, gives lifts of +.061 (tactical) and +.151 (mixed) with
+plain 95% intervals well above zero. Excluding or penalising the three faulted
+boards changes neither by more than .002. The owner decided to promote on
+2026-11-01; the serving change is a separate PR.
+
 ## What is not claimed
 
 - No competitive strength against ranked online humans. No Colonist
   integration exists or is authorized; its terms restrict automation and data
   use.
 - Beating the depth-2 Catanatron comparator is not beating a strong player.
-  The comparator faults on about 1.4% of held-out clusters.
+  Its belief recovery still faults rarely: on 3 of 3,200 held-out clusters in
+  the v13 rerun, all through solver timeouts in long games.
 - DEV passes are screens. Only a reserved held-out run with a predeclared
   analysis supports a promotion.
 - Correctness, latency, calibration and strength are separate claims. A

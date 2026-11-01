@@ -30,7 +30,7 @@ bars below are the honest steps toward it.
   measurable. A game costs one to two seconds, so a 5 pp screen is an hour.
 - The learned baseline that regressed trained on 1,408 games with a linear
   model. The field's reference result used hundreds of millions of decisions.
-- The only external judge is depth-2 Catanatron, which faults on about 1.4% of
+- The only external judge is depth-2 Catanatron, which faulted on about 1.4% of
   held-out clusters and is not a strong player.
 
 ## Standard comparison (from 2026-11-01)
