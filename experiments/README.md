@@ -2,6 +2,41 @@
 
 ## Research: competitive four-player Catan AI
 
+### Row 9: discard-aware hand value, FAIL, parked (2026-11-01)
+
+The first screen under the standard comparison: control is the served
+`planner_parameter`, on the tactical, mixed and self tables. The config
+`experiments/planner-discard-dev.json` was predeclared at `142e61b` before any
+game. `planner_discard` keeps the fitted weights and makes two changes. Hands
+over seven cards are charged P(7 before next turn) = 1 − (5/6)³ times
+floor(n/2) average weighted card values, instead of a flat 0.5 per card.
+Discards are chosen by leaf value, instead of from the largest pile. Power was
+admitted at a true +.10 with sigma .40: 138 boards required, 160 declared.
+
+`runs/planner-discard-dev-v1.json` (sha256 373d84d8…), 3,840 games, zero
+truncations, candidate step max 0.11 s:
+
+| Table | Paired lift | Cluster SD |
+|---|---|---|
+| tactical | −.002 | .26 |
+| mixed | −.008 | .25 |
+| self | −.017 | .17 |
+
+FAIL on every table against the +.05 bar. The candidate is parked and not
+retuned on these boards. The measured cluster SDs are well below the .40
+planning sigma; later configs may plan at a lower declared sigma.
+
+### Red team of the served planner (2026-11-01)
+
+A read-only diagnostic: `runs/redteam-v1/REPORT.md` and probe scripts, run on
+the frozen v13 snapshot. It found no hidden-information leak, illegal action or
+stall. The largest gaps are trade acceptance by card count (138 of 138 injected
+offers accepted; an oracle exploiter rose from 19.7% to 37.7% wins over 122
+paired games) and development cards played at random before the roll (all 480
+plays). The second also means the search's Year of Plenty and Road Building
+handling never runs. Most gaps sit in fixed rules outside the planner's
+position score. That is the motivation for a unified afterstate candidate.
+
 ### Predeclared: external-control rerun on the repaired comparator (v13) (2026-10-31)
 
 Jerry asked to rerun the withheld external-control comparison on the repaired
