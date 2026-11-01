@@ -26,6 +26,9 @@ def load_parameters(path=None):
     path = Path(path or os.environ.get('CATAN_PARAMETER_MODEL') or SERVED_CHECKPOINT).resolve()
     raw = path.read_bytes()
     data = json.loads(raw)
+    if not isinstance(data, dict) or not isinstance(data.get('weights'), list) \
+            or not isinstance(data.get('source'), dict) or 'schema' not in data:
+        raise ValueError('invalid economic parameter checkpoint structure')
     weights = data['weights']
     if (data['schema'] != 1 or len(weights) != len(BOUNDS)
             or any(type(x) not in (int, float) or not math.isfinite(x) or not lo <= x <= hi
