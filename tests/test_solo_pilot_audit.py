@@ -29,7 +29,7 @@ def record_for(human, opponent='tactical', complete=False):
     record = {'schema': 2, 'source': source_files(), 'human_seat': human, 'seed': seed,
               'names': ['PRIVATE NAME'] * 4, 'opponent': opponent, 'trace': trace,
               'winner': game.winner, 'turn': game.turn}
-    if opponent in ('planner_parameter', 'planner_devfix'):
+    if opponent in ('planner_parameter', 'planner_devfix', 'planner_unified'):
         record['model_sha256'] = policies[(human + 1) % 4].model_hash
     return record
 
@@ -75,7 +75,7 @@ def test_complete_synthetic_game_has_outcome_but_is_not_human_evidence():
     assert not result['human_participation_verified']
 
 
-@pytest.mark.parametrize('opponent', ['planner_parameter', 'planner_devfix'])
+@pytest.mark.parametrize('opponent', ['planner_parameter', 'planner_devfix', 'planner_unified'])
 def test_fitted_audit_rejects_missing_or_changed_checkpoint_identity(tmp_path, monkeypatch, opponent):
     import json
     from catan_ai.parameter_planner import DEFAULT
