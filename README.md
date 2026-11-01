@@ -132,6 +132,21 @@ its checkpoint SHA256 for restart recovery. All three opponents must load the
 same checkpoint. This mode supports usability feedback; it does not measure
 performance against three experienced human opponents.
 
+Saved solo pilots can be checked without changing the record:
+
+```sh
+PYTHONPATH=/path/to/frozen/src CATAN_ENGINE=python \
+  CATAN_PARAMETER_MODEL=/path/to/matching/model.json \
+  uv run python scripts/audit_solo_pilot.py \
+  --record /path/to/saved-game.json --output /path/to/new-audit.json
+```
+
+Use the match's frozen source and exact checkpoint. The audit replays bot
+choices and checks legality, outcome, actor labels and recorded timings. It
+reports a pilot result, not proof of human participation or experience, and
+refuses to overwrite an existing output. Human action timings exclude thinking
+time; unfinished turns can have incomplete timing totals.
+
 For a private three-human match, open **Private three-human match** (or `/#room`),
 choose the bot and its seat, and create a room. Tactical remains the default. Share one invitation with each
 human, including yourself. Each invitation grants access to that seat; keep it
