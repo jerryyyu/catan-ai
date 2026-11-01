@@ -126,6 +126,21 @@ class Player:
     knights: int = 0
     largest_army: bool = False
 
+    def __deepcopy__(self, memo):
+        # These containers hold only immutable engine values (enums, integers,
+        # vertex pairs and card/turn pairs). Preserve memo aliases while avoiding
+        # a recursive visit to every resource key and piece in each search node.
+        result = type(self).__new__(type(self))
+        memo[id(self)] = result
+        for name, value in self.__dict__.items():
+            if name in {'resources', 'roads', 'settlements', 'cities', 'development'}:
+                if id(value) not in memo:
+                    memo[id(value)] = value.copy()
+                setattr(result, name, memo[id(value)])
+            else:
+                setattr(result, name, deepcopy(value, memo))
+        return result
+
     @property
     def points(self) -> int:
         return self.public_points + sum(card == "victory_point" for card, _ in self.development)
