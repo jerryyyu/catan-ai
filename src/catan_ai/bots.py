@@ -135,6 +135,9 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_parameter':
         from .parameter_planner import ParameterPlanner
         return ParameterPlanner(rng)
+    if name == 'planner_discard':
+        from .improved_planners import DiscardAwarePlanner
+        return DiscardAwarePlanner(rng)
     if name in ('planner_tactical_opening', 'tactical_planner_opening'):
         from .components import ComponentPolicy
         opening, turn = (('tactical', 'planner_robber') if name == 'planner_tactical_opening'
