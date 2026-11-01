@@ -29,7 +29,7 @@ def record_for(human, opponent='tactical', complete=False):
     record = {'schema': 2, 'source': source_files(), 'human_seat': human, 'seed': seed,
               'names': ['PRIVATE NAME'] * 4, 'opponent': opponent, 'trace': trace,
               'winner': game.winner, 'turn': game.turn}
-    if opponent == 'planner_parameter':
+    if opponent in ('planner_parameter', 'planner_devfix'):
         record['model_sha256'] = policies[(human + 1) % 4].model_hash
     return record
 
@@ -75,14 +75,15 @@ def test_complete_synthetic_game_has_outcome_but_is_not_human_evidence():
     assert not result['human_participation_verified']
 
 
-def test_fitted_audit_rejects_missing_or_changed_checkpoint_identity(tmp_path, monkeypatch):
+@pytest.mark.parametrize('opponent', ['planner_parameter', 'planner_devfix'])
+def test_fitted_audit_rejects_missing_or_changed_checkpoint_identity(tmp_path, monkeypatch, opponent):
     import json
     from catan_ai.parameter_planner import DEFAULT
     path = tmp_path / 'synthetic-model.json'
     data = {'schema': 1, 'source': source_files(), 'weights': DEFAULT}
     path.write_text(json.dumps(data))
     monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
-    record = record_for(1, opponent='planner_parameter')
+    record = record_for(1, opponent=opponent)
     assert audit(record)['replay_valid']
     missing = deepcopy(record)
     missing.pop('model_sha256')
@@ -94,12 +95,19 @@ def test_fitted_audit_rejects_missing_or_changed_checkpoint_identity(tmp_path, m
         audit(record)
 
 
-def test_actual_solo_api_record_audits_without_rewriting_file(tmp_path, monkeypatch):
+@pytest.mark.parametrize('opponent', ['tactical', 'planner_parameter', 'planner_devfix'])
+def test_actual_solo_api_record_audits_without_rewriting_file(tmp_path, monkeypatch, opponent):
     from fastapi.testclient import TestClient
     from catan_ai import api, pilot_store
     monkeypatch.setenv('CATAN_PILOT_DIR', str(tmp_path))
+    if opponent != 'tactical':
+        import json
+        from catan_ai.parameter_planner import DEFAULT
+        model = tmp_path / 'synthetic-model.json'
+        model.write_text(json.dumps({'schema': 1, 'source': source_files(), 'weights': DEFAULT}))
+        monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(model))
     client = TestClient(api.app)
-    created = client.post('/api/games', json={'seed': 2600301, 'human_seat': 1, 'opponent': 'tactical'})
+    created = client.post('/api/games', json={'seed': 2600301, 'human_seat': 1, 'opponent': opponent})
     assert created.status_code == 200
     game_id = created.json()['game_id']
     try:
