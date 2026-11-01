@@ -7,8 +7,15 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Served default
 
-- **Policy:** `planner_parameter`, the fitted economic planner, for new solo web
-  and API games since 2026-11-01 (owner's decision). Tactical is the fallback,
+- **Policy:** `planner_devfix` for new solo web and API games since
+  2026-11-01. It is `planner_parameter` (the fitted economic planner, promoted
+  by the owner the same day) with the development-card fix the owner asked for:
+  it rolls instead of spending a random card before the roll, so its turn
+  search can use Year of Plenty and Road Building. The fix passed a
+  predeclared non-inferiority screen against `planner_parameter`
+  (`runs/planner-devfix-dev-v1.json`, 6,144 games: −.026, +.022, −.008 on the
+  tactical, mixed and self tables against a −.03 floor). The tactical table was
+  close to the floor, so the fix is shown not worse, not shown better. Tactical is the fallback,
   and the three-human pilot rooms keep Tactical as their default. `heuristic`
   remains the frozen comparator.
 - **Why:** both Tactical-control panels of the sealed held-out family passed

@@ -2,6 +2,29 @@
 
 ## Research: competitive four-player Catan AI
 
+### Development-card fix: non-inferiority PASS, shipped as served (2026-11-01)
+
+The red team found that the served planner played a random development card in
+the roll phase, so its turn search never used Year of Plenty or Road Building.
+Jerry asked for the fix. `planner_devfix` rolls instead; nothing else changes.
+The config `experiments/planner-devfix-dev.json` was predeclared at `8baedcb` as a
+non-inferiority screen against the served `planner_parameter`: every table's
+paired lift must be at least −.03, with 256 boards per table and planning sigma
+.30 (215 required, family .844).
+
+`runs/planner-devfix-dev-v1.json`, 6,144 games, zero truncations, candidate
+step max 0.084 s:
+
+| Table | Paired lift | Cluster SD |
+|---|---|---|
+| tactical | −.026 | .22 |
+| mixed | +.022 | .24 |
+| self | −.008 | .19 |
+
+PASS on every table. As predeclared, the fix ships as the served policy
+(`planner_devfix`, same checkpoint). The tactical table sits near the floor:
+the fix is shown not worse by the declared margin, not shown better.
+
 ### Row 9: discard-aware hand value, FAIL, parked (2026-11-01)
 
 The first screen under the standard comparison: control is the served
