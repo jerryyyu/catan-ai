@@ -60,12 +60,19 @@ def load_session(game_id):
         raise HTTPException(404, 'game not found') from exc
     if record['source'] != source_files():
         raise HTTPException(409, 'Saved match uses a different program version; its record is preserved.')
-    if record['opponent'] not in ('heuristic', 'tactical'):
-        raise HTTPException(409, 'Restart recovery currently supports Tactical and Heuristic pilots only.')
+    if record['opponent'] not in ('heuristic', 'tactical', 'planner_parameter'):
+        raise HTTPException(409, 'Restart recovery supports Tactical, Heuristic and trained challenger pilots.')
     game = Game.new(record['names'], record['seed'])
     human_seat = record.get('human_seat', 0)
-    bots = {seat: make_policy(record['opponent'], record['seed'] * 31 + seat)
-            for seat in range(4) if seat != human_seat}
+    try:
+        bots = {seat: make_policy(record['opponent'], record['seed'] * 31 + seat)
+                for seat in range(4) if seat != human_seat}
+        if record['opponent'] == 'planner_parameter':
+            if not record.get('model_sha256') or any(
+                    bot.model_hash != record['model_sha256'] for bot in bots.values()):
+                raise ValueError('Saved checkpoint differs')
+    except (KeyError, OSError, ValueError) as exc:
+        raise HTTPException(409, 'Saved checkpoint unavailable or changed; record is preserved.') from exc
     for row in record['trace']:
         seat = row['seat']
         if seat != human_seat:
@@ -83,7 +90,7 @@ class NewGame(BaseModel):
     name: str = "You"
     seed: int | None = None
     human_seat: int = Field(default=0, ge=0, le=3, strict=True)
-    opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned'] = 'tactical'
+    opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned', 'planner_parameter'] = 'tactical'
 
 
 class ActionBody(BaseModel):
@@ -116,11 +123,18 @@ def create_game(body: NewGame) -> dict:
     names = ["Ada", "Mina", "Lin"]
     names.insert(body.human_seat, body.name.strip() or "You")
     game = Game.new(names, seed)
+    try:
+        bots = {seat: make_policy(body.opponent, seed * 31 + seat)
+                for seat in range(4) if seat != body.human_seat}
+        hashes = {bot.model_hash for bot in bots.values()} if body.opponent == 'planner_parameter' else set()
+        if hashes and len(hashes) != 1:
+            raise ValueError('Checkpoint changed during game creation')
+    except (KeyError, OSError, ValueError) as exc:
+        raise HTTPException(503, 'Requested bot checkpoint is not configured for this server version') from exc
     session = Session(
         game=game,
         human_seat=body.human_seat,
-        bots={seat: make_policy(body.opponent, seed * 31 + seat)
-              for seat in range(4) if seat != body.human_seat},
+        bots=bots,
         game_id=game_id,
         metadata={'schema': 2, 'seed': seed, 'human_seat': body.human_seat,
                   'names': [p.name for p in game.players],
@@ -128,6 +142,8 @@ def create_game(body: NewGame) -> dict:
                   'created_at': datetime.now(timezone.utc).isoformat(),
                   'purpose': 'local pilot; not confirmatory human transfer'},
     )
+    if hashes:
+        session.metadata['model_sha256'] = next(iter(hashes))
     with session_lock:
         persist(session)
         sessions[game_id] = session

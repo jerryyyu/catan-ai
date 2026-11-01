@@ -107,3 +107,66 @@ def test_replay_steps_reconstruct_without_mutating_live_game(client, human_seat)
     assert json.loads(json.dumps(session.game.public_state(human_seat))) == state
     assert session.game.rng.getstate() == before_rng
     assert pilot_store.record_path(game_id).read_bytes() == before_record
+
+
+@pytest.fixture
+def parameter_model(tmp_path, monkeypatch):
+    from catan_ai.experiments import source_files
+    from catan_ai.parameter_planner import DEFAULT
+    path = tmp_path / 'synthetic-model.json'
+    path.write_text(json.dumps({'schema': 1, 'weights': DEFAULT, 'source': source_files()}))
+    monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
+    return path
+
+
+@pytest.mark.parametrize('human_seat', range(4))
+def test_fitted_solo_restart_privacy_and_checkpoint_identity(client, parameter_model, human_seat):
+    import hashlib
+    created = client.post('/api/games', json={'seed': 1623000, 'human_seat': human_seat,
+                                             'opponent': 'planner_parameter'})
+    assert created.status_code == 200, created.text
+    data = created.json()
+    game_id = data['game_id']
+    url = f'/api/games/{game_id}'
+    record = pilot_store.load(game_id)
+    assert record['model_sha256'] == hashlib.sha256(parameter_model.read_bytes()).hexdigest()
+    assert 'model_sha256' not in data
+    state = data['state']
+    for _ in range(3):
+        played = client.post(url + '/actions', json={'action': state['legal_actions'][0]})
+        assert played.status_code == 200, played.text
+        state = played.json()
+    original = sessions.pop(game_id)
+    restored = client.get(url)
+    assert restored.status_code == 200 and restored.json() == state
+    assert sessions[game_id].game.rng.getstate() == original.game.rng.getstate()
+    assert all(sessions[game_id].bots[s].rng.getstate() == original.bots[s].rng.getstate()
+               for s in original.bots)
+    for payload in (restored.json(), client.get(url + '/replay').json()):
+        assert 'model_sha256' not in payload and 'source' not in payload
+        view = payload.get('state', payload)
+        for seat, player in enumerate(view['players']):
+            assert (player['resources'] is not None) == (seat == human_seat)
+            assert (player['development'] is not None) == (seat == human_seat)
+    before = pilot_store.record_path(game_id).read_bytes()
+    model = json.loads(parameter_model.read_text())
+    model['lineage'] = 'changed metadata, unchanged weights'
+    parameter_model.write_text(json.dumps(model))
+    sessions.clear()
+    assert client.get(url).status_code == 409
+    assert pilot_store.record_path(game_id).read_bytes() == before
+
+
+def test_fitted_solo_requires_checkpoint_before_saving(client, monkeypatch):
+    monkeypatch.delenv('CATAN_PARAMETER_MODEL', raising=False)
+    assert client.post('/api/games', json={'opponent': 'planner_parameter'}).status_code == 503
+    assert not sessions
+
+
+def test_fitted_solo_missing_saved_identity_fails_closed(client, parameter_model):
+    data = client.post('/api/games', json={'seed': 1623000, 'opponent': 'planner_parameter'}).json()
+    record = pilot_store.load(data['game_id'])
+    del record['model_sha256']
+    pilot_store.save(data['game_id'], record)
+    sessions.clear()
+    assert client.get('/api/games/' + data['game_id']).status_code == 409
