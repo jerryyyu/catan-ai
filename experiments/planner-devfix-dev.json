@@ -1,0 +1,51 @@
+{
+  "name": "planner-devfix-dev",
+  "stage": "dev",
+  "candidate": "planner_devfix",
+  "control": "planner_parameter",
+  "requires_search": false,
+  "seeds_per_panel": 256,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2410000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2411000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2412000,
+      "opponents": [
+        "planner_parameter",
+        "planner_parameter",
+        "planner_parameter"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": -0.03,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.0,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-01 before any game, under the standard comparison (docs/PLAN.md): control is the served planner_parameter (checkpoints/planner_parameter.json, evaluated weights, rebound with identical compatibility traces). Planning sigma .30 from the row 9 screen's measured cluster SDs (.17-.26). Bug fix Jerry asked for: the served planner spent a random development card in the roll phase, so the turn search never used Year of Plenty or Road Building (red team, runs/redteam-v1). planner_devfix rolls instead; everything else unchanged. This is a NON-INFERIORITY screen: it passes if every table's paired lift is at least -.03. A pass means the fix ships as the served planner (owner-directed fix); a fail keeps the served planner. Admission at a true zero effect: 215 clusters required, 256 declared (family .844)."
+  }
+}

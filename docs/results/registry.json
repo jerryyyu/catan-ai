@@ -1739,6 +1739,34 @@
    "stage": null
   },
   {
+   "bytes": 4393,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-copy-fitted-cython-binding-v1",
+   "panels": {
+    "summary": {
+     "elapsed_seconds": 4.481398791074753,
+     "games": 8,
+     "model_sha256": "7588663039bef2ae1c008a83b63583b26e946b6c48fa00af18317d9abd2d1df5",
+     "pass": true,
+     "scope": "compatibility only; no new strength or human evidence",
+     "trace_sha256": "56d6a2c3c22c543dee28498666dde6e09b049c8992061065f72cffe34d6ffab9",
+     "truncations": 0
+    }
+   },
+   "pass": true,
+   "path": "runs/native-copy-fitted-cython-binding-v1/summary.json",
+   "process_cap": null,
+   "sha256": "26659e9b4e636ceeb1c20a8978e163db447b7af1c404e7d08580e93698e6f65e",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
    "bytes": 293,
    "candidate": null,
    "checkpoint_sha256": null,
@@ -1814,6 +1842,112 @@
    "path": "runs/native-differential-pilot-v2/summary.json",
    "process_cap": null,
    "sha256": "82fe9dfb554e6f7b8bd6ffecc1cdfaeb8fa68038bcbac3e2add948f63a7e6183",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 298,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-rng-copy-dev-v1",
+   "panels": {
+    "summary": {
+     "elapsed_seconds": 5.1542685851454735,
+     "equivalent": true,
+     "median_cpu_reduction": 0.22949469492877872,
+     "pass": true,
+     "truncations": 0
+    }
+   },
+   "pass": true,
+   "path": "runs/native-rng-copy-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "0ce6b639392f7709fd39f0fde2d655425dbd3e22ab71c8210a8888e8ef8b0cfe",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 353,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-rng-copy-differential-v1",
+   "panels": {
+    "summary": {
+     "complete": true,
+     "elapsed_seconds": 85.97776979021728,
+     "pass": true,
+     "scope": "deterministic correctness; no strength or speed claim",
+     "source_unchanged": true,
+     "uncertainty_interval": null
+    }
+   },
+   "pass": true,
+   "path": "runs/native-rng-copy-differential-v1/summary.json",
+   "process_cap": null,
+   "sha256": "2146d14705d4f305db9b67e06a56e2945cf3313edf97a966b4757094f4b8f9fd",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 293,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-rng-copy-native-dev-v1",
+   "panels": {
+    "summary": {
+     "elapsed_seconds": 4.267076751217246,
+     "equivalent": true,
+     "median_cpu_reduction": 0.2913680681208357,
+     "pass": true,
+     "truncations": 0
+    }
+   },
+   "pass": true,
+   "path": "runs/native-rng-copy-native-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "d971d717599a57a9376c814d172b7499e58fab478bc0ee73fa04205a628ad935",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 243,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-rng-fitted-cython-binding-v1",
+   "panels": {
+    "summary": {
+     "elapsed_seconds": 3.5932179167866707,
+     "games": 8,
+     "pass": true,
+     "scope": "compatibility only; no strength or human evidence",
+     "trace_sha256": "921deeec077fb3c1af15d05a2193290de36b77e327e600f4b4ac7cf7ab369c3f",
+     "truncations": 0
+    }
+   },
+   "pass": true,
+   "path": "runs/native-rng-fitted-cython-binding-v1/summary.json",
+   "process_cap": null,
+   "sha256": "d0f72d60f13c170582dc85daf8a5debec554830a2e1eab7cfacf491363977e66",
    "source_hash": null,
    "source_revision": null,
    "stage": null
@@ -2633,6 +2767,58 @@
    "stage": "dev"
   },
   {
+   "bytes": 276638075,
+   "candidate": "planner_devfix",
+   "checkpoint_sha256": "6b91c5fa44d0a434a66b18eb47f9bd8a3d97d119228237f1a6d0dafe96d814ca",
+   "control": "planner_parameter",
+   "games": 6144,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-devfix-dev-v1",
+   "panels": {
+    "mixed": {
+     "cluster_sd": 0.24110614183562262,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.012032166123390198,
+     "paired_seed_lcb": -0.15736491041193604,
+     "paired_win_lift": 0.021484375,
+     "pairs": 1024,
+     "pass": true,
+     "zero_null_mde_80": 0.04475030153623301
+    },
+    "self": {
+     "cluster_sd": 0.1847123502740139,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.013783209025859833,
+     "paired_seed_lcb": -0.18666178541193604,
+     "paired_win_lift": -0.0078125,
+     "pairs": 1024,
+     "pass": true,
+     "zero_null_mde_80": 0.03428337954934315
+    },
+    "tactical": {
+     "cluster_sd": 0.21659222815775234,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.01249016635119915,
+     "paired_seed_lcb": -0.20521647291193604,
+     "paired_win_lift": -0.0263671875,
+     "pairs": 1024,
+     "pass": true,
+     "zero_null_mde_80": 0.040200417321065315
+    }
+   },
+   "pass": true,
+   "path": "runs/planner-devfix-dev-v1.json",
+   "process_cap": 4,
+   "sha256": "dd537304fba5d9d2c0d4ac8dd20bc8c85f4aab33a9555d91be70f7867dd5261a",
+   "source_hash": "4e96ef591346bab3",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
    "bytes": 1496,
    "candidate": null,
    "checkpoint_sha256": null,
@@ -3053,6 +3239,76 @@
    "process_cap": 1,
    "sha256": "2684bb3198f258bfcaf616b6fd1f0f3396e6b886d02f405742393d59e3611570",
    "source_hash": "000f5ac9c6facc9e",
+   "source_revision": null,
+   "stage": "dev"
+  },
+  {
+   "bytes": 5470,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "planner-unified-calibration-v1",
+   "panels": {},
+   "pass": null,
+   "path": "runs/planner-unified-calibration-v1.json",
+   "process_cap": null,
+   "sha256": "c45bd25b94b35e5d2d755f8e42e343c2f4a96af7b8fbec15db22299dc57b3b49",
+   "source_hash": "4e96ef591346bab3",
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 137948031,
+   "candidate": "planner_unified",
+   "checkpoint_sha256": "6b91c5fa44d0a434a66b18eb47f9bd8a3d97d119228237f1a6d0dafe96d814ca",
+   "control": "planner_parameter",
+   "games": 3072,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-unified-dev-v1",
+   "panels": {
+    "mixed": {
+     "cluster_sd": 0.2644086927222881,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.024370793253183365,
+     "paired_seed_lcb": -0.1650404600502965,
+     "paired_win_lift": 0.087890625,
+     "pairs": 512,
+     "pass": true,
+     "zero_null_mde_80": 0.0694030280726732
+    },
+    "self": {
+     "cluster_sd": 0.19175470514008092,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.028058955445885658,
+     "paired_seed_lcb": -0.2001967100502965,
+     "paired_win_lift": 0.052734375,
+     "pairs": 512,
+     "pass": true,
+     "zero_null_mde_80": 0.0503325251786716
+    },
+    "tactical": {
+     "cluster_sd": 0.31522251565362525,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.0229586660861969,
+     "paired_seed_lcb": -0.1748060850502965,
+     "paired_win_lift": 0.078125,
+     "pairs": 512,
+     "pass": true,
+     "zero_null_mde_80": 0.0827408391070763
+    }
+   },
+   "pass": true,
+   "path": "runs/planner-unified-dev-v1.json",
+   "process_cap": 4,
+   "sha256": "402b4361a892f0ae753e43c47d11dee624c7be4779a21a885e8db87d4283851c",
+   "source_hash": "4e96ef591346bab3",
    "source_revision": null,
    "stage": "dev"
   },
@@ -3585,6 +3841,11 @@
   {
    "bytes": 2381731815,
    "path": "runs/economic-parameters-v13-external-heldout-v1.json",
+   "reason": "config or over size cap"
+  },
+  {
+   "bytes": 640032288,
+   "path": "runs/planner-unified-heldout-v1.json",
    "reason": "config or over size cap"
   }
  ]

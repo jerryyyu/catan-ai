@@ -7,8 +7,18 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Served default
 
-- **Policy:** `planner_parameter`, the fitted economic planner, for new solo web
-  and API games since 2026-11-01 (owner's decision). Tactical is the fallback,
+- **Policy:** `planner_devfix` for new solo web and API games since
+  2026-11-01. It is `planner_parameter` (the fitted economic planner, promoted
+  by the owner the same day) with the development-card fix the owner asked for:
+  it rolls instead of spending a random card before the roll, so its turn
+  search can use Year of Plenty and Road Building. The fix passed a
+  predeclared non-inferiority screen against `planner_parameter`
+  (`runs/planner-devfix-dev-v1.json`, 6,144 games: −.026, +.022, −.008 on the
+  tactical, mixed and self tables against a −.03 floor). This compared
+  observed lifts with the floor; it is not a confidence-bound non-inferiority
+  result, and the tactical table was close to the floor. The fix is not shown
+  better. It also delays pre-roll Knights that could have helped, which is a
+  timing trade-off, not a rules correction. Tactical is the fallback,
   and the three-human pilot rooms keep Tactical as their default. `heuristic`
   remains the frozen comparator.
 - **Why:** both Tactical-control panels of the sealed held-out family passed
@@ -30,6 +40,17 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   observation, belief, adapter, search and validation. A timeout plays a legal
   deterministic fallback and counts as a budget failure. The fitted planner's
   held-out step p95 was about 10 ms.
+
+## Next challenger: shared-score planner, held-out PASS
+
+`planner_unified` keeps the fitted weights and build search. It chooses robber
+placement, steals, discards, development-card play and trade answers by one
+position score, S = V(me) − 0.5 · max V(opponent), using card-counted opponent
+hands. Its held-out run against `planner_parameter` passed on every table,
+with lifts and per-table lower bounds of +.112 (LCB +.085) tactical, +.066
+(+.041) mixed and +.023 (+.001) against three fitted planners
+(`runs/planner-unified-heldout-v1.json`). It is not served until the owner
+decides.
 
 ## Challenger: held-out family sealed, FAIL on comparator faults
 
