@@ -27,6 +27,7 @@ receipt's own bar (present only for receipts written after the power tooling).
 | economic-parameters-external-dev-v1 | dev | planner_parameter | external | tactical | 64 | +0.172 | -0.507 | 0 |  | True |
 | economic-parameters-external-dev-v1 | dev | planner_parameter | external | mixed | 64 | +0.172 | -0.507 | 0 |  | True |
 | economic-parameters-run-calibration-v1 |  |  |  |  |  |  |  |  |  |  |
+| economic-parameters-solo-pilot-binding-v1 |  |  |  | summary |  |  |  |  |  | True |
 | economic-parameters-tactical-dev-v1 | dev | planner_parameter | tactical | tactical | 64 | +0.234 | -0.445 | 0 |  | True |
 | economic-parameters-tactical-dev-v1 | dev | planner_parameter | tactical | mixed | 64 | +0.297 | -0.382 | 0 |  | True |
 | economic-parameters-v13-external-dev-v1 | dev | planner_parameter | external | tactical | 256 | +0.082 | -0.257 | 0 | +0.123 | True |
@@ -93,6 +94,13 @@ receipt's own bar (present only for receipts written after the power tooling).
 | mc-shortlist-debug-v2 |  |  |  |  |  |  |  |  |  |  |
 | monopoly-history-dev-v1 | dev | planner_cards | planner_robber | tactical | 32 | +0.000 | -0.960 | 0 |  | False |
 | monopoly-history-dev-v1 | dev | planner_cards | planner_robber | mixed | 32 | +0.000 | -0.960 | 0 |  | False |
+| native-campaign-preflight-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-differential-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-fitted-binding-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-copy-native-dev-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-differential-pilot-v1 |  |  |  | summary |  |  |  |  |  | True |
+| native-differential-pilot-v2 |  |  |  | summary |  |  |  |  |  | True |
 | native-v1-comparison |  |  |  |  |  |  |  |  |  |  |
 | native-v1-cython-1 |  |  |  |  |  |  |  |  |  |  |
 | native-v1-measured-0-cython |  |  |  |  |  |  |  |  |  |  |
@@ -137,6 +145,9 @@ receipt's own bar (present only for receipts written after the power tooling).
 | planner-development-dev-v1 | dev | planner_development | tactical | mixed | 32 | +0.062 | -0.898 | 0 |  | True |
 | planner-disagreements-turn-v1 |  |  |  | summary |  |  |  |  |  |  |
 | planner-disagreements-v1 |  |  |  | summary |  |  |  |  |  |  |
+| planner-discard-dev-v1 | dev | planner_discard | planner_parameter | tactical | 640 | -0.002 | -0.228 | 0 | +0.061 | False |
+| planner-discard-dev-v1 | dev | planner_discard | planner_parameter | mixed | 640 | -0.008 | -0.234 | 0 | +0.058 | False |
+| planner-discard-dev-v1 | dev | planner_discard | planner_parameter | self | 640 | -0.017 | -0.243 | 0 | +0.039 | False |
 | planner-external-guided-dev-v1 | dev | planner_development | external | tactical | 16 | -0.188 | -1 | 0 |  | False |
 | planner-external-guided-dev-v1 | dev | planner_development | external | mixed_external | 16 | +0.312 | -1 | 0 |  | True |
 | planner-four-panel-calibration-v1 |  |  |  |  |  |  |  |  |  |  |

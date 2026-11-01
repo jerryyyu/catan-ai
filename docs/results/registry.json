@@ -5,9 +5,9 @@
    "candidate": "heuristic",
    "checkpoint_sha256": null,
    "control": "random",
-   "games": 200,
+   "games": 100,
    "host": null,
-   "kind": "search_eval",
+   "kind": "diagnostic",
    "name": "base-actions-dev-20261029T170200644839Z",
    "panels": {
     "summary": {
@@ -35,9 +35,9 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 128,
+   "games": 64,
    "host": "Jerrys-Mac-mini.local",
-   "kind": "search_eval",
+   "kind": "diagnostic",
    "name": "belief-sharpness-v1",
    "panels": {
     "summary": {}
@@ -82,7 +82,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 22,
+   "games": 11,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "builder-repair-regression-v2",
@@ -345,6 +345,34 @@
    "stage": null
   },
   {
+   "bytes": 273,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "economic-parameters-solo-pilot-binding-v1",
+   "panels": {
+    "summary": {
+     "elapsed_seconds": 7.4763334561139345,
+     "games": 8,
+     "pass": true,
+     "scope": "compatibility only, not human/strength evidence",
+     "trace_sha256": "e6d4cbb81da1e45873be6711ee41481746b9a7531eda9d45d9de8f95d8b73979",
+     "truncations": 0,
+     "uncertainty_interval": null
+    }
+   },
+   "pass": true,
+   "path": "runs/economic-parameters-solo-pilot-binding-v1/summary.json",
+   "process_cap": null,
+   "sha256": "ccfa86b88065b4bc99845d8b1cfe19513b4f7fd0d8123365b60b1f2f305e609f",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
    "bytes": 13722899,
    "candidate": "planner_parameter",
    "checkpoint_sha256": "77c5ebfc5b148e8d9a22aa07732df2b62b428fe6b8dc3767be8276447206fc92",
@@ -423,7 +451,7 @@
    "stage": "dev"
   },
   {
-   "bytes": 38992,
+   "bytes": 39669,
    "candidate": "planner_parameter",
    "checkpoint_sha256": null,
    "control": "external",
@@ -458,7 +486,7 @@
    "pass": false,
    "path": "runs/economic-parameters-v13-external-heldout-v1-summary/summary.json",
    "process_cap": null,
-   "sha256": "7db1434250dbc2ef0e951a4f055afe5ad62a9f9ec8ffa09fe2807cf5fca32f31",
+   "sha256": "062b0740ee015a25f48be183149969c6f2ccbfe5027870b1e856f90d4a83199e",
    "source_hash": null,
    "source_revision": null,
    "stage": "heldout"
@@ -893,7 +921,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 16,
+   "games": 8,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "external-setup-v1",
@@ -1602,6 +1630,195 @@
    "stage": "dev"
   },
   {
+   "bytes": 354,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-campaign-preflight-v1",
+   "panels": {
+    "summary": {
+     "complete": true,
+     "elapsed_seconds": 11.440816707909107,
+     "pass": true,
+     "scope": "deterministic correctness; no strength or speed claim",
+     "source_unchanged": true,
+     "uncertainty_interval": null
+    }
+   },
+   "pass": true,
+   "path": "runs/native-campaign-preflight-v1/summary.json",
+   "process_cap": null,
+   "sha256": "01babd91eda6b511c202758715a7df27a9c7fd091d02cbd2869edcde304a3147",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 287,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-copy-dev-v1",
+   "panels": {
+    "summary": {
+     "elapsed_seconds": 9.88854525,
+     "equivalent": true,
+     "median_cpu_reduction": 0.214482663070946,
+     "pass": true,
+     "truncations": 0
+    }
+   },
+   "pass": true,
+   "path": "runs/native-copy-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "aa9407829d1881e5fbcba1104c00a45a22373aac64546489291fd55b0323cbed",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 354,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-copy-differential-v1",
+   "panels": {
+    "summary": {
+     "complete": true,
+     "elapsed_seconds": 48.053587248548865,
+     "pass": true,
+     "scope": "deterministic correctness; no strength or speed claim",
+     "source_unchanged": true,
+     "uncertainty_interval": null
+    }
+   },
+   "pass": true,
+   "path": "runs/native-copy-differential-v1/summary.json",
+   "process_cap": null,
+   "sha256": "fd95f5b04135a2d8cc151a597daa0a73906c5e79b8a190cb4600622b2235a283",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 455,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-copy-fitted-binding-v1",
+   "panels": {
+    "summary": {
+     "elapsed_estimate_method": "file timestamps from plan write to final trace write, not a performance benchmark",
+     "elapsed_seconds_estimate": 4.018939256668091,
+     "games": 8,
+     "pass": true,
+     "reference_sha256": "ba1204b282e19c70171ec4376485db65b2a166610206aa1bde654e2c0484f47f",
+     "scope": "compatibility only; no strength or human evidence",
+     "trace_sha256": "85e2c4bb2795a3b425b76f474b8cc139af269aa5914a3b847d3b4b2b298713a1",
+     "truncations": 0
+    }
+   },
+   "pass": true,
+   "path": "runs/native-copy-fitted-binding-v1/summary.json",
+   "process_cap": null,
+   "sha256": "cc319984b56c0c6df61e524fbdf979ba82819cc52d2f6a9060ef1f77cfd53bc5",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 293,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-copy-native-dev-v1",
+   "panels": {
+    "summary": {
+     "elapsed_seconds": 9.240706335753202,
+     "equivalent": true,
+     "median_cpu_reduction": 0.2524667085414768,
+     "pass": true,
+     "truncations": 0
+    }
+   },
+   "pass": true,
+   "path": "runs/native-copy-native-dev-v1/summary.json",
+   "process_cap": null,
+   "sha256": "89984f30ece5f869e03fe3ca14ffa206e545bd95100f66af42531e02817b3e94",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 296,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-differential-pilot-v1",
+   "panels": {
+    "summary": {
+     "elapsed_seconds": 212.3659177068621,
+     "pass": true,
+     "scope": "deterministic correctness; no strength or speed claim",
+     "source_unchanged": true,
+     "truncations": 0,
+     "uncertainty_interval": null
+    }
+   },
+   "pass": true,
+   "path": "runs/native-differential-pilot-v1/summary.json",
+   "process_cap": null,
+   "sha256": "7c908b8a906e318944dd1c3746810743106a34f27e9e6945459afdeff6eca598",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
+   "bytes": 354,
+   "candidate": null,
+   "checkpoint_sha256": null,
+   "control": null,
+   "games": null,
+   "host": null,
+   "kind": "other",
+   "name": "native-differential-pilot-v2",
+   "panels": {
+    "summary": {
+     "complete": true,
+     "elapsed_seconds": 21.133308917284012,
+     "pass": true,
+     "scope": "deterministic correctness; no strength or speed claim",
+     "source_unchanged": true,
+     "uncertainty_interval": null
+    }
+   },
+   "pass": true,
+   "path": "runs/native-differential-pilot-v2/summary.json",
+   "process_cap": null,
+   "sha256": "82fe9dfb554e6f7b8bd6ffecc1cdfaeb8fa68038bcbac3e2add948f63a7e6183",
+   "source_hash": null,
+   "source_revision": null,
+   "stage": null
+  },
+  {
    "bytes": 346,
    "candidate": null,
    "checkpoint_sha256": null,
@@ -1624,7 +1841,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "native-v1-cython-1",
@@ -1642,7 +1859,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "native-v1-measured-0-cython",
@@ -1660,7 +1877,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "native-v1-measured-0-python",
@@ -1678,7 +1895,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "native-v1-measured-1-cython",
@@ -1696,7 +1913,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "native-v1-measured-1-python",
@@ -1714,7 +1931,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "native-v1-measured-2-cython",
@@ -1732,7 +1949,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "native-v1-measured-2-python",
@@ -1750,7 +1967,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "native-v1-profile",
@@ -1768,7 +1985,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "native-v1-python-1",
@@ -2139,7 +2356,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "phase3-profile-after",
@@ -2157,7 +2374,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "phase3-profile-before",
@@ -2175,7 +2392,7 @@
    "candidate": null,
    "checkpoint_sha256": null,
    "control": null,
-   "games": 8,
+   "games": 4,
    "host": "Jerrys-Mac-mini.local",
    "kind": "other",
    "name": "phase3-profile-before-full",
@@ -2249,9 +2466,9 @@
    "candidate": "strategic",
    "checkpoint_sha256": null,
    "control": "heuristic",
-   "games": 800,
+   "games": 400,
    "host": null,
-   "kind": "search_eval",
+   "kind": "diagnostic",
    "name": "placement-strategy-dev-20261029T170621734794Z",
    "panels": {
     "summary": {
@@ -2454,6 +2671,58 @@
    "source_hash": null,
    "source_revision": null,
    "stage": null
+  },
+  {
+   "bytes": 172503501,
+   "candidate": "planner_discard",
+   "checkpoint_sha256": "ac2f8de4e1762cb9b4d333a9019d90663f67268a4ffa70413540803802bd5134",
+   "control": "planner_parameter",
+   "games": 3840,
+   "host": "Jerrys-Mac-mini.local",
+   "kind": "search_eval",
+   "name": "planner-discard-dev-v1",
+   "panels": {
+    "mixed": {
+     "cluster_sd": 0.24593869122964365,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.009085165336728096,
+     "paired_seed_lcb": -0.23404093991809752,
+     "paired_win_lift": -0.0078125,
+     "pairs": 640,
+     "pass": false,
+     "zero_null_mde_80": 0.05773970243571586
+    },
+    "self": {
+     "cluster_sd": 0.16564710937336033,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.010112626478075981,
+     "paired_seed_lcb": -0.2434159399180975,
+     "paired_win_lift": -0.0171875,
+     "pairs": 640,
+     "pass": false,
+     "zero_null_mde_80": 0.03888942710369876
+    },
+    "tactical": {
+     "cluster_sd": 0.2599532334743117,
+     "external_faults": 0,
+     "match_truncations": 0,
+     "p95_seconds": 0.0096360445022583,
+     "paired_seed_lcb": -0.2277909399180975,
+     "paired_win_lift": -0.0015625,
+     "pairs": 640,
+     "pass": false,
+     "zero_null_mde_80": 0.06102993503366168
+    }
+   },
+   "pass": false,
+   "path": "runs/planner-discard-dev-v1.json",
+   "process_cap": 4,
+   "sha256": "373d84d8f1165d1ad84ffa459ac8586b4acbb19ddce18a1bdea4988cad8e62d8",
+   "source_hash": "c72438021ffc8079",
+   "source_revision": null,
+   "stage": "dev"
   },
   {
    "bytes": 4941040,

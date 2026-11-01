@@ -14,20 +14,28 @@ checkpoint b1785ccb, cap 4, host Jerrys-Mac-mini.local.
   worst step 1.42 s and worst turn 3.36 s.
 - **Stage 2 held out, FAIL.** `runs/economic-parameters-v13-external-heldout-v1.json`
   (sha256 94b7ebdb…4f98), 25,600 games, 2026-10-31 14:54Z to 2026-11-01
-  04:16Z, zero truncations. External faults: 1 in the tactical panel and 26 in
-  the mixed panel, against a zero-fault rule with no budget. The evaluator
-  withheld both lifts; they were not computed. Candidate step p95 was 9.9 ms
-  and 9.3 ms. Catanatron's worst step was 1.73 s in both panels, and its
-  worst turn was 4.05 s (tactical) and 7.96 s (mixed).
-- **Fault anatomy.** This is a new class; the bank-trade and Year of Plenty
-  legality mismatches repaired in v12 and v13 did not recur. 25 of the 27 faults
-  are z3 belief-recovery timeouts (`unknown: timeout` at the 500 ms solver
-  limit). The other 3 are budget failures: 1 decision timeout and 2 exhausted
-  turn budgets. All occurred at turns 184–199 of unusually long games. 24 are
-  in one game: mixed board 1710353, candidate arm, with Catanatron in opponent
-  seat 1, faulting on every decision from turn 193. The other two are single
-  faults in the control seat on boards 1710512 (turn 184) and 1700527 (turn
-  199). A separate Shengji job used 4 of the host's 10 cores from about
+  04:16Z, zero truncations. The evaluator counted 27 external fault
+  violations, 1 in the tactical panel and 26 in the mixed panel, against a
+  zero-fault rule with no budget. It withheld both lifts; they were not
+  computed. Candidate step p95 was 9.9 ms and 9.3 ms. In the control seat
+  (`baseline_latency`), Catanatron's worst step was 1.73 s in both panels and
+  its worst turn was 4.05 s (tactical) and 7.96 s (mixed). Those headline
+  figures do not cover Catanatron as an opponent in the candidate arm, where
+  one turn took 10.024 s (below).
+- **Fault anatomy, reconciled with the raw shards** (Codex's review of PR #8,
+  confirmed against shards 353, 512 and 527). The evaluator counts fallback or
+  budget-failure decisions plus step and whole-turn limit violations, so 27 is
+  a violation count. It breaks down as 26 failed decisions and 1 turn
+  violation. The failed decisions are 23 z3 belief-recovery timeouts
+  (`unknown: timeout` at the 500 ms solver limit), 1 decision timeout and 2
+  exhausted turn budgets. The turn violation is turn 197 of mixed board
+  1710353, which took 10.024 s in total. This is a new class: the bank-trade
+  and Year of Plenty legality mismatches repaired in v12 and v13 did not
+  recur. All occurred at turns 184–199 of unusually long games. Mixed board
+  1710353 (candidate arm, Catanatron in opponent seat 1, from turn 193) has 24
+  failed decisions (21 solver timeouts, 1 decision timeout, 2 turn budgets)
+  plus the turn violation. The other two are single solver timeouts in the
+  control seat, on boards 1710512 (turn 184) and 1700527 (turn 199). A separate Shengji job used 4 of the host's 10 cores from about
   18:56Z. The two single faults finished during it, but the 24-fault game
   finished before it, at 17:48Z.
 - **Reading.** Under the predeclared rule this is a FAIL, and it is not
@@ -51,7 +59,9 @@ checkpoint b1785ccb, cap 4, host Jerrys-Mac-mini.local.
 
   The three faulted boards (1700527, 1710353, 1710512) move no estimate by
   more than .002. Jerry decided on 2026-11-01 to promote `planner_parameter`,
-  using these figures together with the sealed Tactical-control panels.
+  using these post-hoc figures together with the sealed Tactical-control
+  panels, and confirmed it directly to Codex (board comment 6554097497). The
+  serving change is PR #9.
 - **Compact summary** for the registry:
   `runs/economic-parameters-v13-external-heldout-v1-summary/summary.json`.
 

@@ -33,7 +33,8 @@ not met and the served default is unchanged until the owner decides otherwise.
 The external comparison was rerun on the repaired comparator v13 as a new,
 predeclared two-stage plan. The 64-board DEV stage passed with zero faults
 (+.082 and +.195). The 1,600-board held-out stage sealed on 2026-11-01 with
-verdict FAIL on 27 external faults in 25,600 games, again against a zero-fault
+verdict FAIL on 27 external fault violations (26 failed decisions and one
+turn over 10 s) in 25,600 games, again against a zero-fault
 rule, so its lifts are withheld. The legality mismatches did not recur. The new
 faults are belief-solver timeouts late in very long games, 24 of them in one
 game (`experiments/README.md`, 2026-11-01). A post-hoc descriptive read,
