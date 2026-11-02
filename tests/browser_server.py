@@ -14,7 +14,9 @@ app = FastAPI()
 
 @app.post('/fixtures/{scenario}')
 def fixture(scenario: str):
-    result = create_game(NewGame(name='You', seed=71))
+    # UI fixtures pin the count-based tactical bot so the trade-offer test exercises
+    # acceptance; the served planner_unified accepts only on hand-score gain.
+    result = create_game(NewGame(name='You', seed=71, opponent='tactical'))
     game = sessions[result['game_id']].game
     game.phase, game.turn = 'actions', 4
     game.players[0].settlements.add(0)
