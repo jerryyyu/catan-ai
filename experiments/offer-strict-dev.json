@@ -1,0 +1,33 @@
+{
+  "name": "offer-strict-dev",
+  "stage": "dev",
+  "candidate": "planner_unified_offer",
+  "control": "planner_unified",
+  "requires_search": false,
+  "seeds_per_panel": 256,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "strict",
+      "seed": 2454000,
+      "opponents": [
+        "planner_strict_acceptor",
+        "planner_strict_acceptor",
+        "planner_strict_acceptor"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.03,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.08,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-02 before any game. Measurement of the served change against a hard trading partner: planner_unified_offer vs planner_unified at a table of three planner_strict_acceptor. Red-team probe (60 unrotated games) suggested ~-.03 +/- .15. Bar +.03 (the red team's proposal). A fail is reported as 'the offer lift is acceptor-dependent' in POLICIES.md; it does not by itself revert the served bot (owner's decision)."
+  }
+}
