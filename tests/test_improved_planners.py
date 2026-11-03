@@ -64,7 +64,8 @@ def test_discard_choice_keeps_the_more_valuable_card():
     assert choice['resource'] == 'wool'
 
 
-@pytest.mark.parametrize('name', ['planner_devfix', 'planner_unified', 'planner_shared', 'planner_race', 'planner_block', 'planner_unified_offer', 'planner_offer'])
+@pytest.mark.parametrize('name', ['planner_devfix', 'planner_unified', 'planner_shared', 'planner_race', 'planner_block', 'planner_unified_offer', 'planner_offer',
+                                  'planner_offer_guard', 'planner_offer_sparse', 'planner_strict_acceptor'])
 def test_new_candidates_play_complete_legal_games(name):
     for seed in (2390000, 2390001, 2390002):
         assert play([name, 'planner_parameter', 'tactical', 'builder'], seed).winner is not None
@@ -214,3 +215,63 @@ def test_race_value_grows_as_the_longest_road_gap_closes():
     game.longest_road_holder = 0
     # A held award is already in the points; only the Largest Army race remains.
     assert bot._race_value(game, 0) < values[0]
+
+
+def _with_cities(game, seat, count):
+    """Give a seat public points: cities on distinct board vertices."""
+    taken = {v for p in game.players for v in p.settlements | p.cities}
+    free = [v for v in range(len(game.board.neighbors)) if v not in taken]
+    game.players[seat].cities = set(free[:count])
+
+
+def test_guarded_offer_skips_a_recipient_near_winning():
+    game = _city_short_one_ore()
+    for seat in (1, 2, 3):
+        _with_cities(game, seat, 4)  # 8 public points each
+    view = Observation.from_game(game, 0)
+    assert make_policy('planner_unified_offer', 1).choose(view, 0)['type'] == 'offer_trade'
+    assert make_policy('planner_offer_guard', 1).choose(view, 0) == {'type': 'end_turn'}
+
+
+def test_guarded_offer_still_trades_with_seats_behind():
+    game = _city_short_one_ore()
+    _with_cities(game, 1, 4)
+    action = make_policy('planner_offer_guard', 1).choose(Observation.from_game(game, 0), 0)
+    assert action['type'] == 'offer_trade' and action['recipient'] in (2, 3)
+
+
+def test_sparse_offer_waits_three_own_turns():
+    game = _city_short_one_ore()
+    bot = make_policy('planner_offer_sparse', 1)
+    first = bot.choose(Observation.from_game(game, 0), 0)
+    assert first['type'] == 'offer_trade'
+    for turn in (24, 28):
+        game.turn = turn
+        assert bot.choose(Observation.from_game(game, 0), 0) == {'type': 'end_turn'}
+    game.turn = 32
+    assert bot.choose(Observation.from_game(game, 0), 0)['type'] == 'offer_trade'
+
+
+def _offer_to(seat, owner_points, my_points):
+    game = _city_short_one_ore()
+    game.players[0].cities = set()
+    _with_cities(game, 0, owner_points // 2)
+    _with_cities(game, seat, my_points // 2)
+    game.apply(0, {'type': 'offer_trade', 'recipient': seat, 'give': {'brick': 2}, 'receive': {'ore': 1}})
+    return game
+
+
+def test_strict_acceptor_refuses_a_seat_not_behind_it():
+    game = _offer_to(1, owner_points=6, my_points=2)
+    view = Observation.from_game(game, 1)
+    assert make_policy('planner_strict_acceptor', 1).choose(view, 1) == {'type': 'reject_trade'}
+
+
+def test_offer_choice_ignores_opponents_hidden_hands():
+    """Boundary: the offer is chosen from public state; swapping hidden cards changes nothing."""
+    game = _city_short_one_ore()
+    base = make_policy('planner_offer_guard', 1).choose(Observation.from_game(game, 0), 0)
+    for seat in (1, 2, 3):
+        hand = game.players[seat].resources
+        hand[Resource.WOOL], hand[Resource.LUMBER] = hand[Resource.LUMBER], hand[Resource.WOOL]
+    assert make_policy('planner_offer_guard', 1).choose(Observation.from_game(game, 0), 0) == base

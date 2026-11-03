@@ -7,8 +7,19 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Served default
 
-- **Policy:** `planner_unified_offer` for new solo web and API games since
-  2026-11-01 (owner-approved after its held-out PASS). It is `planner_unified`
+- **Policy:** `planner_offer_guard` for new solo web and API games since
+  2026-11-02 (owner-approved). It is `planner_unified_offer` with two red-team
+  fixes: it never offers a trade to a seat showing 8 or more public points, and
+  an offer's gain is net of half the recipient's own next-turn build gain.
+  Non-inferiority DEV vs `planner_unified_offer` (`runs/offer-guard-dev-v1.json`,
+  1,280 pairs per table, floor −.03): +.006 tactical, +.006 mixed, −.022 self,
+  −.007 strict-acceptor table. Accepted trades to 8+ point seats fall from 41.4
+  to 0 per 100 games at the tactical table (`runs/offer-diagnostics-v1.json`).
+  The screen is a point-estimate floor, not confidence-based non-inferiority:
+  it does not establish zero strength cost. The guard has no held-out test of
+  its own and does not inherit `planner_unified_offer`'s held-out lift. It is a
+  safety change served on owner approval; no human-play transfer is claimed.
+- **Offers (`planner_unified_offer`, served 2026-11-01 until the guard):** It is `planner_unified`
   plus player trade offers: when the turn search would end the turn, it proposes
   the 1-for-1 or 2-for-1 exchange that most raises its position score, weighted
   by the card-counted chance the recipient holds the card, at most once per turn.
@@ -18,7 +29,7 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   tactical-table lift partly measures exploitation of Tactical's count-based
   acceptance (it takes any offer giving it at least as many cards); the self
   table, whose acceptors take only offers that raise their own hand score, is
-  the cleaner read. No human-acceptance claim is made. The receipts name the arm
+  the cleaner read. No human-acceptance claim is made. Against a strict acceptor (takes only clear gains, only from seats behind it) the offers measure +.003 vs `planner_unified` (`runs/offer-strict-dev-v1.json`, bar +.03 FAIL): the lift depends on the partner. The receipts name the arm
   `planner_offer` (snapshot 14e7ab3, where it shadowed the older offer
   prototype); it is registered as `planner_unified_offer` from this release.
 - **Previous default, `planner_unified`:** keeps the fitted build search of

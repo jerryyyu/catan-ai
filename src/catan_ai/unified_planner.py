@@ -17,7 +17,8 @@ on the robber's tile is not counted, and knights already played keep the value
 they had in hand, so a Knight is played for its board effect and Largest Army
 rather than penalised.
 
-The planner never offers trades. Before rolling it plays only a Knight, and
+``planner_unified`` never offers trades; the version-2 subclasses below can.
+Before rolling it plays only a Knight, and
 only when the robber blocks one of its own producing tiles and playing scores
 higher than holding.
 """
@@ -284,6 +285,7 @@ class SharedScorePlanner(UnifiedPlanner):
     """
 
     race = block = offers = True
+    offer_margin = OFFER_MARGIN
 
     # ------------------------------------------------------------ scoring
     def _road_lengths(self, game):
@@ -323,11 +325,17 @@ class SharedScorePlanner(UnifiedPlanner):
         return self._value(game, seat)
 
     # ------------------------------------------------------------- offers
+    def _offer_allowed(self, game, seat, recipient):
+        return True
+
+    def _offer_gain(self, game, child, seat, recipient, gain, chance):
+        return gain
+
     def _best_offer(self, view, seat):
         game = self._world(view)
         base = self._hand_score(game, seat)
         hand = game.players[seat].resources
-        best, best_gain = None, OFFER_MARGIN
+        best, best_gain = None, self.offer_margin
         for receive in _RESOURCES:
             for give in _RESOURCES:
                 if give == receive:
@@ -336,7 +344,7 @@ class SharedScorePlanner(UnifiedPlanner):
                     if hand[give] < count:
                         continue
                     for recipient in range(len(game.players)):
-                        if recipient == seat:
+                        if recipient == seat or not self._offer_allowed(game, seat, recipient):
                             continue
                         held = game.players[recipient].resources[receive]
                         chance = min(1., held)
@@ -350,16 +358,21 @@ class SharedScorePlanner(UnifiedPlanner):
                         child.players[seat].resources[give] -= count
                         gain = chance * (self._hand_score(child, seat) - base)
                         if gain > best_gain:
+                            gain = self._offer_gain(game, child, seat, recipient, gain, chance)
+                        if gain > best_gain:
                             best, best_gain = (recipient, offer), gain
         if best is None:
             return None
         recipient, offer = best
         return {'type': 'offer_trade', 'recipient': recipient, 'give': offer['give'], 'receive': offer['receive']}
 
+    offer_every = 1   # own turns between offers (turn numbers advance once per player turn)
+
     def choose(self, view, seat):
         action = super().choose(view, seat)
+        recent = self.last_offer_turn is not None and view.turn - self.last_offer_turn < 4 * self.offer_every
         if (self.offers and view.phase == 'actions' and action.get('type') == 'end_turn'
-                and self.last_offer_turn != view.turn):
+                and self.last_offer_turn != view.turn and not (self.offer_every > 1 and recent)):
             offer = self._best_offer(view, seat)
             if offer is not None:
                 self.last_offer_turn = view.turn
@@ -377,3 +390,64 @@ class BlockPlanner(SharedScorePlanner):
 
 class OfferingPlanner(SharedScorePlanner):
     race = block = False
+
+
+# ------------------------------------------------------- offer red-team fixes
+# Predeclared 2026-11-02 after the red team of planner_unified_offer, before any game.
+LEADER_POINTS = 8     # never offer to a seat showing this many public points
+HELP_WEIGHT = LAMBDA  # weight on the recipient's own next-turn build gain
+SPARSE_MARGIN = .5    # sparse arm: minimum expected gain
+SPARSE_EVERY = 3      # sparse arm: at most one offer per three own turns
+
+
+class GuardedOfferPlanner(OfferingPlanner):
+    """Offers that do not feed a near-winner and are priced net of the recipient's gain.
+
+    A recipient showing ``LEADER_POINTS`` or more public points is never offered
+    a trade, and an offer's gain is the offerer's hand-score gain minus
+    ``HELP_WEIGHT`` times the recipient's own next-turn build gain (its plan
+    value on its card-counted hand).
+    """
+
+    def _offer_allowed(self, game, seat, recipient):
+        return game.players[recipient].public_points < LEADER_POINTS
+
+    def _offer_gain(self, game, child, seat, recipient, gain, chance):
+        self._scoring = True
+        try:
+            help_ = self._plan_value(child, recipient) - self._plan_value(game, recipient)
+        finally:
+            self._scoring = False
+        return gain - chance * HELP_WEIGHT * max(help_, 0.)
+
+
+class SparseOfferPlanner(GuardedOfferPlanner):
+    """The guarded offers, sent only for a clear gain and at most every third own turn."""
+
+    offer_every = SPARSE_EVERY
+    offer_margin = SPARSE_MARGIN
+
+
+class StrictAcceptorPlanner(UnifiedPlanner):
+    """Test opponent: ``planner_unified`` that accepts a trade only for a clear gain
+    (hand score up by ``STRICT_ACCEPT``) and never from a seat at or above its own
+    public points. A harder trading partner for screens; not a served candidate."""
+
+    def choose(self, view, seat):
+        if view.phase == 'trade_response' and view.trade_offer is not None:
+            actions = list(view.actions)
+            accept = next((a for a in actions if a['type'] == 'accept_trade'), None)
+            reject = next((a for a in actions if a['type'] == 'reject_trade'), None)
+            if reject is not None:
+                game = self._world(view)
+                owner = view.trade_offer['owner']
+                if (accept is not None
+                        and game.players[owner].public_points < game.players[seat].public_points
+                        and self._trade_value(game, seat, view.trade_offer)
+                        >= self._hand_score(game, seat) + STRICT_ACCEPT):
+                    return accept
+                return reject
+        return super().choose(view, seat)
+
+
+STRICT_ACCEPT = .5

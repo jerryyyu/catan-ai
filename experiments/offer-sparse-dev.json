@@ -1,0 +1,60 @@
+{
+  "name": "offer-sparse-dev",
+  "stage": "dev",
+  "candidate": "planner_offer_sparse",
+  "control": "planner_unified_offer",
+  "requires_search": false,
+  "seeds_per_panel": 320,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2450000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2451000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2452000,
+      "opponents": [
+        "planner_unified_offer",
+        "planner_unified_offer",
+        "planner_unified_offer"
+      ]
+    },
+    {
+      "name": "strict",
+      "seed": 2453000,
+      "opponents": [
+        "planner_strict_acceptor",
+        "planner_strict_acceptor",
+        "planner_strict_acceptor"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": -0.03,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.0,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-02 before any game, after the red team of the served planner_unified_offer (it feeds near-winners, offers almost every turn, and its lift shrinks against strict acceptors). Control is the served planner_unified_offer (PR #18). Tables: tactical, mixed, self (three planner_unified_offer) and strict (three planner_strict_acceptor: planner_unified that accepts only for a hand-score gain >= .5 and only from a seat behind it on public points). planner_offer_guard and planner_offer_sparse share seed blocks 2450000/2451000/2452000/2453000. Sparse: the guard plus offer margin .5 and at most one offer per three own turns. NON-INFERIORITY screen: passes if every table's paired lift is at least -.03; the aim is safer, less predictable offers at no measurable strength cost. 320 seeds per table (four tables). Constants (8 points, .5 help weight, .5 margin, 3 turns) fixed before any game; a fail parks the arm, no retuning. A pass makes it eligible to replace the served offers (owner's decision); offer counts, accept rate and trades to >= 8-point seats are reported separately by scripts/offer_diagnostics.py."
+  }
+}
