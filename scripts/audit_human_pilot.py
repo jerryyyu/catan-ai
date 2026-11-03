@@ -27,6 +27,7 @@ def audit(record):
     game = Game.new(record['names'], record['seed'])
     bot = replay_bot(record)
     times = []
+    turn_times = {}
     human_actions = 0
     for row in record['trace']:
         actor = 'bot' if row['seat'] == seat else 'human'
@@ -40,6 +41,8 @@ def audit(record):
             if action != row['action']:
                 raise ValueError('bot decision differs from frozen replay')
             times.append(seconds)
+            if not game.phase.startswith('setup'):
+                turn_times[game.turn] = turn_times.get(game.turn, 0) + seconds
         else:
             human_actions += 1
         game.apply(row['seat'], row['action'])
@@ -51,9 +54,15 @@ def audit(record):
             'registered_experienced_seats': sum(p['completed_matches'] >= 50 for p in participants.values()),
             'recorded_human_actions': human_actions, 'recorded_bot_actions': len(times),
             'maximum_recorded_bot_step_seconds': max(times, default=None),
+            'maximum_recorded_bot_turn_seconds': max(turn_times.values(), default=None),
+            'recorded_step_budget_violations': sum(t > 2 for t in times),
+            'recorded_turn_budget_violations': sum(t > 10 for t in turn_times.values()),
             'human_participation_verified': False,
             'claim_limit': 'Pilot only. Registration and actor labels cannot establish actual human play. '
-                           'No randomized comparison or turn-time coverage is inferred.'}
+                           'Durations are recorded values, not independent clock verification. '
+                           'Turn totals group non-setup actions by engine turn, including responses on '
+                           'opponents turns; partial-turn totals may be incomplete. '
+                           'No randomized strength comparison is inferred.'}
 
 
 def main():
