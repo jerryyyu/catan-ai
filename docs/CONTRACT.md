@@ -7,21 +7,41 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Served default
 
-- **Policy:** `planner_unified` for new solo web and API games since
-  2026-11-01 (owner-approved after its held-out PASS). It keeps the fitted
-  build search of `planner_parameter` and scores every other decision (robber,
-  steal, discard, development-card play, answering trade offers) with one
-  position score, `V(me) − 0.5 · max V(opponent)`. Opponents' hands are
-  public card-counting estimates, never hidden state. Held-out test against
-  `planner_parameter` (`runs/planner-unified-heldout-v1.json`, 14,400 games on
-  fresh boards): +.112, +.066 and +.023 paired lift on the tactical, mixed and
-  self tables, lower bounds +.085, +.041 and +.001. The self-table bound is
-  thin and approximate. The test's comparator was `planner_parameter`, not
-  `planner_devfix`, so no direct superiority claim over `planner_devfix` is
-  made. `planner_devfix` (the previous served default, which only removes the
-  random pre-roll development-card play) and `planner_parameter` stay
-  selectable. Tactical is the fallback, the three-human pilot rooms keep
-  Tactical as their default, and `heuristic` remains the frozen comparator.
+- **Policy:** `planner_offer_guard` for new solo web and API games since
+  2026-11-02 (owner-approved). It is `planner_unified_offer` with two red-team
+  fixes: it never offers a trade to a seat showing 8 or more public points, and
+  an offer's gain is net of half the recipient's own next-turn build gain.
+  Non-inferiority DEV vs `planner_unified_offer` (`runs/offer-guard-dev-v1.json`,
+  1,280 pairs per table, floor −.03): +.006 tactical, +.006 mixed, −.022 self,
+  −.007 strict-acceptor table. Accepted trades to 8+ point seats fall from 41.4
+  to 0 per 100 games at the tactical table (`runs/offer-diagnostics-v1.json`).
+  The screen is a point-estimate floor, not confidence-based non-inferiority:
+  it does not establish zero strength cost. The guard has no held-out test of
+  its own and does not inherit `planner_unified_offer`'s held-out lift. It is a
+  safety change served on owner approval; no human-play transfer is claimed.
+- **Offers (`planner_unified_offer`, served 2026-11-01 until the guard):** It is `planner_unified`
+  plus player trade offers: when the turn search would end the turn, it proposes
+  the 1-for-1 or 2-for-1 exchange that most raises its position score, weighted
+  by the card-counted chance the recipient holds the card, at most once per turn.
+  Held-out test against `planner_unified` (`runs/planner-offer-heldout-v1.json`,
+  7,200 pairs on fresh boards): +.271, +.115 and +.059 paired lift on the
+  tactical, mixed and self tables, lower bounds +.247, +.093 and +.037. The
+  tactical-table lift partly measures exploitation of Tactical's count-based
+  acceptance (it takes any offer giving it at least as many cards); the self
+  table, whose acceptors take only offers that raise their own hand score, is
+  the cleaner read. No human-acceptance claim is made. Against a strict acceptor (takes only clear gains, only from seats behind it) the offers measure +.003 vs `planner_unified` (`runs/offer-strict-dev-v1.json`, bar +.03 FAIL): the lift depends on the partner. The receipts name the arm
+  `planner_offer` (snapshot 14e7ab3, where it shadowed the older offer
+  prototype); it is registered as `planner_unified_offer` from this release.
+- **Previous default, `planner_unified`:** keeps the fitted build search of
+  `planner_parameter` and scores every other decision (robber, steal, discard,
+  development-card play, answering trade offers) with one position score,
+  `V(me) − 0.5 · max V(opponent)`. Opponents' hands are public card-counting
+  estimates, never hidden state. Held-out vs `planner_parameter`
+  (`runs/planner-unified-heldout-v1.json`): +.112, +.066, +.023, lower bounds
+  +.085, +.041, +.001. `planner_unified`, `planner_devfix` and
+  `planner_parameter` stay selectable. Tactical is the fallback, the three-human
+  pilot rooms keep Tactical as their default, and `heuristic` remains the frozen
+  comparator. Every served change is in [POLICIES.md](POLICIES.md).
 - **Why the fitted line (`planner_parameter`) was promoted:** both Tactical-control panels of the sealed held-out family passed
   (+.110 and +.227 paired lift; simultaneous lower bounds +.096 and +.208). The
   external-control panels have twice been withheld on comparator faults. The
@@ -44,11 +64,10 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Next challenger
 
-None declared. The shared-score planner's held-out PASS is now the served
-default (see above). Remaining red-team gaps that matter most against strong
-opponents: the planner never makes trade offers, does not race for Longest
-Road or Largest Army deliberately, and has no leader-blocking build choice.
-Each would be a change to the shared score with its own predeclared screen.
+None declared. Parked on 2026-11-01 (DEV FAIL vs `planner_unified`, not
+retuned): award-race value (`planner_race`) and the combined race + block +
+offer arm (`planner_shared`, self table +.031). See POLICIES.md "Tried and not
+taken".
 
 ## Challenger: held-out family sealed, FAIL on comparator faults
 

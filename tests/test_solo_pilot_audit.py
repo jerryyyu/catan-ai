@@ -8,6 +8,19 @@ from catan_ai.bots import make_policy
 from catan_ai.engine import Game
 from catan_ai.experiments import source_files
 from catan_ai.observation import Observation
+from catan_ai import unified_planner
+
+
+GUARD = pytest.param(
+    "planner_offer_guard",
+    marks=pytest.mark.skipif(not hasattr(unified_planner, "GuardedOfferPlanner"),
+                             reason="guard runtime arrives with the offer-guard PR"),
+)
+OFFER = pytest.param(
+    "planner_unified_offer",
+    marks=pytest.mark.skipif(not hasattr(unified_planner, "OfferingPlanner"),
+                             reason="offer runtime arrives in PR18"),
+)
 
 
 audit = runpy.run_path(str(Path(__file__).resolve().parents[1] / 'scripts/audit_solo_pilot.py'))['audit']
@@ -29,7 +42,7 @@ def record_for(human, opponent='tactical', complete=False):
     record = {'schema': 2, 'source': source_files(), 'human_seat': human, 'seed': seed,
               'names': ['PRIVATE NAME'] * 4, 'opponent': opponent, 'trace': trace,
               'winner': game.winner, 'turn': game.turn}
-    if opponent == 'planner_parameter':
+    if opponent in ('planner_parameter', 'planner_devfix', 'planner_unified', 'planner_unified_offer', 'planner_offer_guard'):
         record['model_sha256'] = policies[(human + 1) % 4].model_hash
     return record
 
@@ -75,14 +88,15 @@ def test_complete_synthetic_game_has_outcome_but_is_not_human_evidence():
     assert not result['human_participation_verified']
 
 
-def test_fitted_audit_rejects_missing_or_changed_checkpoint_identity(tmp_path, monkeypatch):
+@pytest.mark.parametrize('opponent', ['planner_parameter', 'planner_devfix', 'planner_unified', OFFER, GUARD])
+def test_fitted_audit_rejects_missing_or_changed_checkpoint_identity(tmp_path, monkeypatch, opponent):
     import json
     from catan_ai.parameter_planner import DEFAULT
     path = tmp_path / 'synthetic-model.json'
     data = {'schema': 1, 'source': source_files(), 'weights': DEFAULT}
     path.write_text(json.dumps(data))
     monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
-    record = record_for(1, opponent='planner_parameter')
+    record = record_for(1, opponent=opponent)
     assert audit(record)['replay_valid']
     missing = deepcopy(record)
     missing.pop('model_sha256')
@@ -94,12 +108,19 @@ def test_fitted_audit_rejects_missing_or_changed_checkpoint_identity(tmp_path, m
         audit(record)
 
 
-def test_actual_solo_api_record_audits_without_rewriting_file(tmp_path, monkeypatch):
+@pytest.mark.parametrize('opponent', ['tactical', 'planner_parameter', 'planner_devfix', 'planner_unified', OFFER, GUARD])
+def test_actual_solo_api_record_audits_without_rewriting_file(tmp_path, monkeypatch, opponent):
     from fastapi.testclient import TestClient
     from catan_ai import api, pilot_store
     monkeypatch.setenv('CATAN_PILOT_DIR', str(tmp_path))
+    if opponent != 'tactical':
+        import json
+        from catan_ai.parameter_planner import DEFAULT
+        model = tmp_path / 'synthetic-model.json'
+        model.write_text(json.dumps({'schema': 1, 'source': source_files(), 'weights': DEFAULT}))
+        monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(model))
     client = TestClient(api.app)
-    created = client.post('/api/games', json={'seed': 2600301, 'human_seat': 1, 'opponent': 'tactical'})
+    created = client.post('/api/games', json={'seed': 2600301, 'human_seat': 1, 'opponent': opponent})
     assert created.status_code == 200
     game_id = created.json()['game_id']
     try:
@@ -108,5 +129,25 @@ def test_actual_solo_api_record_audits_without_rewriting_file(tmp_path, monkeypa
         result = audit(pilot_store.load(game_id))
         assert result['replay_valid'] and result['recorded_bot_actions'] == 2
         assert path.read_bytes() == before
+        api.sessions.pop(game_id)
+        recovered = api.load_session(game_id)
+        assert recovered.trace == pilot_store.load(game_id)['trace']
+        assert audit(pilot_store.load(game_id))['replay_valid']
+        assert path.read_bytes() == before
     finally:
         api.sessions.pop(game_id, None)
+
+
+@pytest.mark.parametrize('opponent', [OFFER, GUARD])
+def test_offer_cadence_replays_through_complete_game(tmp_path, monkeypatch, opponent):
+    import json
+    from catan_ai.parameter_planner import DEFAULT
+    model = tmp_path / 'model.json'
+    model.write_text(json.dumps({'schema': 1, 'source': source_files(), 'weights': DEFAULT}))
+    monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(model))
+    record = record_for(1, opponent=opponent, complete=True)
+    assert any(row['actor'] == 'bot' and row['action']['type'] == 'offer_trade'
+               for row in record['trace'])
+    result = audit(record)
+    assert result['replay_valid'] and result['completed']
+    assert not result['human_participation_verified']

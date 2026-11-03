@@ -17,14 +17,15 @@ on the robber's tile is not counted, and knights already played keep the value
 they had in hand, so a Knight is played for its board effect and Largest Army
 rather than penalised.
 
-The planner never offers trades. Before rolling it plays only a Knight, and
+``planner_unified`` never offers trades; the version-2 subclasses below can.
+Before rolling it plays only a Knight, and
 only when the robber blocks one of its own producing tiles and playing scores
 higher than holding.
 """
 from copy import deepcopy
 
 from .card_planner import resource_estimates
-from .engine import Resource, award_holder
+from .engine import Resource, award_holder, longest_road
 from .parameter_planner import ParameterPlanner
 from .tactical import public_projection
 
@@ -259,3 +260,194 @@ class UnifiedPlanner(ParameterPlanner):
             if end is not None:
                 return end
         return super()._fallback(view, seat)
+
+
+# ---------------------------------------------------------------- version 2
+# Three additions to the same shared score, each switchable so a screen can
+# attribute its effect. All constants were fixed before any game.
+RACE_DISCOUNT = .5   # value of an award reached in k more steps: 2 points * RACE_DISCOUNT**k
+OFFER_MARGIN = .25   # minimum expected score gain before an offer is sent
+
+
+class SharedScorePlanner(UnifiedPlanner):
+    """``planner_unified`` plus award races, opponent-aware builds and trade offers.
+
+    - ``race``: every seat's value counts progress toward Longest Road and
+      Largest Army it does not hold, so building toward an award, and an
+      opponent closing in on one, both move the score.
+    - ``block``: the turn search ranks builds by the shared score
+      ``V(me) - LAMBDA * max V(opponent)`` instead of ``V(me)``, so a road or
+      settlement that takes a leader's best site counts.
+    - ``offers``: when the turn would otherwise end, propose the one-card or
+      two-for-one exchange with the highest expected score gain, weighting
+      each by the card-counted chance the recipient holds the requested card.
+      At most one offer per turn.
+    """
+
+    race = block = offers = True
+    offer_margin = OFFER_MARGIN
+
+    # ------------------------------------------------------------ scoring
+    def _road_lengths(self, game):
+        occupied = game.occupied()
+        return [longest_road(p.roads, {v for v, owner in occupied.items() if owner != s})
+                for s, p in enumerate(game.players)]
+
+    def _race_value(self, game, seat):
+        player, points = game.players[seat], self.weights[0]
+        bonus = 0.
+        if game.longest_road_holder != seat and len(player.roads) < 15:
+            lengths = self._road_lengths(game)
+            holder = game.longest_road_holder
+            gap = (5 if holder is None else lengths[holder] + 1) - lengths[seat]
+            if 1 <= gap <= 3:
+                bonus += 2 * points * RACE_DISCOUNT ** gap
+        if game.largest_army_holder != seat:
+            holder = game.largest_army_holder
+            gap = (3 if holder is None else game.players[holder].knights + 1) - player.knights
+            # Only known cards count: estimated opponent cards are placeholders (turn -1).
+            held = sum(card == 'knight' and turn >= 0 for card, turn in player.development)
+            if 1 <= gap <= 3:
+                bonus += 2 * points * RACE_DISCOUNT ** max(gap - held, 0) * .75
+        return bonus
+
+    def _seat_value(self, game, seat):
+        value = super()._seat_value(game, seat)
+        return value + self._race_value(game, seat) if self.race else value
+
+    def _leaf(self, game, seat):
+        if self.block:
+            mine = self._seat_value(game, seat)
+            threat = max(self._seat_value(game, s) for s in range(len(game.players)) if s != seat)
+            return mine - LAMBDA * threat
+        if self.race:
+            return self._value(game, seat) + self._race_value(game, seat)
+        return self._value(game, seat)
+
+    # ------------------------------------------------------------- offers
+    def _offer_allowed(self, game, seat, recipient):
+        return True
+
+    def _offer_gain(self, game, child, seat, recipient, gain, chance):
+        return gain
+
+    def _best_offer(self, view, seat):
+        game = self._world(view)
+        base = self._hand_score(game, seat)
+        hand = game.players[seat].resources
+        best, best_gain = None, self.offer_margin
+        for receive in _RESOURCES:
+            for give in _RESOURCES:
+                if give == receive:
+                    continue
+                for count in (1, 2):
+                    if hand[give] < count:
+                        continue
+                    for recipient in range(len(game.players)):
+                        if recipient == seat or not self._offer_allowed(game, seat, recipient):
+                            continue
+                        held = game.players[recipient].resources[receive]
+                        chance = min(1., held)
+                        if chance <= 0:
+                            continue
+                        offer = {'owner': seat, 'give': {give.value: count}, 'receive': {receive.value: 1}}
+                        child = self._copy(game)
+                        child.players[recipient].resources[receive] = max(held - 1, 0)
+                        child.players[recipient].resources[give] += count
+                        child.players[seat].resources[receive] += 1
+                        child.players[seat].resources[give] -= count
+                        gain = chance * (self._hand_score(child, seat) - base)
+                        if gain > best_gain:
+                            gain = self._offer_gain(game, child, seat, recipient, gain, chance)
+                        if gain > best_gain:
+                            best, best_gain = (recipient, offer), gain
+        if best is None:
+            return None
+        recipient, offer = best
+        return {'type': 'offer_trade', 'recipient': recipient, 'give': offer['give'], 'receive': offer['receive']}
+
+    offer_every = 1   # own turns between offers (turn numbers advance once per player turn)
+
+    def choose(self, view, seat):
+        action = super().choose(view, seat)
+        recent = self.last_offer_turn is not None and view.turn - self.last_offer_turn < 4 * self.offer_every
+        if (self.offers and view.phase == 'actions' and action.get('type') == 'end_turn'
+                and self.last_offer_turn != view.turn and not (self.offer_every > 1 and recent)):
+            offer = self._best_offer(view, seat)
+            if offer is not None:
+                self.last_offer_turn = view.turn
+                return offer
+        return action
+
+
+class RacePlanner(SharedScorePlanner):
+    block = offers = False
+
+
+class BlockPlanner(SharedScorePlanner):
+    race = offers = False
+
+
+class OfferingPlanner(SharedScorePlanner):
+    race = block = False
+
+
+# ------------------------------------------------------- offer red-team fixes
+# Predeclared 2026-11-02 after the red team of planner_unified_offer, before any game.
+LEADER_POINTS = 8     # never offer to a seat showing this many public points
+HELP_WEIGHT = LAMBDA  # weight on the recipient's own next-turn build gain
+SPARSE_MARGIN = .5    # sparse arm: minimum expected gain
+SPARSE_EVERY = 3      # sparse arm: at most one offer per three own turns
+
+
+class GuardedOfferPlanner(OfferingPlanner):
+    """Offers that do not feed a near-winner and are priced net of the recipient's gain.
+
+    A recipient showing ``LEADER_POINTS`` or more public points is never offered
+    a trade, and an offer's gain is the offerer's hand-score gain minus
+    ``HELP_WEIGHT`` times the recipient's own next-turn build gain (its plan
+    value on its card-counted hand).
+    """
+
+    def _offer_allowed(self, game, seat, recipient):
+        return game.players[recipient].public_points < LEADER_POINTS
+
+    def _offer_gain(self, game, child, seat, recipient, gain, chance):
+        self._scoring = True
+        try:
+            help_ = self._plan_value(child, recipient) - self._plan_value(game, recipient)
+        finally:
+            self._scoring = False
+        return gain - chance * HELP_WEIGHT * max(help_, 0.)
+
+
+class SparseOfferPlanner(GuardedOfferPlanner):
+    """The guarded offers, sent only for a clear gain and at most every third own turn."""
+
+    offer_every = SPARSE_EVERY
+    offer_margin = SPARSE_MARGIN
+
+
+class StrictAcceptorPlanner(UnifiedPlanner):
+    """Test opponent: ``planner_unified`` that accepts a trade only for a clear gain
+    (hand score up by ``STRICT_ACCEPT``) and never from a seat at or above its own
+    public points. A harder trading partner for screens; not a served candidate."""
+
+    def choose(self, view, seat):
+        if view.phase == 'trade_response' and view.trade_offer is not None:
+            actions = list(view.actions)
+            accept = next((a for a in actions if a['type'] == 'accept_trade'), None)
+            reject = next((a for a in actions if a['type'] == 'reject_trade'), None)
+            if reject is not None:
+                game = self._world(view)
+                owner = view.trade_offer['owner']
+                if (accept is not None
+                        and game.players[owner].public_points < game.players[seat].public_points
+                        and self._trade_value(game, seat, view.trade_offer)
+                        >= self._hand_score(game, seat) + STRICT_ACCEPT):
+                    return accept
+                return reject
+        return super().choose(view, seat)
+
+
+STRICT_ACCEPT = .5
