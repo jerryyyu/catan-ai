@@ -39,3 +39,11 @@ def test_value_leaf_ignores_opponents_hidden_hands():
         hand = game.players[seat].resources
         hand[Resource.WOOL], hand[Resource.ORE] = hand[Resource.ORE], hand[Resource.WOOL]
     assert make_policy('planner_value_leaf', 1).choose(Observation.for_policy(game, 0, bots[0]), 0) == base
+
+
+def test_scaled_value_leaf_maps_logit_onto_served_units():
+    bot = make_policy('planner_value_leaf_scaled', 1)
+    game = bot._world(Observation.from_game(Game.new(list('abcd'), 5), 0))
+    s = bot.scale
+    assert s['train_games'] == 600 and s['slope'] > 0
+    assert bot._leaf(game, 0) == pytest.approx(s['leaf_mean'] + s['slope'] * (bot._logit(game, 0) - s['logit_mean']))

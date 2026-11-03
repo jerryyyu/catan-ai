@@ -1,0 +1,51 @@
+{
+  "name": "value-leaf-scaled-dev",
+  "stage": "dev",
+  "candidate": "planner_value_leaf_scaled",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 128,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2540000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2541000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2542000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-03 before any game (Jerry: 'Yes run repair'), after planner_value_leaf FAILED DEV (runs/value-leaf-dev-v1.json: -.184/-.230/-.148) with a diagnosed integration defect: the search adds purchase_value (~8, fitted-value units) to a log-odds leaf (train SD .633), so development purchases dominated (126 vs 34 buys in a 12-game check on non-DEV seeds). Candidate planner_value_leaf_scaled = the same frozen model (checkpoints/value_leaf_v1.json) with its log-odds mapped onto the served leaf's units by mean/SD matching on the 600 TRAIN games only (checkpoints/value_leaf_v2.json, sha256 955ca605..., slope 76.38; scripts/fit_value_leaf_scale.py); no test, DEV or outcome data used. Every other decision equals served planner_offer_accept. This is a second integration of the same model: it is a repair test on fresh seeds 2540000/2541000/2542000, not a re-run of v1's boards, and v1's failure stands. Standard screen: observed paired lift >= +.05 on tactical, mixed and self, 128 seeds per table. A fail parks the linear-state-model lane until an action-conditioned target is tried."
+  }
+}

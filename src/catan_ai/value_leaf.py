@@ -46,12 +46,44 @@ class ValueLeafPlanner(AcceptanceOfferPlanner):
         super().__init__(rng)
         self.value_model = load_value_leaf()
 
-    def _leaf(self, game, seat):
-        if game.players[seat].points >= 10:
-            return WIN
+    def _logit(self, game, seat):
         leaves = [self._value(game, s) for s in range(len(game.players))]
         view = Observation.from_game(game, seat, include_events=False)
         x = value_features(view) + [leaves[seat] / 100,
                                     max(leaves[s] for s in range(len(leaves)) if s != seat) / 100]
         m = self.value_model
         return m['bias'] + sum(w * (v - mu) / s for w, v, mu, s in zip(m['weights'], x, m['means'], m['scales']))
+
+    def _leaf(self, game, seat):
+        if game.players[seat].points >= 10:
+            return WIN
+        return self._logit(game, seat)
+
+
+CHECKPOINT_V2 = CHECKPOINT.with_name('value_leaf_v2.json')
+CHECKPOINT_V2_SHA256 = '955ca605d43e5b127423a6024ece18eb89f49d67ce7330deedef2613292c3a04'
+
+
+class ScaledValueLeafPlanner(ValueLeafPlanner):
+    """v2: the same frozen model, its log-odds mapped onto the served leaf's units.
+
+    ``leaf = leaf_mean + slope * (logit - logit_mean)`` with mean/SD matching fitted
+    on the train corpus only (``scripts/fit_value_leaf_scale.py``), so the search's
+    fixed purchase bonus keeps the relative weight it has for the served leaf.
+    """
+
+    def __init__(self, rng=None):
+        super().__init__(rng)
+        raw = CHECKPOINT_V2.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != CHECKPOINT_V2_SHA256:
+            raise ValueError('value-leaf v2 checkpoint does not match the frozen scale')
+        data = json.loads(raw)
+        if data['base_checkpoint_sha256'] != CHECKPOINT_SHA256 or data['model'] != self.value_model:
+            raise ValueError('value-leaf v2 is not built on the frozen v1 model')
+        self.scale = data['scale']
+
+    def _leaf(self, game, seat):
+        if game.players[seat].points >= 10:
+            return WIN
+        s = self.scale
+        return s['leaf_mean'] + s['slope'] * (self._logit(game, seat) - s['logit_mean'])
