@@ -7,8 +7,19 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Served default
 
-- **Policy:** `planner_offer_guard` for new solo web and API games since
-  2026-11-02 (owner-approved). It is `planner_unified_offer` with two red-team
+- **Policy:** `planner_offer_accept` for new solo web and API games since
+  2026-11-03 (owner-approved). It is `planner_offer_guard` (below) with each
+  offer's gain and help penalty scaled by the recipient's public acceptance rate,
+  (accepted + 2) / (answered + 2) over that seat's answers to any player this
+  game; before any answer it offers exactly like the guard. Against the guard:
+  DEV mixed +.050 (bar +.03, `runs/offer-accept-mixed-dev-v1.json`); point floor
+  tactical −.001, self −.007, strict +.002 (floor −.03, not a confidence bound,
+  `runs/offer-accept-dev-v1.json`); held-out mixed **+.068, paired-normal LCB
+  +.052** (2,400 pairs, `runs/offer-accept-heldout-v1.json`). The held-out
+  covers the mixed table only; the other tables rest on the DEV point floor. No
+  human-play transfer is claimed.
+- **Guard (`planner_offer_guard`, served 2026-11-02 until the acceptance model):**
+  Since 2026-11-02 (owner-approved). It is `planner_unified_offer` with two red-team
   fixes: it never offers a trade to a seat showing 8 or more public points, and
   an offer's gain is net of half the recipient's own next-turn build gain.
   Non-inferiority DEV vs `planner_unified_offer` (`runs/offer-guard-dev-v1.json`,

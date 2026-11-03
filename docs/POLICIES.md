@@ -1,9 +1,9 @@
 # Bot policy ledger
 
-Last reconciled: **2026-11-01**.
+Last reconciled: **2026-11-03**.
 
-**Served default: `planner_offer_guard`** (ladder row 6), for new solo web and API games. Rollback:
-`planner_unified_offer` (row 5). Tactical is the fallback whenever the fitted checkpoint is unbound. The three-human
+**Served default: `planner_offer_accept`** (ladder row 7), for new solo web and API games. Rollback:
+`planner_offer_guard` (row 6). Tactical is the fallback whenever the fitted checkpoint is unbound. The three-human
 pilot rooms keep Tactical. **New screens compare against the served default**, on the standard tactical / mixed /
 self tables with a predeclared, powered +5 pp bar (`docs/PLAN.md`).
 
@@ -27,7 +27,8 @@ current claims are in [CONTRACT.md](CONTRACT.md). Add a row here in the same PR 
 
 | row | served | policy (registry name) | change | vs | held-out lift: tactical / mixed / self [LCB] | status | PR | receipt |
 |---:|---|---|---|---|---|---|---|---|
-| 6 | 2026-11-02 | `planner_offer_guard` | Red-team fixes to offers: none to seats on 8+ public points; gain net of .5 × the recipient's next-turn build gain | row 5 | DEV only: +.006 / +.006 / −.022, strict −.007; accepted trades to 8+ point seats 41.4 → 0 per 100 games (tactical) | point-floor PASS (−.03 on observed lift, not a confidence bound); no own held-out; does not inherit row 5's lift | this PR | `offer-guard-dev-v1`, `offer-diagnostics-v1` |
+| 7 | 2026-11-03 | `planner_offer_accept` | Guarded offers weighted by each recipient's public acceptance rate (accepted + 2) / (answered + 2) over its answers to any seat; identical to the guard until a seat answers | row 6 | mixed only: **+.068** [+.052]; DEV mixed +.050 (bar +.03); point floor tactical −.001 / self −.007 / strict +.002; mixed accept rate .31 → .71 | DEV PASS, HELD-OUT PASS (mixed); other tables point floor only | #20 (bot), this PR (serving) | `offer-accept-heldout-v1`, `offer-accept-mixed-dev-v1`, `offer-accept-dev-v1`, `offer-accept-diagnostics-v1` |
+| 6 | 2026-11-02 | `planner_offer_guard` | Red-team fixes to offers: none to seats on 8+ public points; gain net of .5 × the recipient's next-turn build gain | row 5 | DEV only: +.006 / +.006 / −.022, strict −.007; accepted trades to 8+ point seats 41.4 → 0 per 100 games (tactical) | point-floor PASS (−.03 on observed lift, not a confidence bound); no own held-out; does not inherit row 5's lift | #19 | `offer-guard-dev-v1`, `offer-diagnostics-v1` |
 | 5 | 2026-11-01 | `planner_unified_offer` | Player trade offers: when the turn search would end the turn, propose the 1-for-1 or 2-for-1 exchange that most raises the shared score, weighted by the card-counted chance the recipient holds the card; at most one per turn, margin .25 | row 4 | **+.271 / +.115 / +.059** [+.247 / +.093 / +.037]; DEV +.270 / +.096 / +.082 | DEV PASS, HELD-OUT PASS; acceptor-dependent: +.003 vs `planner_unified` at a strict-acceptor table (`offer-strict-dev-v1`, bar +.03 FAIL) | #18 | `planner-offer-heldout-v1` (receipt names the arm `planner_offer`, snapshot 14e7ab3) |
 | 4 | 2026-11-01 | `planner_unified` | One shared score `V(me) − 0.5·max V(opp)` for robber, steal, discard, development-card play and trade answers; build search unchanged | row 2 | **+.112 / +.066 / +.023** [+.085 / +.041 / +.001]; DEV +.078 / +.088 / +.053 | DEV PASS, HELD-OUT PASS (self bound thin) | #17 | `planner-unified-heldout-v1` |
 | 3 | 2026-11-01 | `planner_devfix` | Correctness fix: no random development-card play before the roll | row 2 | DEV only: −.026 / +.022 / −.008 | non-inferiority PASS (−3 pp floor) | #15 | `planner-devfix-dev-v1` |
@@ -35,14 +36,8 @@ current claims are in [CONTRACT.md](CONTRACT.md). Add a row here in the same PR 
 | 1 | 2026-10-31 | `tactical` | Rule-based tactical bot (now the fallback) | Heuristic | **+.118** vs three heuristics [+.085] | HELD-OUT PASS | initial commit | `tactical-heldout-v1` |
 | 0 | 2026-10-29 | `heuristic` | Baseline heuristic; the frozen comparator | — | — | baseline | — | — |
 
-Attribution: rows 4, 5 and 6 each changed one thing against their stated comparator. Row 4 was measured against
+Attribution: rows 4, 5, 6 and 7 each changed one thing against their stated comparator. Row 4 was measured against
 row 2, not row 3, so no direct claim is made that it beats row 3.
-
-## Passed, awaiting the owner's serving decision
-
-| date | policy | change | vs | result | receipts |
-|---|---|---|---|---|---|
-| 2026-11-03 | `planner_offer_accept` | Guarded offers weighted by each recipient's public acceptance rate (accepted + 2) / (answered + 2) over its answers to any seat; identical to the guard until a seat answers | `planner_offer_guard` (row 6) | DEV mixed **+.050** (bar +.03); point floor tactical −.001 / self −.007 / strict +.002 (floor −.03). **Held-out mixed +.068 [paired-normal LCB +.052]**, 2,400 pairs, 0 truncations. Diagnostics: mixed accept rate .31 → .71; offers per game 18.6 → 14.3 (mixed), 15.9 → 9.8 (self). Held-out covers the mixed table only; the other tables rest on the DEV point floor | `offer-accept-mixed-dev-v1`, `offer-accept-dev-v1`, `offer-accept-heldout-v1` (calibration `offer-accept-calibration-v1`), `offer-accept-diagnostics-v1`; snapshot ff82193 |
 
 ## Tried and not taken
 
