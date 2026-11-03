@@ -15,8 +15,10 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   1,280 pairs per table, floor −.03): +.006 tactical, +.006 mixed, −.022 self,
   −.007 strict-acceptor table. Accepted trades to 8+ point seats fall from 41.4
   to 0 per 100 games at the tactical table (`runs/offer-diagnostics-v1.json`).
-  This is a safety change with no strength claim of its own; its strength rests
-  on the offer evidence below.
+  The screen is a point-estimate floor, not confidence-based non-inferiority:
+  it does not establish zero strength cost. The guard has no held-out test of
+  its own and does not inherit `planner_unified_offer`'s held-out lift. It is a
+  safety change served on owner approval; no human-play transfer is claimed.
 - **Offers (`planner_unified_offer`, served 2026-11-01 until the guard):** It is `planner_unified`
   plus player trade offers: when the turn search would end the turn, it proposes
   the 1-for-1 or 2-for-1 exchange that most raises its position score, weighted

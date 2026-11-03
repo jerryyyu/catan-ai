@@ -108,7 +108,8 @@ class NewGame(BaseModel):
 # proposes at most one player trade per turn and passed its held-out test against
 # planner_unified (runs/planner-offer-heldout-v1.json). Since 2026-11-02 the offers
 # skip seats on 8+ public points and are priced net of the recipient's gain
-# (planner_offer_guard; non-inferior to planner_unified_offer, runs/offer-guard-dev-v1.json).
+# (planner_offer_guard; observed lift above a -.03 point floor vs planner_unified_offer,
+# runs/offer-guard-dev-v1.json; no held-out of its own).
 # History: docs/POLICIES.md.
 SERVED_POLICY = 'planner_offer_guard'
 FALLBACK_POLICY = 'tactical'
