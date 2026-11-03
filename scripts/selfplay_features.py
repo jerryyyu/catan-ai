@@ -24,6 +24,7 @@ from collections import defaultdict
 import hashlib
 import json
 from pathlib import Path
+import random
 import time
 
 from catan_ai.bots import make_policy
@@ -96,19 +97,88 @@ def summarise(rows):
     winners = [r for r in rows if r['won']]
     losers = [r for r in rows if not r['won']]
     out['mean_feature_winner_vs_loser'] = {
-        f: [sum(r[f] for r in winners) / len(winners), sum(r[f] for r in losers) / len(losers)]
+        f: [sum(r[f] for r in winners) / len(winners), sum(r[f] for r in losers) / len(losers),
+            sum(r[f] for r in winners) / len(winners) - sum(r[f] for r in losers) / len(losers)]
         for f in ('pips', 'diversity', 'ore_grain', 'brick_lumber')} if winners and losers else None
     return out
 
 
+CONDITIONING = ('by_points_40_rank and by_points_60_rank condition on games still running at that '
+                'turn; rank ties share the better rank.')
+
+
+def _leaves(tree, prefix=()):
+    if isinstance(tree, dict):
+        for k, v in tree.items():
+            yield from _leaves(v, prefix + (str(k),))
+    elif isinstance(tree, list):
+        for i, v in enumerate(tree):
+            yield from _leaves(v, prefix + (str(i),))
+    elif isinstance(tree, (int, float)) and not isinstance(tree, bool):
+        yield '/'.join(prefix), float(tree)
+
+
+def clustered_intervals(rows, resamples=1000, seed=20261103):
+    """Percentile 95% intervals for every summary number, resampling whole games (seeds)."""
+    by_seed = defaultdict(list)
+    for r in rows:
+        by_seed[r['seed']].append(r)
+    seeds = sorted(by_seed)
+    rng = random.Random(seed)
+    draws = defaultdict(list)
+    for _ in range(resamples):
+        sample = []
+        for k, s in enumerate(rng.choice(seeds) for _ in seeds):
+            sample.extend(dict(r, seed=(k, s)) for r in by_seed[s])
+        for key, value in _leaves(summarise(sample)):
+            if not key.endswith('/n'):
+                draws[key].append(value)
+    out = {}
+    for key, values in draws.items():
+        values.sort()
+        out[key] = [values[int(.025 * len(values))], values[min(len(values) - 1, int(.975 * len(values)))],
+                    len(values)]
+    return {'method': 'game-clustered percentile bootstrap (whole seeds resampled with replacement)',
+            'resamples': resamples, 'seed': seed, 'intervals_95': out,
+            'note': 'third element = resamples in which the number was defined; '
+                     'mean_feature_winner_vs_loser lists [winner mean, loser mean, difference]'}
+
+
+def amend(receipt, output, provenance):
+    raw = Path(receipt).read_bytes()
+    data = json.loads(raw)
+    complete = [r for r in data['rows'] if any(x['won'] for x in data['rows'] if x['seed'] == r['seed'])]
+    result = {'scope': data['scope'], 'amends': str(receipt),
+              'amends_sha256': hashlib.sha256(raw).hexdigest(),
+              'script_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+              'provenance': provenance, 'conditioning': CONDITIONING,
+              'summary': summarise(complete), 'uncertainty': clustered_intervals(complete)}
+    with Path(output).open('x') as stream:
+        json.dump(result, stream, indent=2)
+    print(json.dumps(result['uncertainty']['intervals_95'], indent=0)[:3000])
+
+
+def source_revision():
+    import catan_ai
+    commit = Path(catan_ai.__file__).resolve().parents[2] / 'COMMIT'
+    return commit.read_text().strip() if commit.exists() else None
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--policy', required=True)
-    parser.add_argument('--seed', type=int, required=True)
+    parser.add_argument('--amend', type=Path, help='recompute summary + intervals from a stored receipt')
+    parser.add_argument('--provenance', type=Path, help='JSON of recovered provenance for --amend')
+    parser.add_argument('--policy')
+    parser.add_argument('--seed', type=int)
     parser.add_argument('--games', type=int, default=256)
     parser.add_argument('--max-turns', type=int, default=1000)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    if args.amend:
+        return amend(args.amend, args.output, json.loads(args.provenance.read_text()) if args.provenance else None)
+    if args.policy is None or args.seed is None:
+        parser.error('--policy and --seed are required to play games')
+    probe = make_policy(args.policy, 0)
     started = time.monotonic()
     rows, truncated = [], 0
     for i in range(args.games):
@@ -120,9 +190,12 @@ def main():
     complete = [r for r in rows if any(x['won'] for x in rows if x['seed'] == r['seed'])]
     result = {'scope': 'diagnostic: mirror-game feature/outcome association, not a strength claim',
               'policy': args.policy, 'seed': args.seed, 'games': args.games, 'truncated': truncated,
+              'max_turns': args.max_turns, 'source_revision': source_revision(),
+              'model_sha256': getattr(probe, 'model_hash', None), 'conditioning': CONDITIONING,
               'source': source_files(),
               'script_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-              'seconds': time.monotonic() - started, 'summary': summarise(complete), 'rows': rows}
+              'seconds': time.monotonic() - started, 'summary': summarise(complete),
+              'uncertainty': clustered_intervals(complete), 'rows': rows}
     with args.output.open('x') as stream:
         json.dump(result, stream, indent=2)
     print(json.dumps(result['summary'], indent=1))
