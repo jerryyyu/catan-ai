@@ -52,11 +52,7 @@ def setup_features(game, seat):
 
 
 def ranks(values):
-    order = sorted(range(len(values)), key=lambda i: -values[i])
-    out = [0] * len(values)
-    for r, i in enumerate(order):
-        out[i] = 1 + sum(values[j] > values[i] for j in range(len(values)))
-    return out
+    return [1 + sum(other > value for other in values) for value in values]
 
 
 def play(policy, seed, max_turns):
