@@ -1,0 +1,51 @@
+{
+  "name": "offer-accept-dev",
+  "stage": "dev",
+  "candidate": "planner_offer_accept",
+  "control": "planner_offer_guard",
+  "requires_search": false,
+  "seeds_per_panel": 320,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2460000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2462000,
+      "opponents": [
+        "planner_offer_guard",
+        "planner_offer_guard",
+        "planner_offer_guard"
+      ]
+    },
+    {
+      "name": "strict",
+      "seed": 2463000,
+      "opponents": [
+        "planner_strict_acceptor",
+        "planner_strict_acceptor",
+        "planner_strict_acceptor"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": -0.03,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.0,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-03 before any game (board row 6, acceptance model). Candidate planner_offer_accept = served planner_offer_guard with each offer's gain and help penalty scaled by the recipient's public acceptance rate (accepted+2)/(answered+2), counting its answers to any seat this game; identical to the guard until a seat has answered. Control is the served planner_offer_guard (PR #19). Constant ACCEPT_PRIOR=2 fixed before any game; a fail parks the arm, no retuning. The arm passes only if BOTH configs pass: offer-accept-mixed-dev (improvement where the mechanism should bite: Builder and Expander refuse every offer) and offer-accept-dev (non-inferiority on the other tables). This config: tactical, self (three planner_offer_guard) and strict (three planner_strict_acceptor) tables, NON-INFERIORITY point floor: passes if every table's observed paired lift >= -.03 (a point-estimate floor, not confidence-based non-inferiority). 320 seeds per table."
+  }
+}
