@@ -186,7 +186,7 @@ def main():
             for seed in range(lo, lo + n)]
     started, done = time.monotonic(), 0
     with Pool(args.workers) as pool:
-        for status in pool.imap_unordered(play, jobs):
+        for _status in pool.imap_unordered(play, jobs):
             done += 1
             if done % 25 == 0 or done == len(jobs):
                 print(json.dumps({'split': args.split, 'games': done, 'of': len(jobs),
