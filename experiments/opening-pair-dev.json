@@ -1,0 +1,51 @@
+{
+  "name": "opening-pair-dev",
+  "stage": "dev",
+  "candidate": "planner_opening_pair",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 128,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2490000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2491000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2492000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-03 before any game, after the self-play feature diagnostic (runs/selfplay-features-v1.json: best-vs-worst opening production 28.8% vs 17.5%, 5-resource coverage 29.0% vs 3-resource 12.5%) showed the opening matters and the served opening is greedy one settlement at a time. Candidate planner_opening_pair = served planner_offer_accept whose FIRST settlement is the best of the top 10 one-settlement spots scored by the served value of holding it with the best of 10 second spots left after the intervening opponent picks are modelled as greedy on dice pips under the distance rule; all other moves unchanged. Control is the served planner_offer_accept (PR #23). Standard screen: tactical, mixed, self (three planner_offer_accept), observed paired lift >= +.05 on every table, 128 seeds (512 pairs) per table. Constants (10, 10, pip-greedy opponent model) fixed before any game; a fail parks the arm, no retuning. A pass leads to a predeclared held-out."
+  }
+}

@@ -309,3 +309,25 @@ def test_offer_choice_ignores_opponents_hidden_hands_by_policy(name):
         hand = game.players[seat].resources
         hand[Resource.WOOL], hand[Resource.LUMBER] = hand[Resource.LUMBER], hand[Resource.WOOL]
     assert make_policy(name, 1).choose(Observation.from_game(game, 0), 0) == base
+
+
+def test_opening_pair_first_pick_is_legal_and_second_matches_served():
+    game = Game.new(list('abcd'), 12)
+    pair, served = make_policy('planner_opening_pair', 1), make_policy('planner_offer_accept', 1)
+    while game.phase.startswith('setup'):
+        seat = game.current
+        view = Observation.for_policy(game, seat, pair)
+        action = pair.choose(view, seat)
+        assert action in view.legal_actions(seat)
+        if game.phase == 'setup_settlement' and game.players[seat].settlements:
+            assert action == served.choose(view, seat)  # only the first settlement changes
+        game.apply(seat, action)
+
+
+def test_opening_pair_ignores_hidden_hands():
+    game = Game.new(list('abcd'), 13)
+    view = Observation.from_game(game, 0)
+    base = make_policy('planner_opening_pair', 1).choose(view, 0)
+    for seat in (1, 2, 3):
+        game.players[seat].resources[Resource.WOOL] += 3
+    assert make_policy('planner_opening_pair', 1).choose(Observation.from_game(game, 0), 0) == base

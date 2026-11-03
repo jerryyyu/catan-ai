@@ -486,3 +486,66 @@ class StrictAcceptorPlanner(UnifiedPlanner):
 
 
 STRICT_ACCEPT = .5
+
+
+# ------------------------------------------------------- opening pair (row 2 follow-up)
+# Predeclared 2026-11-03 before any game, after the self-play feature diagnostic
+# (runs/selfplay-features-v1.json): the served opening picks one settlement at a time.
+PAIR_TOP_FIRST = 10    # first-settlement candidates, by the served one-settlement value
+PAIR_TOP_SECOND = 10   # second-settlement candidates left after the modelled opponent picks
+
+
+def _vertex_pips(board):
+    pips = [0] * len(board.vertices)
+    for tile in board.tiles:
+        if isinstance(tile.resource, Resource) and tile.number is not None:
+            for v in tile.vertices:
+                pips[v] += 6 - abs(7 - tile.number)
+    return pips
+
+
+class OpeningPairPlanner(AcceptanceOfferPlanner):
+    """``planner_offer_accept`` with a first settlement chosen for the pair it allows.
+
+    For each of the ``PAIR_TOP_FIRST`` best first spots (served one-settlement value),
+    the opponents' picks before our second placement are modelled as greedy on
+    dice pips under the distance rule, and the spot is scored by the served value
+    of holding it together with the best of the ``PAIR_TOP_SECOND`` remaining
+    spots. Every later move, including the second settlement, is unchanged.
+    """
+
+    def choose(self, view, seat):
+        if view.phase == 'setup_settlement' and not view.players[seat].settlements:
+            return self._pair_opening(view, seat)
+        return super().choose(view, seat)
+
+    def _pair_opening(self, view, seat):
+        legal = [a for a in view.actions if 'vertex' in a]
+        root = public_projection(view)
+        board = root.board
+
+        def value(vertices):
+            child = deepcopy(root, {id(board): board})
+            child.players[seat].settlements.update(vertices)
+            return self._value(child, seat)
+
+        first = sorted(legal, key=lambda a: value([a['vertex']]), reverse=True)[:PAIR_TOP_FIRST]
+        my_second = len(root.setup_order) - 1 - view.setup_index
+        picks = my_second - view.setup_index - 1
+        pips = _vertex_pips(board)
+        ranked = sorted(range(len(pips)), key=lambda u: -pips[u])
+        occupied = {v for p in root.players for v in p.settlements | p.cities}
+
+        def pair_value(vertex):
+            taken = occupied | {vertex}
+
+            def open_(u):
+                return u not in taken and not any(n in taken for n in board.neighbors[u])
+            for _ in range(picks):
+                spot = next((u for u in ranked if open_(u)), None)
+                if spot is None:
+                    break
+                taken.add(spot)
+            seconds = [u for u in ranked if open_(u)][:PAIR_TOP_SECOND]
+            return max((value([vertex, u]) for u in seconds), default=value([vertex]))
+        return max(first, key=lambda a: pair_value(a['vertex']))
