@@ -15,8 +15,10 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   DEV mixed +.050 (bar +.03, `runs/offer-accept-mixed-dev-v1.json`); point floor
   tactical −.001, self −.007, strict +.002 (floor −.03, not a confidence bound,
   `runs/offer-accept-dev-v1.json`); held-out mixed **+.068, paired-normal LCB
-  +.052** (2,400 pairs, `runs/offer-accept-heldout-v1.json`). The held-out
-  covers the mixed table only; the other tables rest on the DEV point floor. No
+  +.052** (2,400 pairs, `runs/offer-accept-heldout-v1.json`). A second held-out
+  (`runs/offer-accept-heldout-tables-v1.json`, 3,600 pairs per table) passed
+  confidence-based non-inferiority on the other tables: tactical −.009 (LCB
+  −.027), self +.002 (−.016), strict .000 (−.018), floor −.03 at α .05/3. No
   human-play transfer is claimed.
 - **Guard (`planner_offer_guard`, served 2026-11-02 until the acceptance model):**
   Since 2026-11-02 (owner-approved). It is `planner_unified_offer` with two red-team
