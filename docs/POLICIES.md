@@ -38,6 +38,12 @@ current claims are in [CONTRACT.md](CONTRACT.md). Add a row here in the same PR 
 Attribution: rows 4, 5 and 6 each changed one thing against their stated comparator. Row 4 was measured against
 row 2, not row 3, so no direct claim is made that it beats row 3.
 
+## Passed, awaiting the owner's serving decision
+
+| date | policy | change | vs | result | receipts |
+|---|---|---|---|---|---|
+| 2026-11-03 | `planner_offer_accept` | Guarded offers weighted by each recipient's public acceptance rate (accepted + 2) / (answered + 2) over its answers to any seat; identical to the guard until a seat answers | `planner_offer_guard` (row 6) | DEV mixed **+.050** (bar +.03); point floor tactical −.001 / self −.007 / strict +.002 (floor −.03). **Held-out mixed +.068 [paired-normal LCB +.052]**, 2,400 pairs, 0 truncations. Diagnostics: mixed accept rate .31 → .71; offers per game 18.6 → 14.3 (mixed), 15.9 → 9.8 (self). Held-out covers the mixed table only; the other tables rest on the DEV point floor | `offer-accept-mixed-dev-v1`, `offer-accept-dev-v1`, `offer-accept-heldout-v1` (calibration `offer-accept-calibration-v1`), `offer-accept-diagnostics-v1`; snapshot ff82193 |
+
 ## Tried and not taken
 
 Each was screened against the served bot of its day with a predeclared bar. A failed bar is a result and is not
