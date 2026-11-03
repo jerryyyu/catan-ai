@@ -16,6 +16,11 @@ GUARD = pytest.param(
     marks=pytest.mark.skipif(not hasattr(unified_planner, "GuardedOfferPlanner"),
                              reason="guard runtime arrives with the offer-guard PR"),
 )
+ACCEPT = pytest.param(
+    "planner_offer_accept",
+    marks=pytest.mark.skipif(not hasattr(unified_planner, "AcceptanceOfferPlanner"),
+                             reason="acceptance runtime arrives in PR20"),
+)
 OFFER = pytest.param(
     "planner_unified_offer",
     marks=pytest.mark.skipif(not hasattr(unified_planner, "OfferingPlanner"),
@@ -42,7 +47,8 @@ def record_for(human, opponent='tactical', complete=False):
     record = {'schema': 2, 'source': source_files(), 'human_seat': human, 'seed': seed,
               'names': ['PRIVATE NAME'] * 4, 'opponent': opponent, 'trace': trace,
               'winner': game.winner, 'turn': game.turn}
-    if opponent in ('planner_parameter', 'planner_devfix', 'planner_unified', 'planner_unified_offer', 'planner_offer_guard'):
+    if opponent in ('planner_parameter', 'planner_devfix', 'planner_unified', 'planner_unified_offer', 'planner_offer_guard',
+                    'planner_offer_accept'):
         record['model_sha256'] = policies[(human + 1) % 4].model_hash
     return record
 
@@ -88,7 +94,7 @@ def test_complete_synthetic_game_has_outcome_but_is_not_human_evidence():
     assert not result['human_participation_verified']
 
 
-@pytest.mark.parametrize('opponent', ['planner_parameter', 'planner_devfix', 'planner_unified', OFFER, GUARD])
+@pytest.mark.parametrize('opponent', ['planner_parameter', 'planner_devfix', 'planner_unified', OFFER, GUARD, ACCEPT])
 def test_fitted_audit_rejects_missing_or_changed_checkpoint_identity(tmp_path, monkeypatch, opponent):
     import json
     from catan_ai.parameter_planner import DEFAULT
@@ -108,7 +114,7 @@ def test_fitted_audit_rejects_missing_or_changed_checkpoint_identity(tmp_path, m
         audit(record)
 
 
-@pytest.mark.parametrize('opponent', ['tactical', 'planner_parameter', 'planner_devfix', 'planner_unified', OFFER, GUARD])
+@pytest.mark.parametrize('opponent', ['tactical', 'planner_parameter', 'planner_devfix', 'planner_unified', OFFER, GUARD, ACCEPT])
 def test_actual_solo_api_record_audits_without_rewriting_file(tmp_path, monkeypatch, opponent):
     from fastapi.testclient import TestClient
     from catan_ai import api, pilot_store
@@ -138,7 +144,7 @@ def test_actual_solo_api_record_audits_without_rewriting_file(tmp_path, monkeypa
         api.sessions.pop(game_id, None)
 
 
-@pytest.mark.parametrize('opponent', [OFFER, GUARD])
+@pytest.mark.parametrize('opponent', [OFFER, GUARD, ACCEPT])
 def test_offer_cadence_replays_through_complete_game(tmp_path, monkeypatch, opponent):
     import json
     from catan_ai.parameter_planner import DEFAULT

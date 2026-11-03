@@ -18,11 +18,12 @@ def audit(record):
     if type(human) is not int or human not in range(4):
         raise ValueError('invalid human seat')
     if record['opponent'] not in ('heuristic', 'tactical', 'planner_parameter', 'planner_devfix', 'planner_unified', 'planner_unified_offer',
-                                  'planner_offer_guard'):
+                                  'planner_offer_guard', 'planner_offer_accept'):
         raise ValueError('opponent does not support deterministic solo replay')
     bots = {seat: make_policy(record['opponent'], record['seed'] * 31 + seat)
             for seat in range(4) if seat != human}
-    if record['opponent'] in ('planner_parameter', 'planner_devfix', 'planner_unified', 'planner_unified_offer', 'planner_offer_guard') and (
+    if record['opponent'] in ('planner_parameter', 'planner_devfix', 'planner_unified', 'planner_unified_offer', 'planner_offer_guard',
+                              'planner_offer_accept') and (
             not record.get('model_sha256') or any(bot.model_hash != record['model_sha256'] for bot in bots.values())):
         raise ValueError('saved checkpoint unavailable or changed')
     game = Game.new(record['names'], record['seed'])

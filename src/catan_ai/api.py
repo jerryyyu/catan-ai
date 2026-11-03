@@ -88,7 +88,7 @@ def load_session(game_id):
 
 # Policies that load the source-pinned fitted checkpoint; their games record its SHA256.
 CHECKPOINT_POLICIES = ('planner_parameter', 'planner_devfix', 'planner_unified', 'planner_unified_offer',
-                       'planner_offer_guard')
+                       'planner_offer_guard', 'planner_offer_accept')
 
 
 class NewGame(BaseModel):
@@ -98,7 +98,7 @@ class NewGame(BaseModel):
     # None means the served default (see served_default).
     opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned', 'planner_parameter',
                       'planner_devfix', 'planner_unified', 'planner_unified_offer',
-                      'planner_offer_guard'] | None = None
+                      'planner_offer_guard', 'planner_offer_accept'] | None = None
 
 
 # Since 2026-11-01 (owner-approved): the shared-score planner plus trade offers.
@@ -109,9 +109,11 @@ class NewGame(BaseModel):
 # planner_unified (runs/planner-offer-heldout-v1.json). Since 2026-11-02 the offers
 # skip seats on 8+ public points and are priced net of the recipient's gain
 # (planner_offer_guard; observed lift above a -.03 point floor vs planner_unified_offer,
-# runs/offer-guard-dev-v1.json; no held-out of its own).
+# runs/offer-guard-dev-v1.json; no held-out of its own). Since 2026-11-03 each offer is
+# weighted by the recipient's public acceptance rate (planner_offer_accept; held-out
+# mixed-table PASS vs planner_offer_guard, runs/offer-accept-heldout-v1.json).
 # History: docs/POLICIES.md.
-SERVED_POLICY = 'planner_offer_guard'
+SERVED_POLICY = 'planner_offer_accept'
 FALLBACK_POLICY = 'tactical'
 
 
