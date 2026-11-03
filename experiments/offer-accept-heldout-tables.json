@@ -1,0 +1,54 @@
+{
+  "name": "offer-accept-heldout-tables",
+  "stage": "heldout",
+  "candidate": "planner_offer_accept",
+  "control": "planner_offer_guard",
+  "requires_search": false,
+  "seeds_per_panel": 900,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2470000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2472000,
+      "opponents": [
+        "planner_offer_guard",
+        "planner_offer_guard",
+        "planner_offer_guard"
+      ]
+    },
+    {
+      "name": "strict",
+      "seed": 2473000,
+      "opponents": [
+        "planner_strict_acceptor",
+        "planner_strict_acceptor",
+        "planner_strict_acceptor"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": -0.03,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10,
+    "minimum_paired_lcb": -0.03
+  },
+  "requires_dev_pass": true,
+  "inference": "paired_normal",
+  "power": {
+    "alternative_effect": 0.0,
+    "planning_sigma": 0.25,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-03 before any game, after Jerry approved serving planner_offer_accept (PR #23). Closes the evidence gap the mixed-only held-out left: confidence-based NON-INFERIORITY on the tactical, self (three planner_offer_guard) and strict (three planner_strict_acceptor) tables. Same frozen snapshot runs/offer-accept-source-v1 (ff82193), checkpoint and lineups as runs/offer-accept-dev-v1.json (DEV point-floor PASS: -.0008 / -.0070 / +.0016). Fresh seeds 2470000+, 2472000+, 2473000+ (no overlap with DEV 2460000/2462000/2463000 or mixed 2461000/2466000). Passes only if every table's paired-normal LCB at per-panel alpha .05/3 is >= -.03 and the observed lift >= -.03, calibrated by runs/offer-accept-tables-calibration-v1.json. planning_sigma .25 is above every DEV cluster SD (.216 / .173 / .081). A fail does not unserve the bot by itself; it is reported to the owner, who decides on rollback to planner_offer_guard."
+  }
+}
