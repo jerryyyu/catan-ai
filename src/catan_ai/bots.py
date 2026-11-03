@@ -153,6 +153,9 @@ def make_policy(name: str, seed: int) -> Policy:
                 'planner_offer_guard': u.GuardedOfferPlanner, 'planner_offer_sparse': u.SparseOfferPlanner,
                 'planner_strict_acceptor': u.StrictAcceptorPlanner,
                 'planner_offer_accept': u.AcceptanceOfferPlanner}[name](rng)
+    if name == 'planner_value_leaf':
+        from .value_leaf import ValueLeafPlanner
+        return ValueLeafPlanner(rng)
     if name == 'planner_discard':
         from .improved_planners import DiscardAwarePlanner
         return DiscardAwarePlanner(rng)
