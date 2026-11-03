@@ -275,3 +275,37 @@ def test_offer_choice_ignores_opponents_hidden_hands():
         hand = game.players[seat].resources
         hand[Resource.WOOL], hand[Resource.LUMBER] = hand[Resource.LUMBER], hand[Resource.WOOL]
     assert make_policy('planner_offer_guard', 1).choose(Observation.from_game(game, 0), 0) == base
+
+
+def test_acceptance_offer_matches_guard_before_any_answer():
+    game = _city_short_one_ore()
+    view = Observation.from_game(game, 0)
+    assert make_policy('planner_offer_accept', 1).choose(view, 0) == \
+        make_policy('planner_offer_guard', 1).choose(view, 0)
+
+
+def test_acceptance_offer_moves_off_a_seat_that_keeps_refusing():
+    game = _city_short_one_ore()
+    first = make_policy('planner_offer_guard', 1).choose(Observation.from_game(game, 0), 0)
+    refuser = first['recipient']
+    for _ in range(4):  # public refusals from the guard's preferred recipient
+        game.apply(0, dict(first))
+        game.apply(refuser, {'type': 'reject_trade'})
+    view = Observation.from_game(game, 0)
+    rates = make_policy('planner_offer_accept', 1).acceptance_rates(view)
+    assert rates[refuser] == pytest.approx(2 / 6) and all(rates[s] == 1 for s in (1, 2, 3) if s != refuser)
+    action = make_policy('planner_offer_accept', 1).choose(view, 0)
+    assert action['type'] == 'offer_trade' and action['recipient'] != refuser
+
+
+@pytest.mark.parametrize('name', ['planner_offer_guard', 'planner_offer_accept'])
+def test_offer_choice_ignores_opponents_hidden_hands_by_policy(name):
+    """Boundary: the acceptance record and offer use public state only."""
+    game = _city_short_one_ore()
+    game.apply(0, {'type': 'offer_trade', 'recipient': 1, 'give': {'brick': 1}, 'receive': {'ore': 1}})
+    game.apply(1, {'type': 'reject_trade'})
+    base = make_policy(name, 1).choose(Observation.from_game(game, 0), 0)
+    for seat in (1, 2, 3):
+        hand = game.players[seat].resources
+        hand[Resource.WOOL], hand[Resource.LUMBER] = hand[Resource.LUMBER], hand[Resource.WOOL]
+    assert make_policy(name, 1).choose(Observation.from_game(game, 0), 0) == base

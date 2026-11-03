@@ -145,12 +145,14 @@ def make_policy(name: str, seed: int) -> Policy:
     # snapshot 14e7ab3) registered OfferingPlanner as 'planner_offer', shadowing the
     # older OfferPlanner below; it is 'planner_unified_offer' from here on.
     if name in ('planner_shared', 'planner_race', 'planner_block', 'planner_unified_offer',
-                'planner_offer_guard', 'planner_offer_sparse', 'planner_strict_acceptor'):
+                'planner_offer_guard', 'planner_offer_sparse', 'planner_strict_acceptor',
+                'planner_offer_accept'):
         from . import unified_planner as u
         return {'planner_shared': u.SharedScorePlanner, 'planner_race': u.RacePlanner,
                 'planner_block': u.BlockPlanner, 'planner_unified_offer': u.OfferingPlanner,
                 'planner_offer_guard': u.GuardedOfferPlanner, 'planner_offer_sparse': u.SparseOfferPlanner,
-                'planner_strict_acceptor': u.StrictAcceptorPlanner}[name](rng)
+                'planner_strict_acceptor': u.StrictAcceptorPlanner,
+                'planner_offer_accept': u.AcceptanceOfferPlanner}[name](rng)
     if name == 'planner_discard':
         from .improved_planners import DiscardAwarePlanner
         return DiscardAwarePlanner(rng)

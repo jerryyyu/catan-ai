@@ -428,6 +428,41 @@ class SparseOfferPlanner(GuardedOfferPlanner):
     offer_margin = SPARSE_MARGIN
 
 
+# Predeclared 2026-11-03 before any game (board row 6, acceptance model).
+ACCEPT_PRIOR = 2.     # virtual accepted offers per recipient before any public answer
+
+
+class AcceptanceOfferPlanner(GuardedOfferPlanner):
+    """Guarded offers weighted by each recipient's public answer record.
+
+    Every offer and its answer are public events. A recipient's acceptance rate is
+    ``(accepted + ACCEPT_PRIOR) / (answered + ACCEPT_PRIOR)`` over the answers it
+    has given to any seat this game, and an offer's gain and help penalty are scaled
+    by that rate. With no answers seen it offers exactly like ``planner_offer_guard``;
+    a seat that keeps refusing stops being chosen when another seat can supply the card.
+    """
+
+    _accept_rate = None
+
+    @staticmethod
+    def acceptance_rates(view):
+        accepted, answered = [0] * len(view.players), [0] * len(view.players)
+        for event in view.events:
+            kind = event['action']['type']
+            if kind in ('accept_trade', 'reject_trade'):
+                answered[event['seat']] += 1
+                accepted[event['seat']] += kind == 'accept_trade'
+        return [(a + ACCEPT_PRIOR) / (n + ACCEPT_PRIOR) for a, n in zip(accepted, answered)]
+
+    def _best_offer(self, view, seat):
+        self._accept_rate = self.acceptance_rates(view)
+        return super()._best_offer(view, seat)
+
+    def _offer_gain(self, game, child, seat, recipient, gain, chance):
+        rate = self._accept_rate[recipient]
+        return super()._offer_gain(game, child, seat, recipient, gain * rate, chance * rate)
+
+
 class StrictAcceptorPlanner(UnifiedPlanner):
     """Test opponent: ``planner_unified`` that accepts a trade only for a clear gain
     (hand score up by ``STRICT_ACCEPT``) and never from a seat at or above its own
