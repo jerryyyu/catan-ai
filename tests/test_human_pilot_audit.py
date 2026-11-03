@@ -57,3 +57,38 @@ def test_audit_rejects_inconsistent_record(defect):
         record['trace'][0]['action'] = {'type': 'roll'}
     with pytest.raises(ValueError):
         audit(record)
+
+
+def test_room_audit_aggregates_recorded_turn_cost_and_excludes_setup():
+    record = fixture()
+    game = Game.new(record['names'], record['seed'])
+    bots = [make_policy('tactical', record['seed'] * 31 + seat) for seat in range(4)]
+    trace = []
+    totals = {}
+    # Include setup and multiple ordinary turns, without requiring a full game.
+    while game.turn < 5:
+        seat = game.current
+        action = bots[seat].choose(Observation.for_policy(game, seat, bots[seat]), seat)
+        setup = game.phase.startswith('setup')
+        seconds = 50.0 if setup else 6.0
+        if seat == 0 and not setup:
+            totals[game.turn] = totals.get(game.turn, 0) + seconds
+        trace.append({'seat': seat, 'actor': 'bot' if seat == 0 else 'human',
+                      'action': action, 'seconds': seconds})
+        game.apply(seat, action)
+    record.update(trace=trace, winner=game.winner, turn=game.turn)
+    original = copy.deepcopy(record)
+    result = audit(record)
+    assert len(totals) >= 2
+    assert result['maximum_recorded_bot_turn_seconds'] == max(totals.values())
+    assert result['recorded_turn_budget_violations'] == sum(t > 10 for t in totals.values())
+    assert result['recorded_step_budget_violations'] == sum(row['seat'] == 0 for row in trace)
+    assert result['maximum_recorded_bot_step_seconds'] == 50.0
+    assert record == original
+
+
+def test_setup_only_has_no_recorded_turn_budget():
+    result = audit(fixture())
+    assert result['maximum_recorded_bot_turn_seconds'] is None
+    assert result['recorded_turn_budget_violations'] == 0
+    assert result['recorded_step_budget_violations'] == 0
