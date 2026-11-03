@@ -13,7 +13,6 @@ closed on any mismatch.
 """
 import hashlib
 import json
-import math
 from pathlib import Path
 
 from .experiments import source_files
