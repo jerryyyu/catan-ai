@@ -87,7 +87,7 @@ def load_session(game_id):
 
 
 # Policies that load the source-pinned fitted checkpoint; their games record its SHA256.
-CHECKPOINT_POLICIES = ('planner_parameter', 'planner_devfix', 'planner_unified')
+CHECKPOINT_POLICIES = ('planner_parameter', 'planner_devfix', 'planner_unified', 'planner_unified_offer')
 
 
 class NewGame(BaseModel):
@@ -96,14 +96,16 @@ class NewGame(BaseModel):
     human_seat: int = Field(default=0, ge=0, le=3, strict=True)
     # None means the served default (see served_default).
     opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned', 'planner_parameter',
-                      'planner_devfix', 'planner_unified'] | None = None
+                      'planner_devfix', 'planner_unified', 'planner_unified_offer'] | None = None
 
 
-# Since 2026-11-01 (owner-approved): the shared-score planner. It keeps the
-# fitted build search and scores robber, steal, discard, development-card and
-# trade-answer moves with one position score. It passed its predeclared
-# held-out test against planner_parameter (runs/planner-unified-heldout-v1.json).
-SERVED_POLICY = 'planner_unified'
+# Since 2026-11-01 (owner-approved): the shared-score planner plus trade offers.
+# planner_unified keeps the fitted build search and scores robber, steal, discard,
+# development-card and trade-answer moves with one position score
+# (runs/planner-unified-heldout-v1.json, vs planner_parameter); this arm also
+# proposes at most one player trade per turn and passed its held-out test against
+# planner_unified (runs/planner-offer-heldout-v1.json). History: docs/POLICIES.md.
+SERVED_POLICY = 'planner_unified_offer'
 FALLBACK_POLICY = 'tactical'
 
 

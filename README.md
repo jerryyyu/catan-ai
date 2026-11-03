@@ -126,10 +126,11 @@ not be shared during play. Human timings measure action processing, not thinking
 time; bot timings include observation, decision and application. These local
 one-human/three-bot pilots support debugging, not a human-transfer strength claim.
 
-Solo play defaults to the **Trained planner** (`planner_unified`: the fitted
+Solo play defaults to the **Trained planner** (`planner_unified_offer`: the fitted
 `planner_parameter` build search, with robber, steal, discard,
-development-card and trade-answer moves chosen by one shared position score;
-served since 2026-11-01 after its held-out PASS). The server loads `checkpoints/planner_parameter.json` unless
+development-card and trade-answer moves chosen by one shared position score,
+plus at most one player trade offer per turn; served since 2026-11-01 after its
+held-out PASS). Every served bot and what it measured: [docs/POLICIES.md](docs/POLICIES.md). The server loads `checkpoints/planner_parameter.json` unless
 `CATAN_PARAMETER_MODEL` names another checkpoint. A game records the checkpoint's
 SHA256 for restart recovery, and all three opponents must load the same
 checkpoint. The checkpoint pins every source file and the engine backend. It is

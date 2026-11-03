@@ -1,0 +1,54 @@
+{
+  "name": "planner-offer-heldout",
+  "stage": "heldout",
+  "candidate": "planner_offer",
+  "control": "planner_unified",
+  "requires_search": false,
+  "seeds_per_panel": 600,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2443000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2444000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2445000,
+      "opponents": [
+        "planner_unified",
+        "planner_unified",
+        "planner_unified"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10,
+    "minimum_paired_lcb": 0
+  },
+  "requires_dev_pass": true,
+  "inference": "paired_normal",
+  "power": {
+    "alternative_effect": 0.05,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-01 after planner-offer-dev PASSED (runs/planner-offer-dev-v1.json, sha256 99f0061c...: +.270/+.096/+.082) and before any held-out game. Sibling arms planner_race (-.014/-.012/+.021) and planner_shared (+.248/+.109/+.031) FAILED DEV and are parked; only planner_offer advances. Same frozen snapshot runs/planner-shared-v2-source-v1 (commit 14e7ab3), checkpoint and lineups as DEV; control planner_unified (served via PR #17); self table = three planner_unified. Fresh seeds 2443000+, 2444000+, 2445000+ (no overlap with DEV). Paired-normal LCB > 0 at per-panel alpha .05/3 on every table, calibrated by runs/planner-offer-calibration-v1.json. Admission at true +.05, sigma .30: 600 declared per table. A pass makes planner_offer eligible for promotion (owner's decision); a fail keeps the served planner. Known caveat, predeclared: tactical accepts any offer that gives it at least as many cards as it gives (builder and expander always reject), so the tactical-table lift partly measures exploitation of naive acceptors; the self table (planner_unified accepts only on hand-score gain) is the cleaner read."
+  }
+}

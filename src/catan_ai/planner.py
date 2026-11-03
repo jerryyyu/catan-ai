@@ -73,6 +73,10 @@ class EconomicPlanner(HeuristicBot):
         """Inherited fixed rules for every decision the turn search does not make."""
         return super().choose(view, seat)
 
+    def _leaf(self, game, seat):
+        """The turn search's leaf score; the fitted own-position value by default."""
+        return self._value(game, seat)
+
     def choose(self, view, seat):
         legal = view.legal_actions(seat)
         root = public_projection(view)
@@ -88,7 +92,7 @@ class EconomicPlanner(HeuristicBot):
             return max(legal, key=placement)
         if view.phase not in {'actions', 'free_roads'}:
             return self._fallback(view, seat)
-        base = self._value(root, seat)
+        base = self._leaf(root, seat)
         best_action = next((a for a in legal if a['type'] == 'end_turn'), None)
         best_score = base if best_action else -math.inf
         frontier = [(root, None, legal)]
@@ -112,7 +116,7 @@ class EconomicPlanner(HeuristicBot):
                         child.players[seat].pay('development')
                     else:
                         child.apply(seat, action)
-                    score = self._value(child, seat) + (self.purchase_value if buy else 0) - .01 * (depth + 1)
+                    score = self._leaf(child, seat) + (self.purchase_value if buy else 0) - .01 * (depth + 1)
                     first_action = first or action
                     if score > best_score:
                         best_action, best_score = first_action, score
