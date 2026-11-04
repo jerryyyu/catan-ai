@@ -87,3 +87,33 @@ class ScaledValueLeafPlanner(ValueLeafPlanner):
             return WIN
         s = self.scale
         return s['leaf_mean'] + s['slope'] * (self._logit(game, seat) - s['logit_mean'])
+
+
+END_CHECKPOINT = CHECKPOINT.with_name('value_leaf_end_v1.json')
+END_CHECKPOINT_SHA256 = '213b2c6d760717c011ad6f8d34c11551e6fc25bfc5992ae88d03f65782a83843'
+END_SCALE = CHECKPOINT.with_name('value_leaf_end_v2.json')
+END_SCALE_SHA256 = '453f6d3305f2e1bcec5792c627239043ba757b64024816f19095170f502bcb3d'
+
+
+def _load_bound(path, sha):
+    raw = Path(path).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != sha:
+        raise ValueError(f'{Path(path).name} does not match its frozen hash')
+    return json.loads(raw)
+
+
+class EndTurnValueLeafPlanner(ScaledValueLeafPlanner):
+    """Option A: the model refit on end-of-turn positions (``runs/value-gate-end-v1.json``,
+    offline gate PASS), mapped onto served-leaf units by train-only mean/SD matching,
+    as the build-search leaf. Every other decision equals ``planner_offer_accept``."""
+
+    def __init__(self, rng=None):
+        AcceptanceOfferPlanner.__init__(self, rng)
+        base = _load_bound(END_CHECKPOINT, END_CHECKPOINT_SHA256)
+        current = source_files()
+        if any(current.get(name) != sha for name, sha in base['producer_source'].items()):
+            raise ValueError('value-leaf feature producers changed since the gate')
+        scaled = _load_bound(END_SCALE, END_SCALE_SHA256)
+        if scaled['base_checkpoint_sha256'] != END_CHECKPOINT_SHA256 or scaled['model'] != base['model']:
+            raise ValueError('end-turn scale is not built on the frozen end-turn model')
+        self.value_model, self.scale = base['model'], scaled['scale']

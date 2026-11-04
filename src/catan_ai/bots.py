@@ -159,6 +159,9 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_value_leaf_scaled':
         from .value_leaf import ScaledValueLeafPlanner
         return ScaledValueLeafPlanner(rng)
+    if name == 'planner_value_leaf_end':
+        from .value_leaf import EndTurnValueLeafPlanner
+        return EndTurnValueLeafPlanner(rng)
     if name == 'planner_discard':
         from .improved_planners import DiscardAwarePlanner
         return DiscardAwarePlanner(rng)

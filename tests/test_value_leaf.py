@@ -47,3 +47,11 @@ def test_scaled_value_leaf_maps_logit_onto_served_units():
     s = bot.scale
     assert s['train_games'] == 600 and s['slope'] > 0
     assert bot._leaf(game, 0) == pytest.approx(s['leaf_mean'] + s['slope'] * (bot._logit(game, 0) - s['logit_mean']))
+
+
+def test_end_turn_value_leaf_uses_its_own_frozen_model_and_scale():
+    end, v1 = make_policy('planner_value_leaf_end', 1), make_policy('planner_value_leaf_scaled', 1)
+    assert end.value_model != v1.value_model and end.scale['train_rows'] == 45047
+    game = end._world(Observation.from_game(Game.new(list('abcd'), 5), 0))
+    s = end.scale
+    assert end._leaf(game, 0) == pytest.approx(s['leaf_mean'] + s['slope'] * (end._logit(game, 0) - s['logit_mean']))
