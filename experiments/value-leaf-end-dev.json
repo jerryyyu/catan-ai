@@ -1,0 +1,51 @@
+{
+  "name": "value-leaf-end-dev",
+  "stage": "dev",
+  "candidate": "planner_value_leaf_end",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 128,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2560000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2561000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2562000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared in experiments/value-gate-end.json (0f08a98) before any data; instantiated 2026-11-03 after that gate PASSED (runs/value-gate-end-v1.json: test AUC learned .706 vs shared .659 vs leaf .583, gain LCB +.032). Candidate planner_value_leaf_end = served planner_offer_accept whose build-search leaf is the end-of-turn model's log-odds (checkpoints/value_leaf_end_v1.json, sha256 213b2c6d...) mapped onto served-leaf units by mean/SD matching on the 600 train games only (checkpoints/value_leaf_end_v2.json, sha256 453f6d33..., slope 80.31). Control served planner_offer_accept. Standard screen: observed paired lift >= +.05 on tactical, mixed and self, 128 seeds per table, fresh seeds 2560000/2561000/2562000. A fail closes the linear-state-model lane at this scale (owner decision)."
+  }
+}

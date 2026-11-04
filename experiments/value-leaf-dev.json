@@ -1,0 +1,51 @@
+{
+  "name": "value-leaf-dev",
+  "stage": "dev",
+  "candidate": "planner_value_leaf",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 128,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2520000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2521000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2522000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-03 before any game, after the row 4 offline gate PASSED (runs/value-gate-v1.json: test AUC learned .703 vs shared .652 vs served leaf .588, gain LCB +.036). Candidate planner_value_leaf = served planner_offer_accept whose build-search leaf is the frozen model's win log-odds (checkpoints/value_leaf_v1.json, sha256 59979aef..., bound to the gate receipt and feature-producer hashes); every other decision unchanged. Known limitation, predeclared: the model was fit at the start of own turns and is applied after own builds, before the next roll. Control is the served planner_offer_accept. Standard screen: observed paired lift >= +.05 on tactical, mixed and self (three planner_offer_accept), 128 seeds (512 pairs) per table; fresh seeds 2520000/2521000/2522000. No retuning on these boards; a fail parks this integration."
+  }
+}
