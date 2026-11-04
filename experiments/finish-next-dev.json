@@ -1,0 +1,51 @@
+{
+  "name": "finish-next-dev",
+  "stage": "dev",
+  "candidate": "planner_finish_next",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 128,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2570000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2571000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2572000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-03 before any game (board row 5; Jerry: 'ok lets try it'). Candidate planner_finish_next = served planner_offer_accept that, at >= 8 own points (hidden VP cards included), scores each candidate first action (builds, bank trades, development purchase, end turn) by the chance of winning on its next turn: short continuations (depth 3, 32 nodes per candidate) then 128 fixed dice samples of the next four rolls (own production, robber tile blocked, 7 halves a hand over 7), checking whether the hand plus bank trades pays for cities/settlements on legal spots to reach 10; development purchase counts a VP with probability 5/25. Overrides the served move only when the chance is >= .05 higher. Motivation: loss attribution (runs/loss-attribution-offer-accept-*) shows 78% of losses vs Tactical/mixed are 2nd place within 1-2 points; the older same-turn finish search measured +1 to +3 pp (finish-powered-dev-v2). Control served planner_offer_accept. Standard screen: observed paired lift >= +.05 on tactical, mixed and self, 128 seeds per table, fresh seeds 2570000/2571000/2572000. Constants fixed before any game; a fail parks the arm."
+  }
+}
