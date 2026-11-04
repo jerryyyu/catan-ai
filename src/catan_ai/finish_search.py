@@ -141,7 +141,12 @@ class NextTurnFinishPlanner(AcceptanceOfferPlanner):
             child.apply(seat, action)
             return 1. if child.winner == seat else best(child, FINISH_DEPTH - 1)
 
-        candidates = [a for a in view.actions if a['type'] in _KINDS + ('end_turn',)]
+        # Candidates come from the card-counted world, whose bank stock can differ from
+        # the real one; a served move that is not legal there is kept as is.
+        legal = root.legal_actions(seat)
+        if served not in legal:
+            return served
+        candidates = [a for a in legal if a['type'] in _KINDS + ('end_turn',) and a in view.actions]
         served_value = first_value(served)
         scored = [(first_value(a), i, a) for i, a in enumerate(candidates)]
         value, _, action = max(scored, key=lambda t: (t[0], -t[1]))
