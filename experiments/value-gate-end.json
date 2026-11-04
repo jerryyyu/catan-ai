@@ -1,0 +1,32 @@
+{
+  "name": "value-gate-end",
+  "stage": "offline-prediction",
+  "policy": "planner_offer_accept",
+  "max_turns": 1000,
+  "splits": {
+    "train": [
+      2550000,
+      600
+    ],
+    "test": [
+      2551000,
+      200
+    ]
+  },
+  "model": {
+    "epochs": 50,
+    "learning_rate": 0.05,
+    "l2": 0.001,
+    "sgd_seed": 7
+  },
+  "bootstrap": {
+    "resamples": 1000,
+    "seed": 11
+  },
+  "gate": {
+    "maximum_truncated_games": 0,
+    "minimum_auc_gain_lcb": 0.0
+  },
+  "note": "Predeclared 2026-11-03 before any game (Jerry: 'yes A sounds good'). Option A after both integrations of the turn-start model failed DEV (value-leaf-dev-v1 -.184/-.230/-.148; value-leaf-scaled-dev-v1 -.492/-.418/-.197) because a turn-start classifier was applied to within-turn afterstates. This gate samples the END-OF-TURN position (the seat in its actions phase choosing end_turn, after its own builds), the build search's leaf distribution. Same features, model, fit constants, bootstrap and bar as value-gate v1: PASS iff 0 truncated games and the game-clustered bootstrap 95% LCB of (learned AUC minus the better of served leaf / shared-score AUC) on 200 test games is > 0. Fresh seeds: train 2550000-2550599, test 2551000-2551199; test games not read until training completes. Integration predeclared now, before any data: if this gate passes, the candidate planner_value_leaf_end uses the new model's log-odds mapped onto served-leaf units by mean/SD matching over the train end-of-turn rows only (scripts/fit_value_leaf_scale.py), as the build-search leaf; all else served. Screen: standard +.05 on tactical/mixed/self, 128 seeds, fresh seeds 2560000/2561000/2562000. If either the gate or the screen fails, the linear-state-model lane is closed at this scale (owner's earlier decision: stop after A).",
+  "sample": "end_turn"
+}

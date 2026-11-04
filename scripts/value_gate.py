@@ -1,8 +1,10 @@
 """Board row 4, first bar: does a learned win model rank positions better than the served leaf?
 
 Offline prediction gate, not a strength claim. Self-play games of the served bot
-(four copies) are sampled at the start of every own turn (the seat to roll),
-labelled by whether that seat went on to win. Each row records:
+(four copies) are sampled once per own turn, labelled by whether that seat went
+on to win. ``sample`` in the config picks the point: ``turn_start`` (the seat to
+roll; v1) or ``end_turn`` (the position from which the seat ends its turn, after
+its own builds: the build search's leaf distribution; v2). Each row records:
 
 - ``features``: the 38 observation-only ``value_features`` of that seat's view,
   plus the served leaf for that seat and the largest opponent leaf (both
@@ -37,7 +39,7 @@ from catan_ai.experiments import source_files
 
 
 def play(args):
-    policy, seed, max_turns, path = args
+    policy, seed, max_turns, path, sample = args
     from catan_ai.bots import make_policy
     from catan_ai.engine import Game
     from catan_ai.observation import Observation
@@ -51,7 +53,10 @@ def play(args):
     while game.winner is None and game.turn < max_turns:
         seat = game.current
         view = Observation.for_policy(game, seat, bots[seat])
-        if game.phase == 'roll' and (game.turn, seat) not in sampled:
+        action = bots[seat].choose(view, seat)
+        at_point = (game.phase == 'roll' if sample == 'turn_start'
+                    else game.phase == 'actions' and action['type'] == 'end_turn')
+        if at_point and (game.turn, seat) not in sampled:
             sampled.add((game.turn, seat))
             bot = bots[seat]
             world = bot._world(view)
@@ -60,7 +65,7 @@ def play(args):
                          'features': value_features(view) + [leaves[seat] / 100,
                                                              max(leaves[s] for s in range(4) if s != seat) / 100],
                          'leaf': leaves[seat], 'shared': bot._score(world, seat)})
-        game.apply(seat, bots[seat].choose(view, seat))
+        game.apply(seat, action)
     for row in rows:
         row['won'] = game.winner == row['seat']
     record = {'seed': seed, 'policy': policy, 'winner': game.winner, 'turns': game.turn,
@@ -182,7 +187,8 @@ def main():
     lo, n = config['splits'][args.split]
     directory = args.root / args.split
     directory.mkdir(parents=True, exist_ok=True)
-    jobs = [(config['policy'], seed, config['max_turns'], str(directory / f'{seed}.json'))
+    jobs = [(config['policy'], seed, config['max_turns'], str(directory / f'{seed}.json'),
+             config.get('sample', 'turn_start'))
             for seed in range(lo, lo + n)]
     started, done = time.monotonic(), 0
     with Pool(args.workers) as pool:
