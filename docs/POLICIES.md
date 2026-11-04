@@ -46,6 +46,7 @@ retuned on the same boards.
 
 | date | policy | idea | vs | DEV lift: tactical / mixed / self | outcome | receipt |
 |---|---|---|---|---|---|---|
+| 2026-11-03 | `planner_handwritten_leaf` | Build-search leaf written by hand from game knowledge (no fitting; weight-space-programming idea): 12/VP, ~1/pip + sqrt diversity, .8/card, >7 penalty, ports, spots, −.5 × strongest opponent | `planner_offer_accept` | −.006 / −.002 / −.063 | FAIL (+.05 bar). Parity vs Tactical/mixed, worse in self-play; descriptive AUC .661 vs shared .659 / leaf .583 (`handwritten-leaf-auc-v1`) | `handwritten-leaf-dev-v1` |
 | 2026-11-03 | `planner_opening_pair` | First settlement chosen for the best pair it allows after modelled pip-greedy opponent picks (top 10 × 10); everything else served | `planner_offer_accept` | +.016 / −.012 / +.039 | FAIL (+.05 bar); followed the self-play diagnostic `selfplay-features-v1`; code and config parked on branch `claude/opening-pair` (6d1e92c) | `opening-pair-dev-v1` |
 | 2026-11-02 | `planner_offer_sparse` | Guarded offers, margin .5, at most one per three own turns | `planner_unified_offer` | −.139 / −.063 / −.027, strict −.004 | FAIL (non-inferiority, −.03 floor); cadence matters against acceptors who take most offers | `offer-sparse-dev-v1` |
 | 2026-11-01 | `planner_shared` | Award races + leader-blocking leaf + trade offers together | `planner_unified` | +.248 / +.109 / +.031 | FAIL (self below +.05); offers alone passed | `planner-shared-dev-v1` |
