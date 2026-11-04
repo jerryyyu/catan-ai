@@ -1,4 +1,12 @@
-"""Move-ranking data: playout win rates for the served bot's candidate first moves.
+"""Policy/value (PV) data: playout win rates for the served bot's candidate first moves.
+
+Schema 2 (2026-11-04, Jerry: train a shengji-style policy/value model): each
+decision stores the pre-move observation (``obs``), and each candidate an action
+encoding (``act``), its post-move observation (``after``) and its playout win rate,
+so a shared-trunk network can learn a policy head (which candidate) and a value
+head (win chance). ``value_rows`` add every turn-start position of the game
+labelled with the final winner, for the value head.
+
 
 Data generation for the move-ranking lane (board row 4 follow-up, Jerry
 2026-11-04). Not a strength claim and no model is trained here.
@@ -35,6 +43,16 @@ import time
 from catan_ai.experiments import source_files
 
 KINDS = ('build_city', 'build_settlement', 'build_road', 'bank_trade', 'buy_development', 'end_turn')
+RESOURCES = ('brick', 'lumber', 'wool', 'grain', 'ore')
+
+
+def action_encoding(action):
+    """16 numbers: move type one-hot, then resource given and received for a bank trade."""
+    out = [float(action['type'] == kind) for kind in KINDS] + [0.] * 10
+    if action['type'] == 'bank_trade':
+        out[6 + RESOURCES.index(action['give'])] = 1.
+        out[11 + RESOURCES.index(action['receive'])] = 1.
+    return out
 
 
 def canonical_sha(value):
@@ -132,23 +150,29 @@ def run_game(args):
     game = Game.new([f'{policy}-{i}' for i in range(4)], seed)
     bots = [make_policy(policy, seed * 17 + i + 1) for i in range(4)]
     pick = random.Random(seed * 7919 + 1)
-    decisions, seen, truncated = [], set(), 0
+    decisions, value_rows, seen, truncated = [], [], set(), 0
     while game.winner is None and game.turn < config['max_turns']:
         seat = game.current
         view = Observation.for_policy(game, seat, bots[seat])
         first = game.phase == 'actions' and (game.turn, seat) not in seen
         if first:
             seen.add((game.turn, seat))
+        if game.phase == 'roll' and (game.turn, seat, 'roll') not in seen:
+            seen.add((game.turn, seat, 'roll'))
+            value_rows.append({'turn': game.turn, 'seat': seat, **features(game, seat, deepcopy(bots[seat]))})
         probe = deepcopy(bots[seat])
         action = bots[seat].choose(view, seat)
         if first and action['type'] in KINDS and pick.random() < config['decision_rate']:
+            pre = features(game, seat, deepcopy(probe))
             rows = []
             for k, cand in enumerate(candidates(view, seat, probe, action, config['candidates'])):
                 after = deepcopy(game)
                 after_bot = deepcopy(probe)
                 after.apply(seat, cand)
-                row = {'action': cand, 'served': k == 0, **features(after, seat, after_bot), 'wins': 0,
-                       'playouts': 0, 'truncated': 0}
+                post = features(after, seat, after_bot)
+                row = {'action': cand, 'act': action_encoding(cand), 'served': k == 0,
+                       'after': post['features'], 'leaf': post['leaf'], 'shared': post['shared'],
+                       'wins': 0, 'playouts': 0, 'truncated': 0}
                 for r in range(config['playouts']):
                     winner, trunc, _ = playout(game, [deepcopy(b) for b in bots[:seat]] + [deepcopy(probe)]
                                                + [deepcopy(b) for b in bots[seat + 1:]], cand, seat,
@@ -159,9 +183,12 @@ def run_game(args):
                     truncated += trunc
                 rows.append(row)
             decisions.append({'turn': game.turn, 'seat': seat, 'points': game.players[seat].points,
-                              'candidates': rows})
+                              'obs': pre['features'], 'candidates': rows})
         game.apply(seat, action)
-    record = {'seed': seed, 'identity': identity_sha, 'winner': game.winner, 'turns': game.turn,
+    for row in value_rows:
+        row['won'] = game.winner == row['seat']
+    record = {'seed': seed, 'identity': identity_sha, 'schema': 2, 'value_rows': value_rows,
+              'winner': game.winner, 'turns': game.turn,
               'truncated_game': game.winner is None, 'truncated_playouts': truncated,
               'seconds': time.monotonic() - started, 'decisions': decisions}
     with path.open('x') as stream:
