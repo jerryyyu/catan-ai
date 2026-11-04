@@ -156,6 +156,9 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_handwritten_leaf':
         from .handwritten_leaf import HandWrittenLeafPlanner
         return HandWrittenLeafPlanner(rng)
+    if name == 'planner_finish_next':
+        from .finish_search import NextTurnFinishPlanner
+        return NextTurnFinishPlanner(rng)
     if name == 'planner_value_leaf':
         from .value_leaf import ValueLeafPlanner
         return ValueLeafPlanner(rng)
