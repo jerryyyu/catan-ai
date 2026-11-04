@@ -38,15 +38,62 @@ import time
 from catan_ai.experiments import source_files
 
 
+def canonical_sha(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+
+def source_revision():
+    import catan_ai
+    commit = Path(catan_ai.__file__).resolve().parents[2] / 'COMMIT'
+    return commit.read_text().strip() if commit.exists() else None
+
+
+def run_identity(config):
+    """Everything that determines a corpus: config, producer sources, revision and loaded checkpoint."""
+    from catan_ai.bots import make_policy
+    splits = config['splits']
+    ranges = {name: set(range(lo, lo + n)) for name, (lo, n) in splits.items()}
+    if ranges['train'] & ranges['test']:
+        raise ValueError('train and test seeds overlap')
+    identity = {'config': config, 'config_sha256': canonical_sha(config),
+                'sample': config.get('sample', 'turn_start'), 'max_turns': config['max_turns'],
+                'policy': config['policy'], 'source': source_files(), 'source_revision': source_revision(),
+                'checkpoint_sha256': getattr(make_policy(config['policy'], 0), 'model_hash', None),
+                'script_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    identity['identity_sha256'] = canonical_sha(identity)
+    return identity
+
+
+def bind_manifest(root, identity):
+    """Create the run manifest, or fail closed if an existing one has a different identity."""
+    path = Path(root) / 'manifest.json'
+    if path.exists():
+        existing = json.loads(path.read_text())
+        if existing.get('identity_sha256') != identity['identity_sha256']:
+            raise ValueError('run root belongs to a different producer/config/checkpoint; use a new root')
+        return existing
+    Path(root).mkdir(parents=True, exist_ok=True)
+    with path.open('x') as stream:
+        json.dump(identity, stream, indent=1)
+    return identity
+
+
+def check_record(record, seed, identity_sha):
+    if record.get('seed') != seed or record.get('identity') != identity_sha:
+        raise ValueError(f'game record for seed {seed} does not match this run identity')
+
+
 def play(args):
-    policy, seed, max_turns, path, sample = args
+    policy, seed, max_turns, path, sample, identity_sha = args
     from catan_ai.bots import make_policy
     from catan_ai.engine import Game
     from catan_ai.observation import Observation
     from catan_ai.value_model import value_features
     path = Path(path)
     if path.exists():
+        check_record(json.loads(path.read_text()), seed, identity_sha)
         return 'exists'
+    started = time.monotonic()
     game = Game.new([f'{policy}-{i}' for i in range(4)], seed)
     bots = [make_policy(policy, seed * 17 + i + 1) for i in range(4)]
     rows, sampled = [], set()
@@ -68,8 +115,9 @@ def play(args):
         game.apply(seat, action)
     for row in rows:
         row['won'] = game.winner == row['seat']
-    record = {'seed': seed, 'policy': policy, 'winner': game.winner, 'turns': game.turn,
-              'truncated': game.winner is None, 'rows': rows}
+    record = {'seed': seed, 'policy': policy, 'identity': identity_sha, 'sample': sample,
+              'max_turns': max_turns, 'winner': game.winner, 'turns': game.turn,
+              'truncated': game.winner is None, 'seconds': time.monotonic() - started, 'rows': rows}
     with path.open('x') as stream:
         json.dump(record, stream)
     return 'done'
@@ -94,12 +142,16 @@ def auc(scores, labels, weights):
     return total / (pos * neg)
 
 
-def load(root, config, split):
+def load(root, config, split, identity_sha):
     lo, n = config['splits'][split]
-    games = []
+    games, digests = [], []
     for seed in range(lo, lo + n):
-        games.append(json.loads((Path(root) / split / f'{seed}.json').read_text()))
-    return games
+        raw = (Path(root) / split / f'{seed}.json').read_bytes()
+        record = json.loads(raw)
+        check_record(record, seed, identity_sha)
+        games.append(record)
+        digests.append(hashlib.sha256(raw).hexdigest())
+    return games, hashlib.sha256(''.join(digests).encode()).hexdigest()
 
 
 def fit(games, cfg):
@@ -130,8 +182,14 @@ def predict(model, x):
 
 
 def evaluate(root, config, output):
+    started = time.monotonic()
+    identity = run_identity(config)
+    manifest = bind_manifest(root, identity) if (Path(root) / 'manifest.json').exists() else None
+    if manifest is None:
+        raise ValueError('evaluation needs the run manifest written by generate')
     cfg = config['model']
-    train, test = load(root, config, 'train'), load(root, config, 'test')
+    train, train_sha = load(root, config, 'train', identity['identity_sha256'])
+    test, test_sha = load(root, config, 'test', identity['identity_sha256'])
     truncated = sum(g['truncated'] for g in train + test)
     model = fit([g for g in train if not g['truncated']], cfg)
     test = [g for g in test if not g['truncated']]
@@ -157,7 +215,9 @@ def evaluate(root, config, output):
     gate = config['gate']
     passed = (truncated <= gate['maximum_truncated_games'] and lcb > gate['minimum_auc_gain_lcb'])
     result = {'scope': 'offline prediction gate: AUC on held-out self-play positions, not a strength claim',
-              'config': config, 'source': source_files(),
+              'config': config, 'source': source_files(), 'manifest': manifest,
+              'corpus_sha256': {'train': train_sha, 'test': test_sha},
+              'source_revision': identity['source_revision'], 'seconds': time.monotonic() - started,
               'script_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               'train_games': len(train), 'test_games': len(test), 'truncated_games': truncated,
               'test_rows': sum(len(g) for g in per_game), 'auc': point,
@@ -165,7 +225,7 @@ def evaluate(root, config, output):
               'auc_gain_bootstrap_lcb95': lcb, 'pass': passed, 'model': model}
     with Path(output).open('x') as stream:
         json.dump(result, stream, indent=2)
-    print(json.dumps({k: v for k, v in result.items() if k not in ('config', 'source', 'model')}, indent=1))
+    print(json.dumps({k: v for k, v in result.items() if k not in ('config', 'source', 'model', 'manifest')}, indent=1))
 
 
 def main():
@@ -184,11 +244,12 @@ def main():
     config = json.loads(args.config.read_text())
     if args.command == 'evaluate':
         return evaluate(args.root, config, args.output)
+    identity = bind_manifest(args.root, run_identity(config))
     lo, n = config['splits'][args.split]
     directory = args.root / args.split
     directory.mkdir(parents=True, exist_ok=True)
     jobs = [(config['policy'], seed, config['max_turns'], str(directory / f'{seed}.json'),
-             config.get('sample', 'turn_start'))
+             identity['sample'], identity['identity_sha256'])
             for seed in range(lo, lo + n)]
     started, done = time.monotonic(), 0
     with Pool(args.workers) as pool:

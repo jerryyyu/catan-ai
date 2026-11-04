@@ -6,7 +6,17 @@ import pytest
 from catan_ai import value_leaf
 from catan_ai.bots import make_policy
 from catan_ai.engine import Game, Resource
+from catan_ai.experiments import source_files
 from catan_ai.observation import Observation
+from catan_ai.parameter_planner import DEFAULT
+
+
+@pytest.fixture(autouse=True)
+def checkpoint(tmp_path, monkeypatch):
+    """A test economic checkpoint bound to the active backend (production binding unchanged)."""
+    path = tmp_path / 'model.json'
+    path.write_text(json.dumps({'schema': 1, 'weights': DEFAULT, 'source': source_files()}))
+    monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
 
 
 def test_value_leaf_loads_bound_model_and_scores_finitely():
