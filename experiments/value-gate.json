@@ -1,0 +1,11 @@
+{
+  "name": "value-gate",
+  "stage": "offline-prediction",
+  "policy": "planner_offer_accept",
+  "max_turns": 1000,
+  "splits": {"train": [2500000, 600], "test": [2501000, 200]},
+  "model": {"epochs": 50, "learning_rate": 0.05, "l2": 0.001, "sgd_seed": 7},
+  "bootstrap": {"resamples": 1000, "seed": 11},
+  "gate": {"maximum_truncated_games": 0, "minimum_auc_gain_lcb": 0.0},
+  "note": "Predeclared 2026-11-03 before any game (board row 4, first bar; Jerry approved trying the learned-value lane). Self-play of the served planner_offer_accept (four copies), rows at the start of every own turn labelled by that seat's eventual win. Learned = fixed logistic fit on the 38 value_features plus the served leaf for the seat and the largest opponent leaf (/100), train split only, games weighted equally. PASS iff zero truncated games and the game-clustered bootstrap 95% lower bound of (learned AUC minus the better of the served leaf AUC and the shared-score AUC) on the 200 test games is > 0. Test seeds 2501000-2501199 are not read until training is complete. Prior context: outcome-value v1 passed a log-loss gate against a points/production baseline but its planner integrations failed DEV (-28 to -37 pp, 32 seeds); this gate compares against the served leaf itself. A pass licenses a predeclared integration screen vs the served bot at the standard +.05 bar; a fail parks the linear state model."
+}
