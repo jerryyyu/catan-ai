@@ -336,6 +336,10 @@ class SharedScorePlanner(UnifiedPlanner):
         base = self._hand_score(game, seat)
         hand = game.players[seat].resources
         best, best_gain = None, self.offer_margin
+        # Performance only: the offerer's own next-turn plan value depends on its own
+        # hand and the board, not on which opponent supplies the card, so it is
+        # computed once per (give, receive, count) and reused across recipients.
+        plans = {}
         for receive in _RESOURCES:
             for give in _RESOURCES:
                 if give == receive:
@@ -356,7 +360,15 @@ class SharedScorePlanner(UnifiedPlanner):
                         child.players[recipient].resources[give] += count
                         child.players[seat].resources[receive] += 1
                         child.players[seat].resources[give] -= count
-                        gain = chance * (self._hand_score(child, seat) - base)
+                        key = (give, receive, count)
+                        self._scoring = True
+                        try:
+                            if key not in plans:
+                                plans[key] = self._plan_value(child, seat)
+                            threat = max(self._seat_value(child, s) for s in range(len(child.players)) if s != seat)
+                        finally:
+                            self._scoring = False
+                        gain = chance * ((plans[key] - LAMBDA * threat) - base)
                         if gain > best_gain:
                             gain = self._offer_gain(game, child, seat, recipient, gain, chance)
                         if gain > best_gain:

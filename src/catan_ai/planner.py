@@ -24,7 +24,29 @@ class EconomicPlanner(HeuristicBot):
                 income[tile.resource] += count * (6 - abs(7 - tile.number))
         return income
 
+    def __getstate__(self):
+        # The geometry memo is a derived cache: copies and pickles start without it.
+        state = dict(self.__dict__)
+        state.pop('_geometry_memo', None)
+        return state
+
     def _geometry(self, game, seat):
+        # Performance only: a pure function of the board and every player's buildings
+        # and roads, memoized per planner (bounded); search nodes that differ only in
+        # cards reuse it.
+        key = (id(game.board), seat, tuple((frozenset(p.settlements), frozenset(p.cities), frozenset(p.roads))
+                                          for p in game.players))
+        memo = self.__dict__.setdefault('_geometry_memo', {})
+        hit = memo.get(key)
+        if hit is not None and hit[0] is game.board:  # guard against a reused id
+            return hit[1]
+        if len(memo) > 20000:
+            memo.clear()
+        value = self._geometry_uncached(game, seat)
+        memo[key] = (game.board, value)
+        return value
+
+    def _geometry_uncached(self, game, seat):
         player = game.players[seat]
         occupied = game.occupied()
         enemy_edges = {edge for s, p in enumerate(game.players) if s != seat for edge in p.roads}

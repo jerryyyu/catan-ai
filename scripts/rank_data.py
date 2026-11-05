@@ -89,10 +89,16 @@ def bind_manifest(root, identity):
     return identity
 
 
-def features(game, seat, bot):
+def features(game, seat, bot, view=None):
+    """Observation-only features of ``seat``'s view of ``game``.
+
+    ``view`` may be the observation already built for this exact state (performance
+    only; identical output). ``bot`` is read, not mutated: the world estimate and leaf
+    values do not depend on its per-game state.
+    """
     from catan_ai.observation import Observation
     from catan_ai.value_model import value_features
-    view = Observation.for_policy(game, seat, bot)
+    view = view if view is not None else Observation.for_policy(game, seat, bot)
     world = bot._world(view)
     leaves = [bot._value(world, s) for s in range(4)]
     return {'features': value_features(view) + [leaves[seat] / 100,
@@ -162,16 +168,17 @@ def run_game(args):
         if 'roll' in points and game.phase == 'roll' and (game.turn, seat, 'roll') not in seen:
             seen.add((game.turn, seat, 'roll'))
             value_rows.append({'turn': game.turn, 'seat': seat, 'point': 'roll',
-                               **features(game, seat, deepcopy(bots[seat]))})
-        probe = deepcopy(bots[seat])
+                               **features(game, seat, bots[seat], view)})
+        # Pre-decision copy of the bot only where a sampled decision can use it.
+        probe = deepcopy(bots[seat]) if first and config['decision_rate'] > 0 else None
         action = bots[seat].choose(view, seat)
         if ('end_turn' in points and game.phase == 'actions' and action['type'] == 'end_turn'
                 and (game.turn, seat, 'end') not in seen):
             seen.add((game.turn, seat, 'end'))
             value_rows.append({'turn': game.turn, 'seat': seat, 'point': 'end_turn',
-                               **features(game, seat, deepcopy(probe))})
+                               **features(game, seat, bots[seat], view)})
         if first and action['type'] in KINDS and pick.random() < config['decision_rate']:
-            pre = features(game, seat, deepcopy(probe))
+            pre = features(game, seat, probe, view)
             rows = []
             for k, cand in enumerate(candidates(view, seat, probe, action, config['candidates'])):
                 after = deepcopy(game)
