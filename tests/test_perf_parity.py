@@ -138,3 +138,44 @@ def test_income_memo_returns_copies():
     first[next(iter(first))] += 50
     assert bot._income(game, 0) != first
     assert '_income_memo' not in deepcopy(bot).__dict__
+
+
+def test_old_observations_cannot_change_later_ones():
+    """Codex HOLD on PR28: shared cached events must be read-only (detached observations)."""
+    import json as _json
+    from catan_ai.engine import Game as G
+    g = G.new(list('abcd'), 8)
+    g.apply(g.current, g.legal_actions(g.current)[0])
+    view = Observation.from_game(g, 0)
+    with pytest.raises(TypeError):
+        view.events[0]['counts'][1] = 999
+    with pytest.raises(TypeError):
+        view.events[0]['action']['type'] = 'x'
+    with pytest.raises(TypeError):
+        view.events[0]['counts'].append(1)
+    with pytest.raises(TypeError):
+        view.events[0].update({'counts': None})
+    later = Observation.from_game(g, 0)
+    assert list(later.events) == g.observed_events(0)
+    copied = deepcopy(list(view.events))  # consumers that need to edit get plain copies
+    copied[0]['counts'][1] = 999
+    assert type(copied[0]) is dict and type(copied[0]['counts']) is list
+    assert list(Observation.from_game(g, 0).events) == g.observed_events(0)
+    assert _json.loads(_json.dumps(list(view.events))) == g.observed_events(0)
+
+
+def test_fold_resumes_only_on_an_identical_prefix():
+    from catan_ai import card_planner
+    game = _midgame(11)
+    shared = list(game.observed_view_events(0))
+    card_planner._FOLDS.clear()
+    card_planner.resource_estimates(shared)
+    # same first and last event, replaced middle event: must not reuse the stored fold
+    swapped = shared[:]
+    k = len(swapped) // 2
+    replacement = deepcopy(swapped[k])
+    replacement['counts'] = [c + 1 for c in replacement['counts']]
+    swapped[k] = replacement
+    resumed = card_planner.resource_estimates(swapped)
+    card_planner._FOLDS.clear()
+    assert resumed == card_planner.resource_estimates(deepcopy(swapped))

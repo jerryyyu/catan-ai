@@ -33,25 +33,27 @@ def _fold(hands, event):
 def resource_estimates(events):
     """Card-counted hands from public history: a left fold over ``events``.
 
-    Performance only: when ``events`` extends a sequence seen before (same event
-    objects, as ``Game.observed_view_events`` returns), the fold resumes from the
-    stored state instead of restarting; the arithmetic and its order are unchanged.
-    Stored entries hold the event objects themselves, so identities cannot be reused.
+    Performance only: when ``events`` extends a sequence seen before — every folded
+    event is the identical object, in order (``Game.observed_view_events`` returns
+    read-only shared events) — the fold resumes from the stored state instead of
+    restarting; the arithmetic and its order are unchanged. Stored entries hold the
+    event objects themselves, so identities cannot be reused.
     """
     events = list(events)
     start, hands = 0, [{r: 0.0 for r in _RESOURCES} for _ in range(4)]
     if events:
         entry = _FOLDS.get(id(events[0]))
         if entry is not None:
-            first, last, done, state = entry
-            if first is events[0] and done <= len(events) and events[done - 1] is last:
-                start, hands = done, [dict(h) for h in state]
+            seen, state = entry
+            # resume only if every event already folded is the identical object, in order
+            if len(seen) <= len(events) and all(a is b for a, b in zip(seen, events)):
+                start, hands = len(seen), [dict(h) for h in state]
     for event in events[start:]:
         _fold(hands, event)
     if events:
         if len(_FOLDS) > 64:
             _FOLDS.clear()
-        _FOLDS[id(events[0])] = (events[0], events[-1], len(events), [dict(h) for h in hands])
+        _FOLDS[id(events[0])] = (tuple(events), [dict(h) for h in hands])
     return hands
 
 
