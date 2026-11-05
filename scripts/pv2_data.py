@@ -16,6 +16,12 @@ chosen candidate (sequence, then end of turn) instead of the served move, so the
 visited positions include held cards and non-served builds. Test-split games use
 ``playouts_test`` playouts per candidate for a precise within-decision gate.
 
+Every visited position is also logged (``value_rows``; Jerry 2026-11-05: "pv2 should
+log all the features too"): at each seat's turn start (``roll``) and end of own turn
+(``end_turn``), encoder-v2 features, the 40 legacy features, the served leaf and
+shared score, labelled with the final winner; each sampled decision also stores
+its pre-move encoder-v2 observation (``obs``).
+
 Fail-closed manifest and per-game identity as in ``rank_data.py``; per-game files
 are written with ``open('x')``.
 """
@@ -30,7 +36,7 @@ import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rank_data import bind_manifest, canonical_sha, source_revision  # noqa: E402
+from rank_data import bind_manifest, canonical_sha, features, source_revision  # noqa: E402
 
 from catan_ai.experiments import source_files  # noqa: E402
 
@@ -85,7 +91,13 @@ def run_game(args):
     from catan_ai.bots import make_policy
     from catan_ai.engine import Game
     from catan_ai.observation import Observation
+    from catan_ai.encoding import encode
     from catan_ai.pv_search import afterstate_encoding, candidate_sequences
+
+    def position(view, seat, bot, point):
+        legacy = features(game, seat, bot, view)
+        return {'turn': game.turn, 'seat': seat, 'point': point, 'v2': encode(view, bot._world(view)),
+                'features': legacy['features'], 'leaf': legacy['leaf'], 'shared': legacy['shared']}
     path = Path(path)
     if path.exists():
         record = json.loads(path.read_text())
@@ -97,10 +109,13 @@ def run_game(args):
     game = Game.new([f'{policy}-{i}' for i in range(4)], seed)
     bots = [make_policy(policy, seed * 17 + i + 1) for i in range(4)]
     pick = random.Random(seed * 7919 + 3)
-    decisions, seen, failed = [], set(), 0
+    decisions, value_rows, seen, failed = [], [], set(), 0
     while game.winner is None and game.turn < config['max_turns']:
         seat = game.current
         view = Observation.for_policy(game, seat, bots[seat])
+        if game.phase == 'roll' and (game.turn, seat, 'roll') not in seen:
+            seen.add((game.turn, seat, 'roll'))
+            value_rows.append(position(view, seat, bots[seat], 'roll'))
         first = game.phase == 'actions' and (game.turn, seat) not in seen
         if first:
             seen.add((game.turn, seat))
@@ -127,16 +142,34 @@ def run_game(args):
                     row['playouts'] += 1
                 rows.append(row)
             if len(rows) >= 2:
-                decisions.append({'turn': game.turn, 'seat': seat, 'candidates': rows})
+                decisions.append({'turn': game.turn, 'seat': seat, 'obs': encode(view, probe._world(view)),
+                                  'candidates': rows})
             if rows and pick.random() < config['explore']:
                 choice = rows[pick.randrange(len(rows))]['seq']
-                if apply_turn(game, seat, choice):
+                trial = deepcopy(game)
+                if apply_turn(trial, seat, choice):
+                    # log the explored turn's end position before ending the turn
+                    for action in choice:
+                        game.apply(seat, action)
+                    if game.winner is None:
+                        end_view = Observation.for_policy(game, seat, bots[seat])
+                        if (game.turn, seat, 'end') not in seen:
+                            seen.add((game.turn, seat, 'end'))
+                            value_rows.append(position(end_view, seat, bots[seat], 'end_turn'))
+                        game.apply(seat, {'type': 'end_turn'})
                     continue
                 failed += 1
-            game.apply(seat, served)
-            continue
-        game.apply(seat, bots[seat].choose(view, seat))
-    record = {'seed': seed, 'identity': identity_sha, 'schema': 'pv2', 'winner': game.winner, 'turns': game.turn,
+            action = served
+        else:
+            action = bots[seat].choose(view, seat)
+        if (game.phase == 'actions' and action['type'] == 'end_turn' and (game.turn, seat, 'end') not in seen):
+            seen.add((game.turn, seat, 'end'))
+            value_rows.append(position(view, seat, bots[seat], 'end_turn'))
+        game.apply(seat, action)
+    for row in value_rows:
+        row['won'] = game.winner == row['seat']
+    record = {'seed': seed, 'identity': identity_sha, 'schema': 'pv2', 'value_rows': value_rows,
+              'winner': game.winner, 'turns': game.turn,
               'truncated_game': game.winner is None, 'explore_failed': failed, 'playouts': playouts,
               'seconds': time.monotonic() - started, 'decisions': decisions}
     with path.open('x') as stream:
