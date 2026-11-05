@@ -1,0 +1,18 @@
+{
+  "name": "pv2-b-screen",
+  "stage": "dev",
+  "candidate": "planner_pv2_b",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 128,
+  "max_turns": 1000,
+  "panels": [
+    {"name": "tactical", "seed": 2780000, "opponents": ["tactical", "tactical", "tactical"]},
+    {"name": "mixed", "seed": 2781000, "opponents": ["builder", "tactical", "expander"]},
+    {"name": "self", "seed": 2782000, "opponents": ["planner_offer_accept", "planner_offer_accept", "planner_offer_accept"]}
+  ],
+  "gates": {"maximum_match_truncations": 0, "minimum_paired_win_lift": 0.05, "maximum_p95_decision_seconds": 2,
+            "maximum_step_seconds": 2, "maximum_turn_seconds": 10},
+  "power": {"alternative_effect": 0.1, "planning_sigma": 0.3, "power": 0.8,
+    "note": "Predeclared 2026-11-05 before any game (Jerry: 'screen the best model on e2e play'). Candidate planner_pv2_b = served planner_offer_accept whose own-turn build/trade decisions are made by PV search: the served search proposes 'end now' plus its 4 best sequences, the encoder-v2 state-value net arm B (value-v2-100k-aug-b, chosen over arm A by validation loss as predeclared; test AUC .772; pv2b within-decision cross-eval +.0045 [LCB +.0008]) rates each afterstate and the best is played; all other decisions served. Weights checkpoints/value_v2_resmlp_b_v1.npz (sha256 265c92b4...), numpy forward checked against torch logits on load. Control served planner_offer_accept. Standard screen: observed paired lift >= +.05 on tactical, mixed and self, 128 seeds per table, fresh seeds 2780000/2781000/2782000. Runs on ultra (host Jerrys-Mac-Studio.local). A fail parks the arm; no retuning on these boards."}
+}

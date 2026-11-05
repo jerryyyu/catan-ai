@@ -1,0 +1,25 @@
+{
+ "schema": "catan-value-v2-resmlp-v1",
+ "arch": {
+  "arch": "resmlp",
+  "hidden": 512,
+  "blocks": 3,
+  "dropout": 0.1,
+  "optimizer": "adamw",
+  "learning_rate": 0.0007,
+  "weight_decay": 0.05,
+  "schedule": "cosine",
+  "warmup_fraction": 0.03,
+  "augment": true,
+  "epochs": 16,
+  "batch": 4096,
+  "validation_games": 5000,
+  "seed": 0,
+  "threads": 8
+ },
+ "model_sha256": "a0cfd871a2fdfe8f2f74e2815af820934a035c2a316d206ab4bf17b8bc2a98bb",
+ "train_identity": "357454ad9f771952b02214b8efc4ee95aa0254efb9720b00368d7b460d6111fd",
+ "config_name": "value-v2-100k-aug-b",
+ "epoch": 10,
+ "npz_sha256": "265c92b4dc7165df534230c32d2992f362ebf64acd4786a42402ed4a32994e83"
+}

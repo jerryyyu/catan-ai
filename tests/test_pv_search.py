@@ -56,3 +56,15 @@ def test_afterstate_rejects_sequences_illegal_on_the_world():
     game, bot = _state()
     view = Observation.for_policy(game, 0, bot)
     assert afterstate_encoding(bot, view, 0, [{'type': 'build_city', 'vertex': 10 ** 6}]) is None
+
+
+def test_pv2_b_loads_with_parity_and_plays_a_legal_move():
+    pytest.importorskip('numpy')
+    from catan_ai.pv_search import VALUE_V2_B
+    if not VALUE_V2_B.with_suffix('.npz').exists():
+        pytest.skip('value-net weights are a local artifact (not committed)')
+    bot = make_policy('planner_pv2_b', 1)  # ValueNetV2 checks the npz hash and torch parity on load
+    game, _ = _state()
+    view = Observation.for_policy(game, 0, bot)
+    action = bot.choose(view, 0)
+    assert action in view.legal_actions(0) or action['type'] == 'offer_trade'

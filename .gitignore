@@ -14,3 +14,7 @@ src/catan_ai/*.so
 src/catan_ai/*.pyd
 src/catan_ai/_native_manifest.json
 .claude/settings.local.json
+
+# Learned network weights are local artifacts (kept under runs/ and copied into run snapshots), not committed.
+checkpoints/*.npz
+checkpoints/*.pt

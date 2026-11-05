@@ -147,18 +147,87 @@ class PVSearchPlanner(AcceptanceOfferPlanner):
         super().__init__(rng)
         self.value_mlp = load_value_mlp(self.CHECKPOINT, self.CHECKPOINT_SHA256)
 
+    def _logits(self, rows):
+        return [mlp_logit(self.value_mlp, x) for x in rows]
+
+
+class ValueNetV2:
+    """Numpy forward pass for the exported encoder-v2 state-value nets (``mlp`` or ``resmlp``).
+
+    Loads ``<name>.npz`` and ``<name>.meta.json``; refuses a weights file whose
+    SHA-256 differs from the metadata's, and checks itself against the torch logits
+    stored with the export (parity probe) before use.
+    """
+
+    def __init__(self, stem):
+        import numpy as np
+        self.np = np
+        meta = json.loads(Path(f'{stem}.meta.json').read_text())
+        raw = Path(f'{stem}.npz').read_bytes()
+        if hashlib.sha256(raw).hexdigest() != meta['npz_sha256']:
+            raise ValueError('value net weights do not match their metadata')
+        data = np.load(f'{stem}.npz')
+        self.arch, self.meta = meta['arch'], meta
+        self.w = {k[2:]: data[k].astype(np.float64) for k in data.files if k.startswith('w:')}
+        self.mean, self.sd = data['mean'].astype(np.float64), data['sd'].astype(np.float64)
+        got = self.logits(data['parity_x'])
+        if not np.allclose(got, data['parity_logit'], atol=1e-4):
+            raise ValueError('numpy forward pass disagrees with the exported torch logits')
+
+    def _ln(self, h, name):
+        mu = h.mean(-1, keepdims=True)
+        var = h.var(-1, keepdims=True)
+        return (h - mu) / self.np.sqrt(var + 1e-5) * self.w[f'{name}.weight'] + self.w[f'{name}.bias']
+
+    def _lin(self, h, name):
+        return h @ self.w[f'{name}.weight'].T + self.w[f'{name}.bias']
+
+    def logits(self, rows):
+        np = self.np
+        h = (np.asarray(rows, dtype=np.float64) - self.mean) / self.sd
+        if self.arch.get('arch', 'mlp') == 'mlp':
+            names = sorted({k.split('.')[0] for k in self.w if k.endswith('.weight')}, key=int)
+            for i, n in enumerate(names):
+                h = self._lin(h, n)
+                if i < len(names) - 1:
+                    h = np.maximum(h, 0.)
+            return h[:, 0]
+        h = self._lin(h, 'inp')
+        for b in range(self.arch['blocks']):
+            f = self._ln(h, f'blocks.{b}.f.0')
+            f = np.maximum(self._lin(f, f'blocks.{b}.f.1'), 0.)
+            h = h + self._lin(f, f'blocks.{b}.f.4')
+        return self._lin(self._ln(h, 'out.0'), 'out.1')[:, 0]
+
+
+VALUE_V2_B = Path(__file__).resolve().parents[2] / 'checkpoints' / 'value_v2_resmlp_b_v1'
+
+
+class PVSearchV2BPlanner(PVSearchPlanner):
+    """PV search with the 100k encoder-v2 state-value net, arm B (``value-v2-100k-aug-b``):
+    test AUC .772; pv2b within-decision cross-eval +.0045 [LCB +.0008]. Needs numpy."""
+
+    def __init__(self, rng=None):
+        AcceptanceOfferPlanner.__init__(self, rng)
+        self.net = ValueNetV2(VALUE_V2_B)
+
+    def _logits(self, rows):
+        return [float(v) for v in self.net.logits(rows)] if rows else []
+
     def choose(self, view, seat):
         served = super().choose(view, seat)
         if (view.phase != 'actions' or served['type'] not in REPLACEABLE
                 or not any(a['type'] == 'end_turn' for a in view.actions)):
             return served
-        best, pick = -math.inf, None
+        scored = []
         for seq in candidate_sequences(self, view, seat, self.K):
             encoded = afterstate_encoding(self, view, seat, seq)
-            if encoded is None:
-                continue
-            x, won = encoded
-            value = math.inf if won else mlp_logit(self.value_mlp, x)
+            if encoded is not None:
+                scored.append((seq, *encoded))
+        logits = self._logits([x for _, x, won in scored if not won]) if scored else []
+        best, pick, it = -math.inf, None, iter(logits)
+        for seq, _, won in scored:
+            value = math.inf if won else next(it)
             if value > best:
                 best, pick = value, seq
         if pick is None or not pick:
