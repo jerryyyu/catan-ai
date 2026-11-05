@@ -91,3 +91,26 @@ def test_offer_choice_unchanged_by_plan_cache():
     expect = None if best is None else {'type': 'offer_trade', 'recipient': best[0],
                                         'give': {best[1]: best[3]}, 'receive': {best[2]: 1}}
     assert cached == expect
+
+
+def test_cached_view_events_equal_fresh_events_for_every_viewer():
+    game = _midgame(9)
+    for viewer in (0, 1, 2, 3, None):
+        assert list(game.observed_view_events(viewer)) == game.observed_events(viewer)
+    seat = game.current
+    action = game.legal_actions(seat)[0]
+    game.apply(seat, action)  # cache extends with the new event
+    for viewer in (0, 1, 2, 3):
+        assert list(game.observed_view_events(viewer)) == game.observed_events(viewer)
+    view = Observation.from_game(game, 0)
+    assert list(view.events) == game.observed_events(0)
+
+
+def test_event_cache_rebuilds_on_replaced_history_and_is_not_copied():
+    game = _midgame(9)
+    game.observed_view_events(0)
+    copied = deepcopy(game)
+    assert '_observed_cache' not in copied.__dict__
+    assert list(copied.observed_view_events(0)) == game.observed_events(0)
+    game.events = game.events[:5]  # replaced list: cache must not serve stale rows
+    assert list(game.observed_view_events(0)) == game.observed_events(0)
