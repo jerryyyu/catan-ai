@@ -3,29 +3,55 @@ from .engine import Resource
 from .planner import ProductionRobberPlanner, WEIGHTS
 
 
+_RESOURCES = tuple(Resource)
+_FOLDS = {}  # performance only: resumable folds keyed by the first event object
+
+
+def _fold(hands, event):
+    action, seat = event['action'], event['seat']
+    if 'resource_deltas' in event:
+        for hand, delta in zip(hands, event['resource_deltas']):
+            for resource, count in delta.items():
+                hand[Resource(resource)] += count
+    elif action['type'] in ('steal', 'discard'):
+        source = action['victim'] if action['type'] == 'steal' else seat
+        total = sum(hands[source].values())
+        if total:
+            for resource in _RESOURCES:
+                amount = hands[source][resource] / total
+                hands[source][resource] -= amount
+                if action['type'] == 'steal':
+                    hands[seat][resource] += amount
+    for hand, count in zip(hands, event['counts']):
+        for resource in _RESOURCES:
+            hand[resource] = max(0.0, hand[resource])
+        total = sum(hand.values())
+        for resource in _RESOURCES:
+            hand[resource] = hand[resource] * count / total if total else count / len(_RESOURCES)
+
+
 def resource_estimates(events):
-    hands = [{r: 0.0 for r in Resource} for _ in range(4)]
-    for event in events:
-        action, seat = event['action'], event['seat']
-        if 'resource_deltas' in event:
-            for hand, delta in zip(hands, event['resource_deltas']):
-                for resource, count in delta.items():
-                    hand[Resource(resource)] += count
-        elif action['type'] in ('steal', 'discard'):
-            source = action['victim'] if action['type'] == 'steal' else seat
-            total = sum(hands[source].values())
-            if total:
-                for resource in Resource:
-                    amount = hands[source][resource] / total
-                    hands[source][resource] -= amount
-                    if action['type'] == 'steal':
-                        hands[seat][resource] += amount
-        for hand, count in zip(hands, event['counts']):
-            for resource in Resource:
-                hand[resource] = max(0.0, hand[resource])
-            total = sum(hand.values())
-            for resource in Resource:
-                hand[resource] = hand[resource] * count / total if total else count / len(Resource)
+    """Card-counted hands from public history: a left fold over ``events``.
+
+    Performance only: when ``events`` extends a sequence seen before (same event
+    objects, as ``Game.observed_view_events`` returns), the fold resumes from the
+    stored state instead of restarting; the arithmetic and its order are unchanged.
+    Stored entries hold the event objects themselves, so identities cannot be reused.
+    """
+    events = list(events)
+    start, hands = 0, [{r: 0.0 for r in _RESOURCES} for _ in range(4)]
+    if events:
+        entry = _FOLDS.get(id(events[0]))
+        if entry is not None:
+            first, last, done, state = entry
+            if first is events[0] and done <= len(events) and events[done - 1] is last:
+                start, hands = done, [dict(h) for h in state]
+    for event in events[start:]:
+        _fold(hands, event)
+    if events:
+        if len(_FOLDS) > 64:
+            _FOLDS.clear()
+        _FOLDS[id(events[0])] = (events[0], events[-1], len(events), [dict(h) for h in hands])
     return hands
 
 

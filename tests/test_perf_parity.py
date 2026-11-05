@@ -114,3 +114,27 @@ def test_event_cache_rebuilds_on_replaced_history_and_is_not_copied():
     assert list(copied.observed_view_events(0)) == game.observed_events(0)
     game.events = game.events[:5]  # replaced list: cache must not serve stale rows
     assert list(game.observed_view_events(0)) == game.observed_events(0)
+
+
+def test_incremental_card_counting_equals_a_fresh_fold():
+    from copy import deepcopy as dc
+    from catan_ai import card_planner
+    game = _midgame(11)
+    shared = game.observed_view_events(0)
+    half = shared[:len(shared) // 2]
+    card_planner.resource_estimates(half)          # seeds the resumable fold
+    resumed = card_planner.resource_estimates(shared)
+    card_planner._FOLDS.clear()
+    fresh = card_planner.resource_estimates(dc(list(shared)))  # new objects: no reuse possible
+    assert resumed == fresh
+    resumed[0][next(iter(resumed[0]))] += 99       # callers get their own dicts
+    assert card_planner.resource_estimates(shared) == fresh
+
+
+def test_income_memo_returns_copies():
+    bot = make_policy('planner_offer_accept', 1)
+    game = _midgame(11)
+    first = bot._income(game, 0)
+    first[next(iter(first))] += 50
+    assert bot._income(game, 0) != first
+    assert '_income_memo' not in deepcopy(bot).__dict__
