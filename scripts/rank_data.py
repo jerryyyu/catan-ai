@@ -106,6 +106,42 @@ def features(game, seat, bot, view=None):
             'leaf': leaves[seat], 'shared': bot._score(world, seat)}
 
 
+DECK_PRIOR = (('knight', 14), ('victory_point', 5), ('road_building', 2), ('year_of_plenty', 2), ('monopoly', 2))
+
+
+def post_features(game, seat, bot, action):
+    """Post-move features from information the chooser has before choosing.
+
+    A hypothetical development purchase must not reveal the hidden deck: the drawn
+    card is replaced by each card type in turn and the features are averaged under
+    the standard deck prior (14/5/2/2/2 of 25). Other moves are deterministic given
+    the chooser's information. (Codex HOLD on PR #28, P1.)
+    """
+    after = deepcopy(game)
+    after.apply(seat, action)
+    if action['type'] != 'buy_development':
+        return features(after, seat, bot)
+    total = sum(n for _, n in DECK_PRIOR)
+    mixed = None
+    for card, n in DECK_PRIOR:
+        variant = deepcopy(after)
+        drawn_turn = variant.players[seat].development[-1][1]
+        variant.players[seat].development[-1] = (card, drawn_turn)
+        for event in reversed(variant.events):
+            if event['public']['action']['type'] == 'buy_development' and event['public']['seat'] == seat:
+                event['private'][seat] = {'drawn_card': card}
+                break
+        f = features(variant, seat, bot)
+        w = n / total
+        if mixed is None:
+            mixed = {'features': [w * x for x in f['features']], 'leaf': w * f['leaf'], 'shared': w * f['shared']}
+        else:
+            mixed['features'] = [a + w * x for a, x in zip(mixed['features'], f['features'])]
+            mixed['leaf'] += w * f['leaf']
+            mixed['shared'] += w * f['shared']
+    return mixed
+
+
 def candidates(view, seat, bot, served, limit):
     world = bot._world(view)
     legal = world.legal_actions(seat)
@@ -181,10 +217,7 @@ def run_game(args):
             pre = features(game, seat, probe, view)
             rows = []
             for k, cand in enumerate(candidates(view, seat, probe, action, config['candidates'])):
-                after = deepcopy(game)
-                after_bot = deepcopy(probe)
-                after.apply(seat, cand)
-                post = features(after, seat, after_bot)
+                post = post_features(game, seat, deepcopy(probe), cand)
                 row = {'action': cand, 'act': action_encoding(cand), 'served': k == 0,
                        'after': post['features'], 'leaf': post['leaf'], 'shared': post['shared'],
                        'wins': 0, 'playouts': 0, 'truncated': 0}

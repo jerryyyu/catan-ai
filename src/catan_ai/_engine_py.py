@@ -199,8 +199,15 @@ class Game:
             memo[id(self.rng)] = rng
             rng.setstate(self.rng.getstate())
             rng.__dict__.update(deepcopy(self.rng.__dict__, memo))
-        result.__dict__.update(deepcopy(self.__dict__, memo))
+        # The per-viewer event cache is derived from ``events``; copies rebuild it lazily.
+        state = {k: v for k, v in self.__dict__.items() if k != '_observed_cache'}
+        result.__dict__.update(deepcopy(state, memo))
         return result
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        state.pop('_observed_cache', None)
+        return state
 
     @classmethod
     def new(cls, names: list[str], seed: int) -> "Game":
@@ -399,6 +406,24 @@ class Game:
     def observed_events(self, viewer: int | None) -> list[dict]:
         return [deepcopy(event['public'] | event['private'].get(viewer, {}))
                 for event in self.events]
+
+    def observed_view_events(self, viewer: int | None) -> tuple[dict, ...]:
+        """``observed_events`` for policy observations, cached per viewer.
+
+        Performance only. Events are append-only, so each viewer's merged copies
+        are extended with new events instead of rebuilt; the cache is dropped and
+        rebuilt if ``events`` is replaced or shrinks. The returned dicts are shared
+        between observations of this game and must be treated as read-only.
+        """
+        cache = self.__dict__.get('_observed_cache')
+        if cache is None or cache[0] is not self.events:
+            cache = self.__dict__['_observed_cache'] = (self.events, {})
+        rows = cache[1].setdefault(viewer, [])
+        if len(rows) > len(self.events):
+            rows.clear()
+        for event in self.events[len(rows):]:
+            rows.append(deepcopy(event['public'] | event['private'].get(viewer, {})))
+        return tuple(rows)
 
     def _apply(self, seat: int, action: dict[str, Any]) -> None:
         if type(seat) is not int or seat not in range(4) or not isinstance(action, dict):

@@ -29,3 +29,30 @@ def test_manifest_and_records_fail_closed(tmp_path):
     path.write_text(json.dumps({'seed': 11, 'identity': identity['identity_sha256']}))
     with pytest.raises(ValueError):
         rank['run_game']((10, config, str(path), identity['identity_sha256']))
+
+
+def _buy_state(deck_order):
+    from catan_ai.engine import Game, Resource
+    from catan_ai.bots import make_policy
+    from catan_ai.observation import Observation
+    game = Game.new(list('abcd'), 21)
+    bots = [make_policy('planner_offer_accept', i) for i in range(4)]
+    while game.phase.startswith('setup') or game.turn < 8 or game.current != 0 or game.phase != 'actions':
+        seat = game.current
+        game.apply(seat, bots[seat].choose(Observation.for_policy(game, seat, bots[seat]), seat))
+    game.players[0].resources.update({Resource.WOOL: 1, Resource.GRAIN: 1, Resource.ORE: 1})
+    deck = [c for c in game.deck]
+    top = {'knight': 'victory_point', 'victory_point': 'knight'}[deck_order]
+    i = next(k for k in range(len(deck) - 1, -1, -1) if deck[k] == top)
+    deck[-1], deck[i] = deck[i], deck[-1]  # same multiset, different next card
+    game.deck = deck
+    return game, bots[0]
+
+
+def test_buy_candidate_features_ignore_hidden_deck_order():
+    a, bot = _buy_state('knight')
+    b, _ = _buy_state('victory_point')
+    assert a.deck[-1] != b.deck[-1] and sorted(a.deck) == sorted(b.deck)
+    buy = {'type': 'buy_development'}
+    assert buy in a.legal_actions(0)
+    assert rank['post_features'](a, 0, bot, buy) == rank['post_features'](b, 0, bot, buy)

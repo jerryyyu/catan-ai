@@ -15,7 +15,11 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import sys
 import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from artifact_guard import provenance, publish, refuse_existing, sha256, validate  # noqa: E402
 
 
 def load(root, lo, n, identity, point):
@@ -93,14 +97,18 @@ def train_point(torch, args, cfg, data_cfg, manifest, point):
         history.append({'epoch': epoch, 'val_loss': vloss})
         if best is None or vloss < best[0]:
             best = (vloss, epoch, {key: v.clone() for key, v in net.state_dict().items()})
-    torch.save({'state': best[2], 'mean': mean, 'sd': sd, 'epoch': best[1], 'point': point, 'config': cfg},
-               Path(args.model_dir) / f'value-{point}.pt')
+    path = Path(args.model_dir) / f'value-{point}.pt'
+    publish(path, lambda tmp: torch.save({'state': best[2], 'mean': mean, 'sd': sd, 'epoch': best[1],
+                                          **provenance(cfg, data_cfg, manifest, point)}, tmp))
     return {'fit_rows': len(x), 'val_rows': len(vx), 'best_epoch': best[1], 'history': history,
+            'model_sha256': sha256(path),
             'fit_corpus_sha256': fit['corpus_sha256'], 'val_corpus_sha256': val['corpus_sha256']}
 
 
 def gate_point(torch, args, cfg, data_cfg, manifest, point):
-    saved = torch.load(Path(args.model_dir) / f'value-{point}.pt', weights_only=False)
+    path = Path(args.model_dir) / f'value-{point}.pt'
+    saved = torch.load(path, weights_only=False)
+    validate(saved, cfg, data_cfg, manifest, point)
     lo, n = data_cfg['split']['test']
     test = load(args.data, lo, n, manifest['identity_sha256'], point)
     net = build(torch, len(test['x'][0]), cfg['hidden'], cfg['layers'])
@@ -129,13 +137,17 @@ def gate_point(torch, args, cfg, data_cfg, manifest, point):
     lcb = diffs[int(.025 * len(diffs))]
     return {'test_rows': len(y), 'auc': point_m, 'gain_vs_best_baseline': point_m['net'] - max(point_m['leaf'], point_m['shared']),
             'gain_lcb95': lcb, 'pass': lcb > cfg['gate']['minimum_gain_lcb'],
-            'test_corpus_sha256': test['corpus_sha256'], 'epoch': saved['epoch']}
+            'test_corpus_sha256': test['corpus_sha256'], 'epoch': saved['epoch'], 'model_sha256': sha256(path)}
 
 
-def export(args, point):
+def export(args, point, cfg, data_cfg, manifest):
     import torch
-    saved = torch.load(Path(args.model_dir) / f'value-{point}.pt', weights_only=False)
+    path = Path(args.model_dir) / f'value-{point}.pt'
+    saved = torch.load(path, weights_only=False)
+    validate(saved, cfg, data_cfg, manifest, point)
     out = {'schema': 'catan-value-mlp-v1', 'point': point, 'epoch': saved['epoch'], 'config': saved['config'],
+           'model_sha256': sha256(path), 'data_identity_sha256': saved['data_identity_sha256'],
+           'train_split': saved['train_split'],
            'mean': saved['mean'].tolist(), 'sd': saved['sd'].tolist(),
            'state': {k: v.tolist() for k, v in saved['state'].items()}}
     with (Path(args.model_dir) / f'value-{point}.json').open('x') as stream:
@@ -157,9 +169,14 @@ def main():
     if manifest['config'] != data_cfg:
         raise ValueError('data root was produced with a different data config')
     if args.command == 'export':
+        refuse_existing(*(Path(args.model_dir) / f'value-{p}.json' for p in cfg['points']))
         for point in cfg['points']:
-            export(args, point)
+            export(args, point, cfg, data_cfg, manifest)
         return
+    if args.command == 'train':
+        refuse_existing(args.output, *(Path(args.model_dir) / f'value-{p}.pt' for p in cfg['points']))
+    else:
+        refuse_existing(args.output)
     import torch
     torch.set_num_threads(cfg.get('threads', 8))
     args.model_dir.mkdir(parents=True, exist_ok=True)

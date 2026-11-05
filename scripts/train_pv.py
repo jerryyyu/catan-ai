@@ -23,7 +23,11 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import sys
 import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from artifact_guard import provenance, publish, refuse_existing, sha256, validate  # noqa: E402
 
 
 def load_games(root, lo, n, identity):
@@ -141,10 +145,12 @@ def train(args, cfg, data_cfg, manifest):
         if best is None or vloss.item() < best[0]:
             best = (vloss.item(), epoch, {k2: v.clone() for k2, v in net.state_dict().items()})
     net.load_state_dict(best[2])
-    torch.save({'state': net.state_dict(), 'stats': stats, 'config': cfg, 'epoch': best[1]}, args.model)
+    publish(args.model, lambda tmp: torch.save({'state': net.state_dict(), 'stats': stats, 'epoch': best[1],
+                                                **provenance(cfg, data_cfg, manifest)}, tmp))
     return {'train_games': n, 'fit_decisions': decisions, 'val_decisions': len(val['obs']),
             'value_rows': len(fit['vobs']), 'best_epoch': best[1], 'history': history,
-            'train_corpus_sha256': hashlib.sha256(''.join(h for _, h in games).encode()).hexdigest()}
+            'train_corpus_sha256': hashlib.sha256(''.join(h for _, h in games).encode()).hexdigest(),
+            'model_sha256': sha256(args.model)}
 
 
 def auc(scores, labels):
@@ -166,6 +172,7 @@ def auc(scores, labels):
 def gate(args, cfg, data_cfg, manifest):
     import torch
     saved = torch.load(args.model, weights_only=False)
+    validate(saved, cfg, data_cfg, manifest)
     stats = saved['stats']
     lo, n = data_cfg['split']['test']
     games = load_games(args.data, lo, n, manifest['identity_sha256'])
@@ -216,13 +223,15 @@ def gate(args, cfg, data_cfg, manifest):
             'served_pick_is_playout_best_share': sum(r[3] == 0 for r in rows) / len(rows),
             'v_auc': v_auc, 'served_leaf_auc_on_value_rows': leaf_auc,
             'test_corpus_sha256': hashlib.sha256(''.join(h for _, h in games).encode()).hexdigest(),
-            'pass': passed}
+            'model_sha256': sha256(args.model), 'pass': passed}
 
 
-def export(args):
+def export(args, cfg, data_cfg, manifest):
     import torch
     saved = torch.load(args.model, weights_only=False)
+    validate(saved, cfg, data_cfg, manifest)
     out = {'schema': 'catan-pv-v1', 'config': saved['config'], 'epoch': saved['epoch'],
+           'model_sha256': sha256(args.model), 'data_identity_sha256': saved['data_identity_sha256'],
            'stats': {k: v.tolist() for k, v in saved['stats'].items()},
            'state': {k: v.tolist() for k, v in saved['state'].items()}}
     with Path(args.output).open('x') as stream:
@@ -244,7 +253,9 @@ def main():
     if manifest['config'] != data_cfg:
         raise ValueError('data root was produced with a different data config')
     if args.command == 'export':
-        return export(args)
+        refuse_existing(args.output)
+        return export(args, cfg, data_cfg, manifest)
+    refuse_existing(args.output, *((args.model,) if args.command == 'train' else ()))
     started = time.monotonic()
     result = (train if args.command == 'train' else gate)(args, cfg, data_cfg, manifest)
     result.update({'command': args.command, 'config': cfg, 'config_sha256': hashlib.sha256(args.config.read_bytes()).hexdigest(),
