@@ -159,6 +159,48 @@ class Player:
             self.resources[resource] -= amount
 
 
+class _FrozenError(TypeError):
+    pass
+
+
+def _refuse(*_args, **_kwargs):
+    raise _FrozenError('observation events are read-only; copy them to modify')
+
+
+class FrozenDict(dict):
+    """A read-only dict for shared observation events. Deep copies and pickles are plain dicts."""
+    __setitem__ = __delitem__ = update = pop = popitem = setdefault = clear = __ior__ = _refuse
+
+    def __deepcopy__(self, memo):
+        return {deepcopy(k, memo): deepcopy(v, memo) for k, v in self.items()}
+
+    def __reduce__(self):
+        return (dict, (dict(self),))
+
+
+class FrozenList(list):
+    """A read-only list for shared observation events. Deep copies and pickles are plain lists."""
+    __setitem__ = __delitem__ = append = extend = insert = pop = remove = clear = sort = reverse = _refuse
+    __iadd__ = __imul__ = _refuse
+
+    def __deepcopy__(self, memo):
+        return [deepcopy(v, memo) for v in self]
+
+    def __reduce__(self):
+        return (list, (list(self),))
+
+
+def freeze(value):
+    """Recursively read-only copy of an event payload (dicts, lists, tuples)."""
+    if isinstance(value, dict):
+        return FrozenDict((k, freeze(v)) for k, v in value.items())
+    if isinstance(value, list):
+        return FrozenList(freeze(v) for v in value)
+    if isinstance(value, tuple):
+        return tuple(freeze(v) for v in value)
+    return value
+
+
 @dataclass
 class Game:
     board: Board
@@ -412,8 +454,9 @@ class Game:
 
         Performance only. Events are append-only, so each viewer's merged copies
         are extended with new events instead of rebuilt; the cache is dropped and
-        rebuilt if ``events`` is replaced or shrinks. The returned dicts are shared
-        between observations of this game and must be treated as read-only.
+        rebuilt if ``events`` is replaced or shrinks. The returned events are shared
+        between observations of this game and are recursively read-only (``freeze``):
+        any attempt to modify them raises, so observations stay detached.
         """
         cache = self.__dict__.get('_observed_cache')
         if cache is None or cache[0] is not self.events:
@@ -422,7 +465,7 @@ class Game:
         if len(rows) > len(self.events):
             rows.clear()
         for event in self.events[len(rows):]:
-            rows.append(deepcopy(event['public'] | event['private'].get(viewer, {})))
+            rows.append(freeze(event['public'] | event['private'].get(viewer, {})))
         return tuple(rows)
 
     def _apply(self, seat: int, action: dict[str, Any]) -> None:

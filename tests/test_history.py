@@ -48,7 +48,12 @@ def test_history_is_detached_and_invalid_actions_are_not_recorded():
     game.apply(0, game.legal_actions(0)[0])
     before = copy.deepcopy(game.events)
     view = Observation.from_game(game, 0)
-    view.events[0]['action']['vertex'] = -1
+    # Events in observations are recursively read-only (shared cache, PR #28): an edit
+    # raises instead of silently diverging; consumers that need to edit deep-copy them.
+    with pytest.raises(TypeError):
+        view.events[0]['action']['vertex'] = -1
+    editable = copy.deepcopy(list(view.events))
+    editable[0]['action']['vertex'] = -1
     view.discard_remaining[1] = 100
     assert game.events == before
     assert not game.discard_remaining
