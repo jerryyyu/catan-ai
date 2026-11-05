@@ -274,3 +274,104 @@ class PVSearchV2BFixPlanner(PVSearchV2BPlanner):
                       else {'type': 'end_turn'})
             return self._end_of_turn_offer(view, seat, action)
         return pick[0]
+
+
+def afterstate_variants(planner, view, seat, seq):
+    """Like ``afterstate_encoding`` but a purchase returns one encoding per card type with
+    its deck-prior weight, so the caller can average predictions instead of features.
+
+    Returns ``None`` (not replayable), ``'won'`` (immediate win) or ``[(weight, x), ...]``.
+    """
+    replayed = _replay(planner._world(view), seat, seq)
+    if replayed is None:
+        return None
+    world, bought = replayed
+    if world.winner == seat:
+        return 'won'
+    if not bought:
+        return [(1., encode(Observation.from_game(world, seat, include_events=False), world))]
+    total = sum(n for _, n in DECK_PRIOR)
+    out = []
+    for card, n in DECK_PRIOR:
+        variant = deepcopy(world, {id(world.board): world.board})
+        variant.players[seat].development.append((card, view.turn))
+        out.append((n / total, encode(Observation.from_game(variant, seat, include_events=False), variant)))
+    return out
+
+
+class PVSearchS1Planner(PVSearchV2BFixPlanner):
+    """``planner_pv2_b_fix`` plus two search fixes from red team #2 (board #1):
+
+    - commit to the picked sequence: the rest of the chosen sequence is replayed on
+      later calls in the same turn while each step stays legal (re-plan otherwise);
+      when it is exhausted the turn ends through the served end-of-turn path, which
+      is exactly what the data and the within-decision gate assumed;
+    - a development purchase is scored by averaging predicted win probabilities over
+      the deck prior, not by averaging features.
+    """
+
+    NET = VALUE_V2_B
+
+    def __init__(self, rng=None):
+        AcceptanceOfferPlanner.__init__(self, rng)
+        self.net = ValueNetV2(self.NET)
+        self._plan = None
+
+    def _end_path(self, view, seat):
+        legal = view.legal_actions(seat)
+        action = (self._fallback(view, seat) if any(a['type'] == 'play_development' for a in legal)
+                  else {'type': 'end_turn'})
+        return self._end_of_turn_offer(view, seat, action)
+
+    def choose(self, view, seat):
+        if view.phase == 'actions' and self._plan is not None and self._plan[0] == (view.turn, seat):
+            remaining = self._plan[1]
+            if not remaining:
+                self._plan = None
+                return self._end_path(view, seat)
+            step = remaining[0]
+            if step in view.legal_actions(seat):
+                self._plan = ((view.turn, seat), remaining[1:])
+                return step
+            self._plan = None  # no longer legal: re-plan below
+        elif self._plan is not None and self._plan[0] != (view.turn, seat):
+            self._plan = None
+        before = self.last_offer_turn
+        served = AcceptanceOfferPlanner.choose(self, view, seat)
+        if (view.phase != 'actions' or served['type'] in ('offer_trade', 'play_development')
+                or served['type'] not in REPLACEABLE or not any(a['type'] == 'end_turn' for a in view.actions)):
+            return served
+        options, rows = [], []
+        for seq in candidate_sequences(self, view, seat, self.K):
+            variants = afterstate_variants(self, view, seat, seq)
+            if variants is None:
+                continue
+            if variants == 'won':
+                options.append((seq, None))
+                continue
+            options.append((seq, (len(rows), [w for w, _ in variants])))
+            rows.extend(x for _, x in variants)
+        logits = self._logits(rows) if rows else []
+        best, pick = -math.inf, None
+        for seq, spec in options:
+            if spec is None:
+                value = math.inf
+            else:
+                start, weights = spec
+                p = sum(w / (1 + math.exp(-logits[start + i])) for i, w in enumerate(weights))
+                value = math.log(max(p, 1e-12) / max(1 - p, 1e-12))
+            if value > best:
+                best, pick = value, seq
+        self.last_offer_turn = before
+        if pick is None:
+            return served
+        if not pick:
+            return served if served['type'] == 'end_turn' else self._end_path(view, seat)
+        self._plan = ((view.turn, seat), pick[1:])
+        return pick[0]
+
+
+class PVSearchS1M1Planner(PVSearchS1Planner):
+    """``planner_pv2_s1`` with the fine-tuned value net ``value-v2-m1`` (local weights)."""
+
+    NET = Path(__file__).resolve().parents[2] / 'checkpoints' / 'value_v2_m1_v1'
