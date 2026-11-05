@@ -57,3 +57,38 @@ def test_encoding_changes_with_public_board_state():
     base = _encode(game, bot)
     game.robber_tile = (game.robber_tile + 1) % 19
     assert _encode(game, bot) != base
+
+
+def test_board_symmetries_are_valid_bijections_of_the_board():
+    from catan_ai.encoding import symmetry_permutations
+    game, bot = _game()
+    perms = symmetry_permutations(game.board)
+    assert len(perms) == 12 and perms[0] == list(range(size()))
+    assert all(sorted(p) == list(range(size())) for p in perms)
+    assert len({tuple(p) for p in perms}) == 12
+    x = _encode(game, bot)
+    for p in perms:
+        y = [x[i] for i in p]
+        assert sorted(y) == sorted(x)                      # contents preserved
+        assert y[19 * 8:] [-(4 * 27 + 20):] == x[-(4 * 27 + 20):]   # player/global block untouched
+        assert sum(y[i * 8 + 7] for i in range(19)) == 1    # still exactly one robber tile
+    rot = perms[1]
+    six = list(range(size()))
+    for _ in range(6):
+        six = [six[i] for i in rot]
+    assert six == list(range(size()))                       # six 60-degree turns = identity
+
+
+def test_symmetry_preserves_adjacency():
+    """A settlement's neighbouring roads stay its neighbours after any symmetry."""
+    from catan_ai.encoding import symmetry_permutations, VERTEX_BLOCK, EDGE_BLOCK
+    game, _ = _game()
+    board = game.board
+    perms = symmetry_permutations(board)
+    v0, e0 = 19 * 8, 19 * 8 + 54 * VERTEX_BLOCK
+    for p in perms:
+        inv = {old: new for new, old in enumerate(p)}
+        vnew = {v: (inv[v0 + v * VERTEX_BLOCK] - v0) // VERTEX_BLOCK for v in range(54)}
+        enew = {e: (inv[e0 + e * EDGE_BLOCK] - e0) // EDGE_BLOCK for e in range(len(board.edges))}
+        for e, (a, b) in enumerate(board.edges):
+            assert tuple(sorted(board.edges[enew[e]])) == tuple(sorted((vnew[a], vnew[b])))

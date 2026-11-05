@@ -34,6 +34,66 @@ def shards(root, split):
     return out
 
 
+DATA_KEYS = ('roots', 'point', 'stride', 'max_turns', 'shard_games', 'split')
+
+
+def build_model(torch, dim, m):
+    """``mlp``: Linear/ReLU stack. ``resmlp``: input projection, residual blocks of
+    LayerNorm -> Linear -> ReLU -> Dropout -> Linear (+ skip), final LayerNorm, head."""
+    nn = torch.nn
+    if m.get('arch', 'mlp') == 'mlp':
+        layers, width = [], dim
+        for _ in range(m['layers']):
+            layers += [nn.Linear(width, m['hidden']), nn.ReLU()]
+            if m.get('dropout'):
+                layers.append(nn.Dropout(m['dropout']))
+            width = m['hidden']
+        return nn.Sequential(*layers, nn.Linear(width, 1))
+
+    class Block(nn.Module):
+        def __init__(self, width, dropout):
+            super().__init__()
+            self.f = nn.Sequential(nn.LayerNorm(width), nn.Linear(width, width), nn.ReLU(), nn.Dropout(dropout),
+                                   nn.Linear(width, width))
+
+        def forward(self, x):
+            return x + self.f(x)
+
+    class ResMLP(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.inp = nn.Linear(dim, m['hidden'])
+            self.blocks = nn.Sequential(*[Block(m['hidden'], m.get('dropout', 0.)) for _ in range(m['blocks'])])
+            self.out = nn.Sequential(nn.LayerNorm(m['hidden']), nn.Linear(m['hidden'], 1))
+
+        def forward(self, x):
+            return self.out(self.blocks(self.inp(x)))
+    return ResMLP()
+
+
+def make_optimizer(torch, net, m, steps):
+    if m.get('optimizer', 'adam') == 'adamw':
+        opt = torch.optim.AdamW(net.parameters(), lr=m['learning_rate'], weight_decay=m['weight_decay'])
+    else:
+        opt = torch.optim.Adam(net.parameters(), lr=m['learning_rate'], weight_decay=m['weight_decay'])
+    if m.get('schedule') != 'cosine':
+        return opt, None
+    warm = max(1, int(m.get('warmup_fraction', .03) * steps))
+    import math
+
+    def factor(step):
+        if step < warm:
+            return (step + 1) / warm
+        return .5 * (1 + math.cos(math.pi * min(1., (step - warm) / max(1, steps - warm))))
+    return opt, torch.optim.lr_scheduler.LambdaLR(opt, factor)
+
+
+def symmetry_index(torch):
+    from catan_ai.encoding import symmetry_permutations
+    from catan_ai.engine import Game
+    return torch.tensor(symmetry_permutations(Game.new(list('abcd'), 0).board), dtype=torch.long)
+
+
 def provenance(cfg, train_identity):
     return {'config': cfg, 'train_identity': train_identity, 'split': cfg['split']}
 
@@ -51,24 +111,34 @@ def train(args, cfg):
     y = torch.from_numpy(data['y'][fit].astype(np.float32))
     vx = torch.from_numpy(data['x'][val].astype(np.float32))
     vy = torch.from_numpy(data['y'][val].astype(np.float32))
-    mean, sd = x.mean(0), x.std(0).clamp_min(1e-6)
+    mean, var = x.mean(0), x.var(0)
+    perms = symmetry_index(torch) if m.get('augment') else None
+    if perms is not None:
+        # Symmetrize the standardization over the 12 board symmetries so it is invariant
+        # under them: permuting standardized rows then equals standardizing permuted rows.
+        mean = torch.stack([mean[p] for p in perms]).mean(0)
+        var = torch.stack([var[p] for p in perms]).mean(0)
+    sd = var.sqrt().clamp_min(1e-6)
     x, vx = (x - mean) / sd, (vx - mean) / sd
-    layers, width = [], x.shape[1]
-    for _ in range(m['layers']):
-        layers += [torch.nn.Linear(width, m['hidden']), torch.nn.ReLU()]
-        width = m['hidden']
-    net = torch.nn.Sequential(*layers, torch.nn.Linear(width, 1))
-    opt = torch.optim.Adam(net.parameters(), lr=m['learning_rate'], weight_decay=m['weight_decay'])
+    net = build_model(torch, x.shape[1], m)
+    steps = m['epochs'] * ((len(x) + m['batch'] - 1) // m['batch'])
+    opt, sched = make_optimizer(torch, net, m, steps)
     lossf = torch.nn.BCEWithLogitsLoss()
     gen = torch.Generator().manual_seed(m['seed'])
     best, history = None, []
     for epoch in range(m['epochs']):
         net.train()
         for idx in torch.randperm(len(x), generator=gen).split(m['batch']):
-            loss = lossf(net(x[idx]).squeeze(-1), y[idx])
+            xb = x[idx]
+            if perms is not None:  # a random board symmetry per row (standardization is symmetric, see above)
+                pick = torch.randint(0, len(perms), (len(idx),), generator=gen)
+                xb = torch.gather(xb, 1, perms[pick])
+            loss = lossf(net(xb).squeeze(-1), y[idx])
             opt.zero_grad()
             loss.backward()
             opt.step()
+            if sched is not None:
+                sched.step()
         net.eval()
         with torch.no_grad():
             vloss = lossf(net(vx).squeeze(-1), vy).item()
@@ -89,12 +159,7 @@ def gate(args, cfg):
     if saved['config'] != cfg or saved['train_identity'] != train_identity:
         raise ValueError('model provenance does not match this declaration and training data')
     test = shards(args.data, 'test')
-    m = cfg['model']
-    layers, width = [], test['x'].shape[1]
-    for _ in range(m['layers']):
-        layers += [torch.nn.Linear(width, m['hidden']), torch.nn.ReLU()]
-        width = m['hidden']
-    net = torch.nn.Sequential(*layers, torch.nn.Linear(width, 1))
+    net = build_model(torch, test['x'].shape[1], cfg['model'])
     net.load_state_dict(saved['state'])
     net.eval()
     with torch.no_grad():
@@ -132,8 +197,10 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     cfg = json.loads(args.config.read_text())
-    if not (Path(args.data) / 'DONE.json').exists() or json.loads((Path(args.data) / 'DONE.json').read_text())['config'] != cfg:
-        raise ValueError('shards were not completed under this declaration')
+    done = Path(args.data) / 'DONE.json'
+    made = json.loads(done.read_text())['config'] if done.exists() else None
+    if made is None or any(made.get(k) != cfg.get(k) for k in DATA_KEYS):
+        raise ValueError('shards were not completed under this data declaration')
     refuse_existing(args.output, *((args.model,) if args.command == 'train' else ()))
     started = time.monotonic()
     result = (train if args.command == 'train' else gate)(args, cfg)

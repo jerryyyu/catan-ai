@@ -18,6 +18,8 @@ edges; only terrain, numbers and port types are shuffled per game):
 Uses only the seat's observation and the card-counted world built from it:
 hidden opponent hands enter only as public-history estimates, never directly.
 """
+import math
+
 from .engine import Resource
 from .scoring import longest_road
 
@@ -104,3 +106,54 @@ def encode(view, world):
 
 def size():
     return 19 * 8 + 54 * 14 + 72 * 4 + 4 * 27 + 5 + 5 + 1 + 4 + 5
+
+
+# ----------------------------------------------------------- board symmetries
+TILE_BLOCK, VERTEX_BLOCK, EDGE_BLOCK = 8, 14, 4
+
+
+def symmetry_permutations(board):
+    """The 12 symmetries of the hex board (6 rotations x optional reflection) as index
+    permutations of the encoding: ``x_sym = [x[p[i]] for i in range(len(x))]``.
+
+    The board topology is identical in every game (only contents are shuffled) and
+    centred on the origin, so each symmetry maps tiles, vertices and edges to tiles,
+    vertices and edges. Only the board block moves; per-player and global features
+    are orientation-free. Used for training-time augmentation (AlphaGo-style).
+    """
+    def key(x, y):
+        return (round(x, 3) + 0., round(y, 3) + 0.)
+    vindex = {key(x, y): i for i, (x, y) in enumerate(board.vertices)}
+    centres = [(sum(board.vertices[v][0] for v in t.vertices) / len(t.vertices),
+                sum(board.vertices[v][1] for v in t.vertices) / len(t.vertices)) for t in board.tiles]
+    tindex = {key(x, y): i for i, (x, y) in enumerate(centres)}
+    eindex = {tuple(sorted(e)): i for i, e in enumerate(board.edges)}
+    n_tiles, n_vertices = len(board.tiles), len(board.vertices)
+    v0 = n_tiles * TILE_BLOCK
+    e0 = v0 + n_vertices * VERTEX_BLOCK
+    total = size()
+    perms = []
+    for reflect in (False, True):
+        for k in range(6):
+            c, s = math.cos(math.pi / 3 * k), math.sin(math.pi / 3 * k)
+
+            def move(x, y, reflect=reflect, c=c, s=s):
+                if reflect:
+                    y = -y
+                return key(c * x - s * y, s * x + c * y)
+            vmap = [vindex[move(*board.vertices[v])] for v in range(n_vertices)]
+            tmap = [tindex[move(*centres[t])] for t in range(n_tiles)]
+            emap = [eindex[tuple(sorted((vmap[a], vmap[b])))] for a, b in board.edges]
+            perm = list(range(total))
+            # x_sym[new position] = x[old position]: new index of old item i is map[i]
+            for t in range(n_tiles):
+                for j in range(TILE_BLOCK):
+                    perm[tmap[t] * TILE_BLOCK + j] = t * TILE_BLOCK + j
+            for v in range(n_vertices):
+                for j in range(VERTEX_BLOCK):
+                    perm[v0 + vmap[v] * VERTEX_BLOCK + j] = v0 + v * VERTEX_BLOCK + j
+            for e in range(len(board.edges)):
+                for j in range(EDGE_BLOCK):
+                    perm[e0 + emap[e] * EDGE_BLOCK + j] = e0 + e * EDGE_BLOCK + j
+            perms.append(perm)
+    return perms
