@@ -52,14 +52,29 @@ class ParameterPlanner(ProductionRobberPlanner):
             return 100000.
         w = self.weights
         income = self._income(game, seat)
-        production = sum(WEIGHTS[r] * (n + w[7] * math.sqrt(n)) for r, n in income.items())
+        # Key the actual income, including subclass robber adjustments, and the
+        # fitted coefficient. Preserve the original summation order exactly.
+        key = (tuple(income.items()), w[7])
+        memo = self.__dict__.setdefault('_production_value_memo', {})
+        production = memo.get(key)
+        if production is None:
+            production = sum(WEIGHTS[r] * (n + w[7] * math.sqrt(n)) for r, n in income.items())
+            if len(memo) >= 4096:
+                memo.clear()
+            memo[key] = production
         hand = sum(WEIGHTS[r] * (1.6 * min(n, 3) + .45 * max(n - 3, 0))
                    for r, n in player.resources.items())
         discard = .5 * max(sum(player.resources.values()) - 7, 0)
-        ports = sum(max(income[r] - 5, 0) * (4 / game.trade_rate(seat, r) - 1) for r in Resource)
+        rates = game.trade_rates(seat)
+        ports = sum(max(income[r] - 5, 0) * (4 / rates[r] - 1) for r in Resource)
         development = sum(6 if card == 'victory_point' else 3 for card, _ in player.development)
         return (w[0] * player.points + w[1] * production + w[2] * hand - discard
                 + w[3] * self._geometry(game, seat) + w[4] * ports + w[5] * development)
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        state.pop('_production_value_memo', None)
+        return state
 
 
 def served_status():
