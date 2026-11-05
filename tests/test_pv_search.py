@@ -68,3 +68,19 @@ def test_pv2_b_loads_with_parity_and_plays_a_legal_move():
     view = Observation.for_policy(game, 0, bot)
     action = bot.choose(view, 0)
     assert action in view.legal_actions(0) or action['type'] == 'offer_trade'
+
+
+def test_pv2_b_fix_keeps_served_offers():
+    pytest.importorskip('numpy')
+    from catan_ai.pv_search import VALUE_V2_B
+    if not VALUE_V2_B.with_suffix('.npz').exists():
+        pytest.skip('value-net weights are a local artifact (not committed)')
+    fixed, served = make_policy('planner_pv2_b_fix', 1), make_policy('planner_offer_accept', 1)
+    for seed in range(21, 40):
+        game, _ = _state(seed)
+        view = Observation.for_policy(game, 0, served)
+        s = make_policy('planner_offer_accept', 1).choose(view, 0)
+        if s['type'] == 'offer_trade':
+            assert fixed.choose(view, 0) == s
+            return
+    pytest.skip('no served offer in the sampled states')

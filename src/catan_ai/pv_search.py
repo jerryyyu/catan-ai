@@ -233,3 +233,44 @@ class PVSearchV2BPlanner(PVSearchPlanner):
         if pick is None or not pick:
             return served if served['type'] in ('end_turn', 'offer_trade') else {'type': 'end_turn'}
         return pick[0]
+
+
+class PVSearchV2BFixPlanner(PVSearchV2BPlanner):
+    """``planner_pv2_b`` with the red-team integration fix (board #1, red team #2, step 1).
+
+    The parked arm dropped served trade offers (the served ``choose`` had already marked
+    the turn as offered) and ended turns with a bare ``end_turn`` that skipped the served
+    end-of-turn logic. Here: a served offer is kept; PV only replaces served builds, bank
+    trades, purchases and ends of turn; when PV chooses to end the turn, the served
+    end-of-turn path runs (development-card fallback when a card is playable, then the
+    offer step). Same value net, candidates and features.
+    """
+
+    def choose(self, view, seat):
+        before = self.last_offer_turn
+        served = AcceptanceOfferPlanner.choose(self, view, seat)
+        if (view.phase != 'actions' or served['type'] in ('offer_trade', 'play_development')
+                or served['type'] not in REPLACEABLE or not any(a['type'] == 'end_turn' for a in view.actions)):
+            return served
+        scored = []
+        for seq in candidate_sequences(self, view, seat, self.K):
+            encoded = afterstate_encoding(self, view, seat, seq)
+            if encoded is not None:
+                scored.append((seq, *encoded))
+        logits = self._logits([x for _, x, won in scored if not won]) if scored else []
+        best, pick, it = -math.inf, None, iter(logits)
+        for seq, _, won in scored:
+            value = math.inf if won else next(it)
+            if value > best:
+                best, pick = value, seq
+        self.last_offer_turn = before
+        if pick is None:
+            return served
+        if not pick:  # end the turn: the served end-of-turn path, not a bare end_turn
+            if served['type'] == 'end_turn':
+                return served
+            legal = view.legal_actions(seat)
+            action = (self._fallback(view, seat) if any(a['type'] == 'play_development' for a in legal)
+                      else {'type': 'end_turn'})
+            return self._end_of_turn_offer(view, seat, action)
+        return pick[0]
