@@ -4,8 +4,9 @@ Schema 2 (2026-11-04, Jerry: train a shengji-style policy/value model): each
 decision stores the pre-move observation (``obs``), and each candidate an action
 encoding (``act``), its post-move observation (``after``) and its playout win rate,
 so a shared-trunk network can learn a policy head (which candidate) and a value
-head (win chance). ``value_rows`` add every turn-start position of the game
-labelled with the final winner, for the value head.
+head (win chance). ``value_rows`` add every turn-start position (and, when
+``value_points`` includes ``end_turn``, every end-of-turn position) labelled with
+the final winner, for the value head; ``point`` names which.
 
 
 Data generation for the move-ranking lane (board row 4 follow-up, Jerry
@@ -157,11 +158,18 @@ def run_game(args):
         first = game.phase == 'actions' and (game.turn, seat) not in seen
         if first:
             seen.add((game.turn, seat))
-        if game.phase == 'roll' and (game.turn, seat, 'roll') not in seen:
+        points = config.get('value_points', ['roll'])
+        if 'roll' in points and game.phase == 'roll' and (game.turn, seat, 'roll') not in seen:
             seen.add((game.turn, seat, 'roll'))
-            value_rows.append({'turn': game.turn, 'seat': seat, **features(game, seat, deepcopy(bots[seat]))})
+            value_rows.append({'turn': game.turn, 'seat': seat, 'point': 'roll',
+                               **features(game, seat, deepcopy(bots[seat]))})
         probe = deepcopy(bots[seat])
         action = bots[seat].choose(view, seat)
+        if ('end_turn' in points and game.phase == 'actions' and action['type'] == 'end_turn'
+                and (game.turn, seat, 'end') not in seen):
+            seen.add((game.turn, seat, 'end'))
+            value_rows.append({'turn': game.turn, 'seat': seat, 'point': 'end_turn',
+                               **features(game, seat, deepcopy(probe))})
         if first and action['type'] in KINDS and pick.random() < config['decision_rate']:
             pre = features(game, seat, deepcopy(probe))
             rows = []
