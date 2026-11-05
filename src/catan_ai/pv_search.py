@@ -1,0 +1,166 @@
+"""PV search v2: the served search proposes, a learned afterstate value decides.
+
+Shared by the data generator (``scripts/pv2_data.py``) and the bot, so training
+and play see the same candidates and the same features (model audit fix 1/4):
+
+- ``candidate_sequences``: "end the turn now" plus, for each first move the served
+  turn search tried, its best continuation by the served score; the ``k`` best by
+  that score are kept. Sequences are built on the public projection exactly as
+  the served search does.
+- ``afterstate_encoding``: replays a sequence on the card-counted world built from
+  the chooser's view and encodes the resulting position with encoder v2. A
+  development purchase is averaged over the standard deck prior (14/5/2/2/2), so
+  it cannot reveal the hidden deck.
+
+``PVSearchPlanner`` (``planner_pv2``) plays the candidate whose afterstate the
+frozen value MLP rates highest; every other decision is served. It is registered
+only once a model passes its predeclared within-decision gate.
+"""
+from copy import deepcopy
+import hashlib
+import json
+import math
+from pathlib import Path
+
+from .encoding import encode
+from .observation import Observation
+from .tactical import public_projection
+from .unified_planner import AcceptanceOfferPlanner
+
+DECK_PRIOR = (('knight', 14), ('victory_point', 5), ('road_building', 2), ('year_of_plenty', 2), ('monopoly', 2))
+REPLACEABLE = ('build_city', 'build_settlement', 'build_road', 'bank_trade', 'buy_development', 'end_turn', 'offer_trade')
+
+
+def served_sequences(planner, view, seat):
+    """The served turn search, keeping the best-scoring sequence for each first move."""
+    legal = view.legal_actions(seat)
+    root = public_projection(view)
+    if planner.buy_after_root and sum(e['action']['type'] == 'buy_development' for e in view.events) < 25:
+        root.deck = ['unknown']
+    best = {}
+    frontier = [(root, [], legal)]
+    nodes = 0
+    for depth in range(3):
+        successors = []
+        for game, path, actions in frontier:
+            for action in actions:
+                kind = action['type']
+                build = kind in {'build_city', 'build_settlement', 'build_road'}
+                acquire = kind == 'bank_trade' or kind == 'play_development' and action['card'] in {'year_of_plenty', 'road_building'}
+                buy = kind == 'buy_development'
+                if not (build or buy and (depth == 0 or planner.buy_after_root) or depth == 0 and acquire):
+                    continue
+                if nodes >= 128:
+                    break
+                nodes += 1
+                child = deepcopy(game, {id(game.board): game.board})
+                if buy:
+                    child.players[seat].pay('development')
+                else:
+                    child.apply(seat, action)
+                score = planner._leaf(child, seat) + (planner.purchase_value if buy else 0) - .01 * (depth + 1)
+                seq = path + [action]
+                key = json.dumps(seq[0], sort_keys=True)
+                if key not in best or score > best[key][0]:
+                    best[key] = (score, seq)
+                if not buy and child.winner is None:
+                    successors.append((score, child, seq))
+        successors.sort(key=lambda row: row[0], reverse=True)
+        frontier = [(game, seq, game.legal_actions(seat)) for _, game, seq in successors[:8]]
+    return sorted(best.values(), key=lambda t: -t[0])
+
+
+def candidate_sequences(planner, view, seat, k):
+    """[] (end the turn now) followed by the ``k`` best served sequences by first move."""
+    return [[]] + [seq for _, seq in served_sequences(planner, view, seat)[:k]]
+
+
+def _replay(world, seat, seq):
+    for action in seq:
+        if action['type'] == 'buy_development':
+            # The card-counted world keeps no deck (its contents are hidden), so the
+            # engine's legality check would refuse every purchase; check what the
+            # chooser can know: phase and affordability.
+            if world.phase != 'actions' or not world.players[seat].can_afford('development'):
+                return None
+            world.players[seat].pay('development')
+            return world, True  # the purchase ends the sequence (served search never continues past it)
+        if action not in world.legal_actions(seat):
+            return None
+        world.apply(seat, action)
+    return world, False
+
+
+def afterstate_encoding(planner, view, seat, seq):
+    """Encoder-v2 features of the position after ``seq``, from the chooser's information only.
+
+    Returns ``None`` if the sequence is not legal on the card-counted world, and
+    ``(features, won)`` otherwise, where ``won`` marks an immediate win.
+    """
+    replayed = _replay(planner._world(view), seat, seq)
+    if replayed is None:
+        return None
+    world, bought = replayed
+    if world.winner == seat:
+        return None, True
+    if not bought:
+        return encode(Observation.from_game(world, seat, include_events=False), world), False
+    total = sum(n for _, n in DECK_PRIOR)
+    mixed = None
+    for card, n in DECK_PRIOR:
+        variant = deepcopy(world, {id(world.board): world.board})
+        variant.players[seat].development.append((card, view.turn))
+        x = encode(Observation.from_game(variant, seat, include_events=False), variant)
+        mixed = [n / total * v for v in x] if mixed is None else [m + n / total * v for m, v in zip(mixed, x)]
+    return mixed, False
+
+
+def load_value_mlp(path, sha256):
+    raw = Path(path).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != sha256:
+        raise ValueError('value MLP checkpoint does not match its frozen hash')
+    data = json.loads(raw)
+    layers = []
+    names = sorted({k.split('.')[0] for k in data['state'] if k.endswith('.weight')}, key=int)
+    for n in names:
+        layers.append((data['state'][f'{n}.weight'], data['state'][f'{n}.bias']))
+    return {'mean': data['mean'], 'sd': data['sd'], 'layers': layers}
+
+
+def mlp_logit(model, x):
+    h = [(v - m) / s for v, m, s in zip(x, model['mean'], model['sd'])]
+    for i, (w, b) in enumerate(model['layers']):
+        h = [bias + sum(wi * hi for wi, hi in zip(row, h)) for row, bias in zip(w, b)]
+        if i < len(model['layers']) - 1:
+            h = [v if v > 0 else 0. for v in h]
+    return h[0]
+
+
+class PVSearchPlanner(AcceptanceOfferPlanner):
+    """``planner_offer_accept`` whose own-turn build decisions are made by the afterstate value."""
+
+    K = 4
+    CHECKPOINT = None
+    CHECKPOINT_SHA256 = None
+
+    def __init__(self, rng=None):
+        super().__init__(rng)
+        self.value_mlp = load_value_mlp(self.CHECKPOINT, self.CHECKPOINT_SHA256)
+
+    def choose(self, view, seat):
+        served = super().choose(view, seat)
+        if (view.phase != 'actions' or served['type'] not in REPLACEABLE
+                or not any(a['type'] == 'end_turn' for a in view.actions)):
+            return served
+        best, pick = -math.inf, None
+        for seq in candidate_sequences(self, view, seat, self.K):
+            encoded = afterstate_encoding(self, view, seat, seq)
+            if encoded is None:
+                continue
+            x, won = encoded
+            value = math.inf if won else mlp_logit(self.value_mlp, x)
+            if value > best:
+                best, pick = value, seq
+        if pick is None or not pick:
+            return served if served['type'] in ('end_turn', 'offer_trade') else {'type': 'end_turn'}
+        return pick[0]
