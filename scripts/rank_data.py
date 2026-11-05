@@ -244,6 +244,29 @@ def run_game(args):
     return 'done'
 
 
+def completed_elsewhere(root, config):
+    """Seeds already produced by an earlier run of the same declaration (``complete_from``).
+
+    Used to finish a paused run with a faster, output-identical producer in a new root:
+    each earlier record must parse and carry the earlier manifest's identity, which must
+    equal the declared one, so the union of the two roots covers each seed exactly once.
+    """
+    spec = config.get('complete_from')
+    if not spec:
+        return set()
+    prior = Path(root).parent / spec['root'] if not Path(spec['root']).is_absolute() else Path(spec['root'])
+    manifest = json.loads((prior / 'manifest.json').read_text())
+    if manifest['identity_sha256'] != spec['identity_sha256']:
+        raise ValueError('complete_from root does not have the declared identity')
+    done = set()
+    for path in (prior / 'games').glob('*.json'):
+        record = json.loads(path.read_text())
+        if record.get('identity') != spec['identity_sha256'] or f"{record.get('seed')}.json" != path.name:
+            raise ValueError(f'{path} does not belong to the declared prior run')
+        done.add(record['seed'])
+    return done
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=Path, required=True)
@@ -255,8 +278,9 @@ def main():
     directory = args.root / 'games'
     directory.mkdir(parents=True, exist_ok=True)
     lo, n = config['seeds']
+    done = completed_elsewhere(args.root, config)
     jobs = [(seed, config, str(directory / f'{seed}.json'), identity['identity_sha256'])
-            for seed in range(lo, lo + n)]
+            for seed in range(lo, lo + n) if seed not in done]
     started, done = time.monotonic(), 0
     with Pool(args.workers) as pool:
         for _status in pool.imap_unordered(run_game, jobs):

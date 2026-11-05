@@ -56,3 +56,17 @@ def test_buy_candidate_features_ignore_hidden_deck_order():
     buy = {'type': 'buy_development'}
     assert buy in a.legal_actions(0)
     assert rank['post_features'](a, 0, bot, buy) == rank['post_features'](b, 0, bot, buy)
+
+
+def test_complete_from_skips_prior_seeds_and_rejects_foreign_roots(tmp_path):
+    prior = tmp_path / 'first'
+    (prior / 'games').mkdir(parents=True)
+    (prior / 'manifest.json').write_text(json.dumps({'identity_sha256': 'aaa'}))
+    (prior / 'games' / '10.json').write_text(json.dumps({'seed': 10, 'identity': 'aaa'}))
+    config = {'complete_from': {'root': 'first', 'identity_sha256': 'aaa'}}
+    assert rank['completed_elsewhere'](tmp_path / 'second', config) == {10}
+    with pytest.raises(ValueError):
+        rank['completed_elsewhere'](tmp_path / 'second', {'complete_from': {'root': 'first', 'identity_sha256': 'bbb'}})
+    (prior / 'games' / '11.json').write_text(json.dumps({'seed': 12, 'identity': 'aaa'}))
+    with pytest.raises(ValueError):
+        rank['completed_elsewhere'](tmp_path / 'second', config)
