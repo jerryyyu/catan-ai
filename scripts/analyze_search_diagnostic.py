@@ -82,7 +82,10 @@ def analyze(decisions, rng, resamples=1000):
     for k in ('seq', 'first', 'all', 'pv'):
         draws = sorted(mean([r for gid in (rng.choice(ids) for _ in ids) for r in by_game[gid]], k) for _ in range(resamples))
         summary[k] = {'mean': mean(rows, k), 'ci95': [draws[int(.025 * resamples)], draws[int(.975 * resamples)]]}
-    reliability = st.correlation(rel_a, rel_b) if len(rel_a) > 2 else None
+    try:
+        reliability = st.correlation(rel_a, rel_b) if len(rel_a) > 2 else None
+    except st.StatisticsError:  # constant inputs (tiny samples)
+        reliability = None
     return {'decisions': len(rows), 'games': len(ids), 'headroom_vs_served': summary,
             'split_half_reliability': reliability, 'best_first_move_types': dict(types)}
 
