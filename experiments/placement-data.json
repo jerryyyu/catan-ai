@@ -1,0 +1,11 @@
+{
+  "name": "placement-data",
+  "stage": "training data (targeted; Jerry 2026-11-07 'Yes and allow' lifts the data-generation pause for this run only)",
+  "styles": ["planner_offer_accept", "tactical", "builder", "expander"],
+  "top_k": 12,
+  "random_k": 4,
+  "playouts": 8,
+  "max_turns": 1000,
+  "split": {"train": [2896000, 450], "test": [2896450, 50]},
+  "note": "Labels for a fast placement evaluator (tile transformer from arch-bakeoff-v1, with the opponents' style posterior as input). Every setup settlement decision of every seat (8 per game) in 500 games with per-game random style lineups; candidates = served top-12 + 4 random other legal vertices; 8 playouts each by the game's true lineup (CRN). About 1,000 playouts per game; about 4 h on ultra after placement-infer-screen-v1. Test split = last 50 games, never used for fitting or model selection. Fresh seeds 2896000-2896499. Its model will get its own predeclared offline gate (playout-rate ranking on the test split vs the served ranking and vs placement search) before any game screen."
+}
