@@ -1,0 +1,24 @@
+{
+  "name": "placement-search-screen",
+  "stage": "dev",
+  "candidate": "planner_placement_search",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 64,
+  "max_turns": 1000,
+  "panels": [
+    {"name": "tactical", "seed": 2870000, "opponents": ["tactical", "tactical", "tactical"]},
+    {"name": "self", "seed": 2871000, "opponents": ["planner_offer_accept", "planner_offer_accept", "planner_offer_accept"]}
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-07 before any game (Jerry: 'Yes' to building and running the placement-search bot after phase-diagnostic-v1 found opening-placement headroom +.105 [+.035,+.180] per decision vs Tactical, +.019 in self-play). Candidate = served bot except at its two setup settlements: served top-12 vertices x 24 playouts each with the served bot in all seats (common random numbers; deck order and dice sampled; opponents' identities not used), most wins placed. Alternative +.10 per table (both placements, imperfect search); sigma .30 above the largest observed .264 (screen_power over pv2-b-fix screens). scripts/screen_power.py: 44 clusters/panel for 2 panels at sigma .263; 64 used. Gates: standard +.05 paired lift per panel, zero truncations, p95 decision <= 2 s. The per-step and per-turn latency maxima are deliberately not gated: this is an offline 'expert' (Jerry: 'do 10s as an expert to see headroom before making it faster'); each placement takes minutes. Claims are strength only; no latency claim. Expected reading: Tactical is where the diagnostic found headroom; self-play is expected near the +.05 bar or below. PASS = both panels (evaluator rule). Fresh seeds 2870000 (tactical), 2871000 (self). Runs on ultra, process-cap 4 x 7 playout workers."
+  }
+}

@@ -171,6 +171,9 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_pv2_b':
         from .pv_search import PVSearchV2BPlanner
         return PVSearchV2BPlanner(rng)
+    if name == 'planner_placement_search':
+        from .placement_search import PlacementSearchPlanner
+        return PlacementSearchPlanner(rng)
     if name == 'planner_pv2_b_fix':
         from .pv_search import PVSearchV2BFixPlanner
         return PVSearchV2BFixPlanner(rng)
