@@ -1,5 +1,5 @@
 """Approximate public-history resource estimates for Monopoly selection."""
-from .engine import Resource
+from .engine import FrozenDict, Resource
 from .planner import ProductionRobberPlanner, WEIGHTS
 
 
@@ -37,11 +37,15 @@ def resource_estimates(events):
     event is the identical object, in order (``Game.observed_view_events`` returns
     read-only shared events) — the fold resumes from the stored state instead of
     restarting; the arithmetic and its order are unchanged. Stored entries hold the
-    event objects themselves, so identities cannot be reused.
+    event objects themselves, so identities cannot be reused. Only trusted histories
+    take part — every event a recursively read-only ``FrozenDict`` from the engine —
+    because identity proves unchanged contents only for immutable events; plain
+    (copied, unpickled, hand-built) events always fold from scratch.
     """
     events = list(events)
     start, hands = 0, [{r: 0.0 for r in _RESOURCES} for _ in range(4)]
-    if events:
+    trusted = bool(events) and all(type(e) is FrozenDict for e in events)
+    if trusted:
         entry = _FOLDS.get(id(events[0]))
         if entry is not None:
             seen, state = entry
@@ -50,7 +54,7 @@ def resource_estimates(events):
                 start, hands = len(seen), [dict(h) for h in state]
     for event in events[start:]:
         _fold(hands, event)
-    if events:
+    if trusted:
         if len(_FOLDS) > 64:
             _FOLDS.clear()
         _FOLDS[id(events[0])] = (tuple(events), [dict(h) for h in hands])
