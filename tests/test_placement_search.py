@@ -53,3 +53,16 @@ def test_non_setup_decisions_are_served():
     s = game.current
     a, b = make_policy('planner_placement_search', 2), make_policy('planner_offer_accept', 2)
     assert a.choose(Observation.for_policy(game, s, a), s) == b.choose(Observation.for_policy(game, s, b), s)
+
+
+def test_mixed_pool_is_deterministic_and_draws_styles():
+    from catan_ai import placement_search as ps
+    game, view, s = next(_setup_views(5))
+    one, two = make_policy('planner_placement_mix', 2), make_policy('planner_placement_mix', 3)
+    for p in (one, two):
+        p.candidates, p.playouts, p.max_turns = 2, 3, 40
+    one.workers, two.workers = 1, 2
+    assert one.placement_scores(view, s) == two.placement_scores(view, s)
+    import random
+    drawn = {random.Random(k * 7 + 1).choice(ps.PlacementSearchMixPlanner.pool) for k in range(50)}
+    assert drawn == set(ps.PlacementSearchMixPlanner.pool)

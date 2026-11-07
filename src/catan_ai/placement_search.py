@@ -38,15 +38,22 @@ def setup_world(view):
 
 
 def playout(args):
-    """One full game from ``world`` after ``action``; 1 if ``seat`` wins."""
-    world, seat, action, stream, max_turns = args
+    """One full game from ``world`` after ``action``; 1 if ``seat`` wins.
+
+    ``pool`` (optional) lists opponent styles; each other seat draws one per playout
+    from the stream, so every candidate meets the same opponents in playout ``r``.
+    """
+    world, seat, action, stream, max_turns = args[:5]
+    pool = args[5] if len(args) > 5 else None
     from .bots import make_policy
     from .observation import Observation
     game = deepcopy(world)
     game.rng = random.Random(stream)
     game.deck = list(DECK)
     game.rng.shuffle(game.deck)
-    bots = [make_policy('planner_offer_accept', stream * 4 + s) for s in range(4)]
+    styles = random.Random(stream * 7 + 1)
+    names = [('planner_offer_accept' if s == seat or not pool else styles.choice(pool)) for s in range(4)]
+    bots = [make_policy(names[s], stream * 4 + s) for s in range(4)]
     game.apply(seat, action)
     while game.winner is None and game.turn < max_turns:
         s = game.current
@@ -60,6 +67,7 @@ class PlacementSearchPlanner(AcceptanceOfferPlanner):
     playouts = 24
     workers = 7
     max_turns = 1000
+    pool = None  # None: the served bot in every playout seat
 
     def _served_ranking(self, view, seat):
         root = public_projection(view)
@@ -79,7 +87,8 @@ class PlacementSearchPlanner(AcceptanceOfferPlanner):
         # streams from the public position, so the served RNG is untouched
         key = (view.setup_index, tuple(sorted(a['vertex'] for a in view.actions)), seat)
         base = random.Random(repr(key)).randrange(1 << 40)
-        jobs = [(world, seat, action, base + r, self.max_turns) for action in ranked for r in range(self.playouts)]
+        jobs = [(world, seat, action, base + r, self.max_turns) + ((self.pool,) if self.pool else ())
+                for action in ranked for r in range(self.playouts)]
         if self.workers > 1:
             with ProcessPoolExecutor(self.workers, mp_context=multiprocessing.get_context('spawn')) as pool:
                 bits = list(pool.map(playout, jobs, chunksize=4))
@@ -94,3 +103,10 @@ class PlacementSearchPlanner(AcceptanceOfferPlanner):
         scores = self.placement_scores(view, seat)
         best = max(range(len(scores)), key=lambda i: (scores[i][1], -i))
         return scores[best][0]
+
+
+class PlacementSearchMixPlanner(PlacementSearchPlanner):
+    """Placement search whose playout opponents are a per-playout mix of styles
+    (served, Tactical, Builder, Expander), after ``placement-search-screen-v1`` showed
+    served-only playouts gain against served opponents (+.117) but not Tactical (+.020)."""
+    pool = ('planner_offer_accept', 'tactical', 'builder', 'expander')

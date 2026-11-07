@@ -1,0 +1,49 @@
+{
+  "name": "placement-mix-screen",
+  "stage": "dev",
+  "candidate": "planner_placement_mix",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 80,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2890000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2891000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2892000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-07 before any game (Jerry: 'Yea both' to option A after placement-search-screen-v1 FAIL: +.020 Tactical / +.117 self). Candidate planner_placement_mix = planner_placement_search (served top-12 vertices x 24 playouts at its two setup settlements) except each playout's three opponent seats are each drawn from {served, Tactical, Builder, Expander} by the playout stream (common random numbers across candidates). Standard three tables, +.05 paired lift on every table, 0 truncations, p95 decision <= 2 s; per-step/turn maxima ungated (offline expert; no latency claim). Alternative +.10 per table, sigma .30 (largest observed .317 on v1 Tactical; .207 self); check_design: 78 seeds/panel required for family pass probability .80 with 3 panels; 80 used (.81). Limitation stated in advance: the playout pool contains the Tactical/mixed table styles, so a pass shows robustness across known styles, not to unseen opponents. Fresh seeds 2890000/2891000/2892000. Ultra, process-cap 4 x 7 playout workers."
+  }
+}
