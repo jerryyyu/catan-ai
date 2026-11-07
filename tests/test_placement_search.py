@@ -66,3 +66,36 @@ def test_mixed_pool_is_deterministic_and_draws_styles():
     import random
     drawn = {random.Random(k * 7 + 1).choice(ps.PlacementSearchMixPlanner.pool) for k in range(50)}
     assert drawn == set(ps.PlacementSearchMixPlanner.pool)
+
+
+def test_style_posterior_identifies_known_styles_from_public_setup():
+    import random
+    from catan_ai.placement_search import STYLES, style_posterior
+    hits = total = 0
+    for seed in range(6):
+        rng = random.Random(seed)
+        lineup = ['planner_offer_accept'] + [rng.choice(STYLES) for _ in range(3)]
+        game = Game.new(list('abcd'), seed + 5000)
+        bots = [make_policy(n, seed * 4 + i) for i, n in enumerate(lineup)]
+        while game.phase.startswith('setup'):
+            s = game.current
+            if s == 0 and game.phase == 'setup_settlement' and game.setup_index >= 4:
+                view = Observation.for_policy(game, 0, bots[0])
+                post = style_posterior(view, 0)
+                assert post == style_posterior(view, 0)  # deterministic
+                assert set(post) == {1, 2, 3}
+                for o in (1, 2, 3):
+                    names, w = post[o]
+                    assert abs(sum(w) - 1) < 1e-9
+                    hits += names[w.index(max(w))] == lineup[o]
+                    total += 1
+            game.apply(s, bots[s].choose(Observation.for_policy(game, s, bots[s]), s))
+    assert hits / total >= .7
+
+
+def test_posterior_is_uniform_before_any_opponent_placement():
+    from catan_ai.placement_search import style_posterior
+    game = Game.new(list('abcd'), 4)
+    view = Observation.for_policy(game, 0, make_policy('planner_placement_infer', 1))
+    for names, w in style_posterior(view, 0).values():
+        assert max(w) - min(w) < 1e-12

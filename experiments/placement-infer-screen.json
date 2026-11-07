@@ -1,0 +1,49 @@
+{
+  "name": "placement-infer-screen",
+  "stage": "dev",
+  "candidate": "planner_placement_infer",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 80,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2893000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2894000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2895000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-07 before any game (Jerry: 'Yes and allow' to opponent-style inference after placement-mix-screen-v1 FAIL: +.100 Tactical / +.044 mixed / +.044 self; served-only v1: +.020 / - / +.117). Candidate planner_placement_infer = placement search (served top-12 vertices x 24 playouts at its two setup settlements) whose playout opponents are drawn per seat from a posterior over {served, Tactical, Builder, Expander} inferred from that opponent's observed setup settlements (each replayed on the public setup state; likelihood .9 if the style's bot places the same vertex, else .1 spread over the other legal vertices; uniform prior; uniform before any placement is seen). Offline identifiability check before this screen (40 games, second placement): MAP style correct 106/120. Same tables, gates and power as placement-mix-screen: +.05 paired lift on all three tables, 0 truncations, p95 decision <= 2 s; per-step/turn maxima ungated (offline expert; no latency claim). check_design: 78 seeds/panel for family pass .80 at alternative +.10, sigma .30; 80 used. Limitation stated in advance: the test tables use exactly the styles in the inference set, so a pass shows that matching known opponent styles works; it says nothing about unseen opponents. Fresh seeds 2893000/2894000/2895000. Ultra, process-cap 4 x 7 playout workers."
+  }
+}

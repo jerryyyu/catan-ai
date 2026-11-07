@@ -17,6 +17,7 @@ on the number of workers.
 """
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
+import math
 import multiprocessing
 import random
 
@@ -52,7 +53,10 @@ def playout(args):
     game.deck = list(DECK)
     game.rng.shuffle(game.deck)
     styles = random.Random(stream * 7 + 1)
-    names = [('planner_offer_accept' if s == seat or not pool else styles.choice(pool)) for s in range(4)]
+    if isinstance(pool, dict):  # per-seat posterior: {seat: (styles, weights)}
+        names = ['planner_offer_accept' if s == seat else styles.choices(*pool[s])[0] for s in range(4)]
+    else:
+        names = [('planner_offer_accept' if s == seat or not pool else styles.choice(pool)) for s in range(4)]
     bots = [make_policy(names[s], stream * 4 + s) for s in range(4)]
     game.apply(seat, action)
     while game.winner is None and game.turn < max_turns:
@@ -68,6 +72,9 @@ class PlacementSearchPlanner(AcceptanceOfferPlanner):
     workers = 7
     max_turns = 1000
     pool = None  # None: the served bot in every playout seat
+
+    def _playout_pool(self, view, seat):
+        return self.pool
 
     def _served_ranking(self, view, seat):
         root = public_projection(view)
@@ -87,7 +94,8 @@ class PlacementSearchPlanner(AcceptanceOfferPlanner):
         # streams from the public position, so the served RNG is untouched
         key = (view.setup_index, tuple(sorted(a['vertex'] for a in view.actions)), seat)
         base = random.Random(repr(key)).randrange(1 << 40)
-        jobs = [(world, seat, action, base + r, self.max_turns) + ((self.pool,) if self.pool else ())
+        pool = self._playout_pool(view, seat)
+        jobs = [(world, seat, action, base + r, self.max_turns) + ((pool,) if pool else ())
                 for action in ranked for r in range(self.playouts)]
         if self.workers > 1:
             with ProcessPoolExecutor(self.workers, mp_context=multiprocessing.get_context('spawn')) as pool:
@@ -110,3 +118,49 @@ class PlacementSearchMixPlanner(PlacementSearchPlanner):
     (served, Tactical, Builder, Expander), after ``placement-search-screen-v1`` showed
     served-only playouts gain against served opponents (+.117) but not Tactical (+.020)."""
     pool = ('planner_offer_accept', 'tactical', 'builder', 'expander')
+
+
+STYLES = ('planner_offer_accept', 'tactical', 'builder', 'expander')
+
+
+def style_posterior(view, seat, styles=STYLES, eps=.1):
+    """Per-opponent posterior over ``styles`` from their observed setup settlements.
+
+    Each earlier ``setup_settlement`` event of an opponent is replayed on the public
+    setup state of that moment (``setup_world`` on the event prefix); a style's
+    likelihood is ``1 - eps`` if that style's bot (fixed seed) places the same vertex,
+    else ``eps / (legal - 1)``. Uniform prior. Public information only.
+    """
+    from .bots import make_policy
+    from .observation import Observation
+    bots = {name: make_policy(name, 1) for name in styles}
+    logp = {s: {name: 0. for name in styles} for s in range(4) if s != seat}
+    board = view.board
+    robber = next(i for i, tile in enumerate(board.tiles) if tile.resource == DESERT)
+    game = Game(board, [Player(str(s)) for s in range(4)], random.Random(0), robber_tile=robber, deck=[])
+    for event in view.events:
+        s, action = event['seat'], dict(event['action'])
+        if s != seat and event['phase'] == 'setup_settlement' and game.phase == 'setup_settlement':
+            legal = game.legal_actions(s)
+            for name, bot in bots.items():
+                pick = bot.choose(Observation.for_policy(game, s, bot), s)
+                like = 1 - eps if pick == action else eps / max(1, len(legal) - 1)
+                logp[s][name] += math.log(like)
+        game.apply(s, action)
+    out = {}
+    for s, row in logp.items():
+        top = max(row.values())
+        w = {name: math.exp(v - top) for name, v in row.items()}
+        z = sum(w.values())
+        out[s] = (tuple(styles), tuple(w[name] / z for name in styles))
+    return out
+
+
+class PlacementSearchInferPlanner(PlacementSearchPlanner):
+    """Placement search whose playout opponents are drawn per seat from a posterior over
+    styles inferred from that opponent's observed setup placements (uniform before any
+    are seen), after placement-mix-screen-v1 showed the gain follows the playout
+    opponent model (+.100 Tactical / +.044 mixed / +.044 self)."""
+
+    def _playout_pool(self, view, seat):
+        return style_posterior(view, seat)
