@@ -1,0 +1,29 @@
+{
+  "name": "value-data-100k",
+  "stage": "data-generation",
+  "schema": 2,
+  "policy": "planner_offer_accept",
+  "max_turns": 1000,
+  "seeds": [
+    2650000,
+    100000
+  ],
+  "decision_rate": 0.0,
+  "candidates": 4,
+  "playouts": 0,
+  "value_points": [
+    "roll",
+    "end_turn"
+  ],
+  "split": {
+    "train": [
+      2650000,
+      95000
+    ],
+    "test": [
+      2745000,
+      5000
+    ]
+  },
+  "note": "Predeclared 2026-11-04 before any data (Jerry: scale the value data up further). Same producer and fields as value-data-10k: 100,000 self-play games of the served planner_offer_accept (fresh seeds 2650000-2749999), turn-start and end-of-turn positions with 40 observation-only features, served leaf and shared score, labelled with the final winner; no playouts. Train = first 95,000 games, test = last 5,000; the test split is not read until a training config is committed. Runs on ultra from a frozen snapshot; data stays on ultra (training runs there), receipts copied back to runs/ on the mini."
+}

@@ -1,0 +1,18 @@
+{
+  "name": "rank-data",
+  "stage": "data-generation",
+  "policy": "planner_offer_accept",
+  "max_turns": 1000,
+  "seeds": [2610000, 500],
+  "decision_rate": 0.08,
+  "candidates": 4,
+  "playouts": 16,
+  "split": {"train": [2610000, 400], "test": [2610400, 100]},
+  "gate": {
+    "metric": "mean playout win rate of the picked candidate, ranker pick minus served pick (candidate 0), over test decisions",
+    "uncertainty": "game-clustered bootstrap, 1000 resamples, seed 13",
+    "pass": "95% lower bound > 0 and zero truncated playouts in the test split",
+    "note": "The ranker's model, features and fit are fixed in a separate config committed before the test split is read; this file fixes the data, split and bar."
+  },
+  "note": "Predeclared 2026-11-04 before any data (Jerry: 'run data gen on ultra'). Move-ranking data for the served planner_offer_accept: at sampled first-action decisions of own turns, up to 4 candidate first moves (served choice + best 3 others by the served one-step leaf), each played to the end 16 times from the true state with common random numbers across candidates (own dice stream and reshuffled remaining deck per playout). Features are observation-only. Seeds 2610000-2610499 (fresh); train = first 400 games, test = last 100. A gate pass licenses a predeclared integration screen vs the served bot at the standard +.05 bar. Runs on ultra (Mac Studio) from a frozen snapshot; outputs copied back to runs/ on the mini."
+}

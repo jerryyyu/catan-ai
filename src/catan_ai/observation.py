@@ -59,7 +59,7 @@ class Observation:
                    game.robber_tile, game.rolled, game.setup_index, game.pending_setup_vertex,
                    dict(game.discard_remaining), game.robber_actor, game.longest_road_holder,
                    game.largest_army_holder, game.played_development, game.return_phase,
-                   game.free_roads, tuple(game.observed_events(seat)) if include_events else ())
+                   game.free_roads, game.observed_view_events(seat) if include_events else ())
 
     @classmethod
     def for_policy(cls, game: Game, seat: int, policy) -> 'Observation':
