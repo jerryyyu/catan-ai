@@ -44,8 +44,12 @@ def main():
     games, corpus = load(args.pv2_data, lo, n, manifest['identity_sha256'])
     rows, cm, cp, cn = [], 0, 0, 0
     for g, cands in decisions(games):
-        x = np.asarray([c['x'] for c in cands], dtype=np.float16)
-        p, _ = score(torch, net, arm, x, np.arange(len(cands)), saved['mean'], saved['sd'], device)
+        live = [i for i, c in enumerate(cands) if not c['won_now']]
+        p = {}
+        if live:
+            x = np.asarray([cands[i]['x'] for i in live], dtype=np.float16)
+            out, _ = score(torch, net, arm, x, np.arange(len(live)), saved['mean'], saved['sd'], device)
+            p = dict(zip(live, out))
         scores = [float('inf') if c['won_now'] else float(p[i]) for i, c in enumerate(cands)]
         rate = [c['wins'] / c['playouts'] if c['playouts'] else 1. for c in cands]
         served = next(i for i, c in enumerate(cands) if c['served'])
