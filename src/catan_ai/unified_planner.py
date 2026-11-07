@@ -381,7 +381,10 @@ class SharedScorePlanner(UnifiedPlanner):
     offer_every = 1   # own turns between offers (turn numbers advance once per player turn)
 
     def choose(self, view, seat):
-        action = super().choose(view, seat)
+        return self._end_of_turn_offer(view, seat, super().choose(view, seat))
+
+    def _end_of_turn_offer(self, view, seat, action):
+        """The served offer step: when ``action`` ends the turn, propose the best offer instead."""
         recent = self.last_offer_turn is not None and view.turn - self.last_offer_turn < 4 * self.offer_every
         if (self.offers and view.phase == 'actions' and action.get('type') == 'end_turn'
                 and self.last_offer_turn != view.turn and not (self.offer_every > 1 and recent)):
