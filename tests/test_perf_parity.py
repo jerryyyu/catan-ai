@@ -179,3 +179,24 @@ def test_fold_resumes_only_on_an_identical_prefix():
     resumed = card_planner.resource_estimates(swapped)
     card_planner._FOLDS.clear()
     assert resumed == card_planner.resource_estimates(deepcopy(swapped))
+
+
+def test_fold_never_reuses_mutable_histories():
+    """Codex HOLD on PR28 @3242de4: copied/unpickled histories are mutable, so identity proves nothing."""
+    import pickle
+    from catan_ai import card_planner
+    from catan_ai.engine import Game as G
+    g = G.new(list('abcd'), 8)
+    g.apply(g.current, g.legal_actions(g.current)[0])
+    for copy in (lambda e: deepcopy(e), lambda e: pickle.loads(pickle.dumps(e))):
+        card_planner._FOLDS.clear()
+        events = copy(list(Observation.from_game(g, 0).events))
+        card_planner.resource_estimates(events)
+        assert not card_planner._FOLDS
+        events[0]['counts'][1] = 5
+        cached = card_planner.resource_estimates(events)
+        card_planner._FOLDS.clear()
+        assert cached == card_planner.resource_estimates(events)
+    card_planner._FOLDS.clear()
+    card_planner.resource_estimates(Observation.from_game(g, 0).events)
+    assert card_planner._FOLDS  # the engine's read-only history still resumes
