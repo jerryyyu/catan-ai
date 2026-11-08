@@ -1,0 +1,66 @@
+{
+  "name": "stac-determinism",
+  "purpose": "Measured determinism check for the seeded StacSettlers match patch: the same base seed run twice must give the same setup (board, deck, first player, seats) and the same dice for every roll index k both runs reach, so a candidate and the default bot can be compared on paired luck. Not a strength claim.",
+  "policy": "planner_offer_accept",
+  "seed": 20261108,
+  "stac": {
+    "repo": "https://github.com/ruflab/StacSettlers",
+    "commit": "c9e3b66f69e796b1cdd56a508ec32a6ceed1141d",
+    "patch": {
+      "file": "runs/external/stac-catanai-v2.patch",
+      "sha256": "ebadcfcb42c1dc272d9b2e6f25225e68c25ee877b45f6f72e7c69c91c52aa052"
+    },
+    "seed": 20261108,
+    "no_player_trades": true,
+    "fully_observable": false,
+    "observable_vp": false,
+    "chat_negotiation": false,
+    "force_end_turn_sec": 30,
+    "jvm_heap": "3g"
+  },
+  "agents": {
+    "pomcp_ts_cr": {
+      "source": "Dobre & Lascarides, POMCP with Human Preferences in Settlers of Catan (AIIDE 2018), POMCP-TS-CR; paper setting 10k iterations, 4 threads, C=4 with PUCT, offers limit 3",
+      "flags": [
+        "MCTS_ITERATIONS:10000",
+        "MCTS_THREADS:4",
+        "MCTS_Cp:4.0",
+        "MCTS_TYPED_ROLLOUTS",
+        "MCTS_FACTORED_BELIEF",
+        "MCTS_OFFERS_LIMIT:3",
+        "MCTS_POMCP",
+        "MCTS_LIST_POMS",
+        "MCTS_HUMAN_ACTION_TYPE_PDF_CONDITIONED_SEEDING",
+        "MCTS_PUCT",
+        "MCTS_HUMAN_ACTION_TYPE_PDF_SEEDING_TEMPERATURE:7",
+        "MCTS_HUMAN_ACTION_TYPE_CONDITIONED_DIST_ROLLOUTS",
+        "NO_TRADES"
+      ],
+      "time_cap_ms": 10000
+    },
+    "jsettlers": {
+      "source": "STAC-bundled JSettlers 1.1.16 robot (SOCDefaultRobotFactory, server default parameters: FAST strategy)"
+    }
+  },
+  "blocks": [
+    {
+      "name": "StacDetPomcp",
+      "opponent": "pomcp_ts_cr",
+      "games": 4,
+      "jvm_heap": "8g"
+    },
+    {
+      "name": "StacDetJset",
+      "opponent": "jsettlers",
+      "games": 4
+    }
+  ],
+  "parallel_blocks": 2,
+  "bridge_timeout_ms": 30000,
+  "timeout_sec_per_game": 1200,
+  "pass_bar": {
+    "completed_games": 8,
+    "bridge_errors": 0
+  },
+  "analysis": "Run twice into two new --out dirs; compare with `scripts/stac_match.py --compare A/receipt.json B/receipt.json`. Report games with identical setup, games with identical setup and identical dice for every shared roll index k, games identical end to end, and the first divergence for the rest. POMCP play is not reproducible (4-thread tree parallelism, internal RNG), so end-to-end identity is only expected, if at all, in the JSettlers block; it is measured, not required."
+}
