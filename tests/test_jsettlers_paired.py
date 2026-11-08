@@ -16,7 +16,7 @@ def _game(name, won, board='b1'):
 def _receipt(policy, wins, boards=None):
     boards = boards or ['b%d' % i for i in range(len(wins))]
     return {'jsettlers': {'seed': 7, 'patch_sha256': 'p', 'all_smart': True}, 'config': {'policy': policy, 'seed': 7},
-            'games_requested': len(wins), 'bridge_errors': 0,
+            'games_requested': len(wins), 'games_completed': len(wins), 'truncated': 0, 'bridge_errors': 0,
             'games': [_game('~botsOnly~%d' % i, w, b) for i, (w, b) in enumerate(zip(wins, boards))]}
 
 
@@ -49,3 +49,33 @@ def test_negative_or_zero_effect_fails():
     cand = _receipt('planner_pv2_tiles', [0, 1] * 50)
     ctrl = _receipt('planner_offer_accept', [0, 1] * 50)
     assert not jp.pair(cand, ctrl, alpha=0.0125)['pass']
+
+
+def test_declared_design_and_health_evidence_are_required():
+    """Codex HOLD @705603e: partial, unfinished or evidence-free runs must not confirm a promotion."""
+    win = [1, 1, 0, 1] * 40
+    lose = [0, 1, 0, 0] * 40
+    good = jp.pair(_receipt('planner_pv2_tiles', win), _receipt('planner_offer_accept', lose), alpha=0.0125, expect_games=160)
+    assert good['pass']
+    # equal smaller designs are not the declared gate
+    small = jp.pair(_receipt('planner_pv2_tiles', win[:4]), _receipt('planner_offer_accept', lose[:4]), alpha=0.0125, expect_games=160)
+    assert not small['pass'] and not small['compatible']
+    # one unfinished game in the candidate run
+    cand = _receipt('planner_pv2_tiles', win)
+    cand['games'][5]['finished'] = False
+    assert not jp.pair(cand, _receipt('planner_offer_accept', lose), alpha=0.0125, expect_games=160)['pass']
+    # inconsistent summary counts
+    cand = _receipt('planner_pv2_tiles', win)
+    cand['games_completed'] = 159
+    assert not jp.pair(cand, _receipt('planner_offer_accept', lose), alpha=0.0125, expect_games=160)['pass']
+    # missing health evidence
+    for key in ('bridge_errors', 'truncated', 'games_completed'):
+        cand = _receipt('planner_pv2_tiles', win)
+        del cand[key]
+        r = jp.pair(cand, _receipt('planner_offer_accept', lose), alpha=0.0125, expect_games=160)
+        assert not r['pass'] and any(key in p for p in r['problems'])
+    # nonzero truncation or bridge errors
+    for key in ('truncated', 'bridge_errors'):
+        cand = _receipt('planner_pv2_tiles', win)
+        cand[key] = 1
+        assert not jp.pair(cand, _receipt('planner_offer_accept', lose), alpha=0.0125, expect_games=160)['pass']

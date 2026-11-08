@@ -8,7 +8,7 @@ per-game difference won(candidate) − won(control); the one-sided paired-normal
 given on the command line.
 
 Usage:
-    python scripts/jsettlers_paired.py CANDIDATE/receipt.json CONTROL/receipt.json --alpha 0.0125 --out OUT.json
+    python scripts/jsettlers_paired.py CANDIDATE/receipt.json CONTROL/receipt.json --alpha 0.0125 --expect-games 512 --out OUT.json
 """
 import argparse
 import json
@@ -33,9 +33,34 @@ def setup_identity(g: dict) -> tuple:
     return tuple(json.dumps(g.get(k), sort_keys=True) for k in SETUP_PAIR_KEYS)
 
 
-def pair(cand: dict, ctrl: dict, alpha: float, max_excluded: float = 0.05) -> dict:
+def health_problems(r: dict, name: str, expect_games: int | None) -> list[str]:
+    """Completed-coverage evidence a receipt must carry before it can support a confirmatory verdict."""
+    problems = []
+    games = r.get('games') or []
+    requested = r.get('games_requested')
+    if expect_games is not None and requested != expect_games:
+        problems.append(f'{name}: games_requested {requested!r} != declared {expect_games}')
+    for key in ('games_completed', 'truncated', 'bridge_errors'):
+        if not isinstance(r.get(key), int):
+            problems.append(f'{name}: missing {key} evidence')
+    if isinstance(r.get('games_completed'), int) and r.get('games_completed') != requested:
+        problems.append(f'{name}: games_completed {r.get("games_completed")} != games_requested {requested}')
+    if r.get('truncated') not in (0, None) or (isinstance(r.get('truncated'), int) and r['truncated'] != 0):
+        problems.append(f'{name}: truncated {r.get("truncated")}')
+    if isinstance(r.get('bridge_errors'), int) and r['bridge_errors'] != 0:
+        problems.append(f'{name}: bridge_errors {r["bridge_errors"]}')
+    if len(games) != requested:
+        problems.append(f'{name}: {len(games)} game records != games_requested {requested}')
+    unfinished = [g.get('game') for g in games if not g.get('finished') or g.get('won') is None]
+    if unfinished:
+        problems.append(f'{name}: {len(unfinished)} unfinished games, e.g. {unfinished[:3]}')
+    return problems
+
+
+def pair(cand: dict, ctrl: dict, alpha: float, max_excluded: float = 0.05, expect_games: int | None = None) -> dict:
     problems = [p for p in smoke.receipt_problems(cand, ctrl)
                 if not any(p.startswith(prefix) for prefix in POLICY_FREE_PROBLEMS)]
+    problems += health_problems(cand, 'candidate', expect_games) + health_problems(ctrl, 'control', expect_games)
     if (cand.get('config') or {}).get('policy') == (ctrl.get('config') or {}).get('policy'):
         problems.append('candidate and control use the same policy')
     games_c = {g['game']: g for g in cand.get('games') or [] if g.get('game')}
@@ -69,9 +94,9 @@ def pair(cand: dict, ctrl: dict, alpha: float, max_excluded: float = 0.05) -> di
         result.update(mean_diff=mean, sd=sd, se=se, lcb=mean - normal_quantile(1 - alpha) * se,
                       ci95=[mean - 1.96 * se, mean + 1.96 * se])
     too_many_excluded = n_total == 0 or len(excluded) > max_excluded * n_total
+    result['expect_games'] = expect_games
     result['pass'] = bool(result['compatible'] and not too_many_excluded and len(diffs) >= 2
-                          and result['mean_diff'] >= 0 and result['lcb'] > 0
-                          and cand.get('bridge_errors', 0) == 0 and ctrl.get('bridge_errors', 0) == 0)
+                          and result['mean_diff'] >= 0 and result['lcb'] > 0)
     if too_many_excluded:
         result['fail_reason'] = f'more than {max_excluded:.0%} of games excluded'
     return result
@@ -83,10 +108,12 @@ def main():
     parser.add_argument('control', type=Path)
     parser.add_argument('--alpha', type=float, required=True)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--expect-games', type=int, required=True,
+                        help='the declared game count of each run (512 for experiments/tiles-heldout.json)')
     args = parser.parse_args()
     cand = json.loads(args.candidate.read_text())
     ctrl = json.loads(args.control.read_text())
-    result = pair(cand, ctrl, args.alpha)
+    result = pair(cand, ctrl, args.alpha, expect_games=args.expect_games)
     result['candidate_receipt'] = str(args.candidate)
     result['control_receipt'] = str(args.control)
     with args.out.open('x') as stream:
