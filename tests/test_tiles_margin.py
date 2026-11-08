@@ -108,7 +108,9 @@ def test_declared_constants_are_read_from_the_declaration():
     tm.check_configs(cfg, base)
     assert tm.margin_constants(cfg) == (.5, 1.)
     assert tm.gate_constants(cfg) == {'reference_auc': .7859, 'min_diff': 0., 'lcb_gt': -.002,
-                                      'resamples': 1000, 'seed': 29, 'xeval_min': .0062}
+                                      'resamples': 1000, 'seed': 29, 'xeval_data': 'runs/pv2-test-v2',
+                                      'xeval_data_config': 'experiments/pv2-test-v2-data.json',
+                                      'xeval_rule': 'candidate >= reference'}
 
 
 def test_margin_targets_use_the_seat_one_hot_and_exclude_mismatches():
@@ -238,7 +240,8 @@ ELIGIBLE = {'pick_minus_served': .01, 'pick_minus_served_lcb95': .001, 'eligible
 
 @pytest.mark.parametrize('change, reason', [
     ({}, None),
-    ({'pick_minus_served': .006}, 'declared bar'),
+    ({'pick_minus_served': .0049}, "not >= the reference's"),
+    ({'pick_minus_served': None}, "not >= the reference's"),
     ({'eligible_for_next_gate': False, 'ineligible_reason': 'pick_minus_served_lcb95 <= 0',
       'pick_minus_served_lcb95': -.1}, 'eligibility not true'),
     ({'truncation': {'rollout_truncations': None, 'candidates_without_truncation_record': 9,
@@ -249,12 +252,28 @@ ELIGIBLE = {'pick_minus_served': .01, 'pick_minus_served_lcb95': .001, 'eligible
     ({'pick_minus_served_lcb95': -.1}, 'lcb95'),
     ({'eligible_for_next_gate': None}, 'eligibility not true'),
 ])
-def test_xeval_needs_the_bar_and_cross_eval_eligibility(change, reason):
+def test_xeval_needs_reference_parity_and_cross_eval_eligibility(change, reason):
     _, _, _, tm = _modules()
-    failures = tm.xeval_check({**ELIGIBLE, **change}, .0062)
+    reference = {'pick_minus_served': .005}  # the reference's own eligibility is reported, not required
+    failures = tm.xeval_check({**ELIGIBLE, **change}, reference)
     assert (failures == []) if reason is None else any(reason in f for f in failures)
-    for key in ('eligible_for_next_gate', 'truncation', 'pick_minus_served_lcb95'):  # missing fails closed
-        assert tm.xeval_check({k: v for k, v in ELIGIBLE.items() if k != key}, .0062)
+    assert tm.xeval_check({**ELIGIBLE, 'pick_minus_served': .005}, reference) == []  # equal passes
+    assert tm.xeval_check(ELIGIBLE, {})  # missing reference estimate fails closed
+    for key in ('eligible_for_next_gate', 'truncation', 'pick_minus_served_lcb95', 'pick_minus_served'):
+        assert tm.xeval_check({k: v for k, v in ELIGIBLE.items() if k != key}, reference)
+
+
+def make_pv2_root(tmp_path, identity='pv2-id'):
+    """A minimal pv2 test root under experiments/pv2-test-v2-data.json (records without decisions)."""
+    dcfg = json.loads((ROOT / 'experiments' / 'pv2-test-v2-data.json').read_text())
+    root = tmp_path / 'pv2-test-v2'
+    (root / 'games').mkdir(parents=True)
+    (root / 'manifest.json').write_text(json.dumps({'config': dcfg, 'identity_sha256': identity}))
+    lo, n = dcfg['split']['test']
+    for seed in range(lo, lo + n):
+        (root / 'games' / f'{seed}.json').write_text(json.dumps(
+            {'seed': seed, 'identity': identity, 'schema': 'pv2', 'decisions': []}))
+    return root
 
 
 def test_synthetic_train_win_xeval_binding_and_gate_end_to_end(tmp_path):
@@ -281,25 +300,54 @@ def test_synthetic_train_win_xeval_binding_and_gate_end_to_end(tmp_path):
     assert saved['params'] == trained['params'] - (ab.TILES_D + 1)
     # the gate binds an xeval result to this checkpoint's win-head file
     assert saved['derived_from']['final_points_records_sha256'] == trained['final_points']['records_sha256']
-    xeval = {'model_sha256': win['win_sha256'], **ELIGIBLE}
+    pv2 = make_pv2_root(tmp_path)
+    corpus = tm.pv2_corpus(pv2, ROOT / 'experiments' / 'pv2-test-v2-data.json')
+    xeval = {'model_sha256': win['win_sha256'], 'test_corpus_sha256': corpus, 'test_decisions': 40, **ELIGIBLE}
+    reference = {'model_sha256': hashlib.sha256((ref_out / 'tiles.pt').read_bytes()).hexdigest(),
+                 'test_corpus_sha256': corpus, 'test_decisions': 40, **ELIGIBLE, 'pick_minus_served': .008}
     (tmp_path / 'xeval.json').write_text(json.dumps(xeval))
-    gated = tm.main(['gate', *common, '--data', str(data_dir), '--final-points', str(fp),
-                     '--reference', str(ref_out / 'tiles.pt'), '--xeval', str(tmp_path / 'xeval.json')])
+    (tmp_path / 'reference.json').write_text(json.dumps(reference))
+    gate_args = ['gate', *common, '--data', str(data_dir), '--final-points', str(fp),
+                 '--reference', str(ref_out / 'tiles.pt'), '--xeval', str(tmp_path / 'xeval.json'),
+                 '--reference-xeval', str(tmp_path / 'reference.json'), '--pv2-data', str(pv2)]
+    # a gate without the reference receipt (or the pv2 root) is incomplete, never a pass
+    partial = tm.main(gate_args[:-4])
+    assert partial['missing'] == ['reference_xeval', 'pv2_data'] and partial['pass'] is None
+    (out / 'gate.json').unlink()
+    gated = tm.main(gate_args)
     assert gated['smoke'] and gated['missing'] == [] and gated['xeval_pass'] is True
+    assert abs(gated['xeval_minus_reference'] - .002) < 1e-12 and gated['xeval_corpus_sha256'] == corpus
+    assert gated['reference_xeval']['pick_minus_served'] == .008
     assert gated['pass'] == (gated['vs_reference']['pass'] and gated['xeval_pass'])
     for arm in ('tiles_margin', 'tiles_reference'):
         assert {'auc', 'log_loss', 'ece10'} <= set(gated['arms'][arm])
     assert gated['arms']['tiles_margin']['margin_head_test']['rows'] > 0
-    gate_args = ['gate', *common, '--data', str(data_dir), '--final-points', str(fp),
-                 '--reference', str(ref_out / 'tiles.pt'), '--xeval', str(tmp_path / 'xeval.json')]
+    # candidate below the reference on the same decisions fails
+    (tmp_path / 'xeval.json').write_text(json.dumps(dict(xeval, pick_minus_served=.007)))
+    (out / 'gate.json').unlink()
+    below = tm.main(gate_args)
+    assert below['xeval_pass'] is False and below['pass'] is False and len(below['xeval_failures']) == 1
+    # receipts on different data are refused (reference on another corpus; different decision sets)
+    (tmp_path / 'xeval.json').write_text(json.dumps(xeval))
+    (out / 'gate.json').unlink()
+    for bad, match in ((dict(reference, test_corpus_sha256='c' * 64), 'declared pv2 test data'),
+                       (dict(reference, test_decisions=41), 'different decision sets'),
+                       (dict(reference, model_sha256='0' * 64), 'reference xeval was not run')):
+        (tmp_path / 'reference.json').write_text(json.dumps(bad))
+        with pytest.raises(ValueError, match=match):
+            tm.main(gate_args)
+    (tmp_path / 'reference.json').write_text(json.dumps(reference))
+    other = make_pv2_root(tmp_path / 'other', identity='other-id')
+    with pytest.raises(ValueError, match='declared pv2 test data'):
+        tm.main(gate_args[:-1] + [str(other)])
     # an ineligible receipt (unknown truncation, failed LCB) never advances, whatever the point estimate
     (tmp_path / 'xeval.json').write_text(json.dumps(dict(
         xeval, eligible_for_next_gate=False, pick_minus_served_lcb95=-.1,
         ineligible_reason='rollout truncation: 9 candidates do not record rollout truncation (pre-fix producer)',
         truncation={'rollout_truncations': None, 'violation': '9 candidates do not record rollout truncation'})))
-    (out / 'gate.json').unlink()
     blocked = tm.main(gate_args)
     assert blocked['xeval_pass'] is False and blocked['pass'] is False and len(blocked['xeval_failures']) == 3
+    assert not any('reference' in f for f in blocked['xeval_failures'])  # point estimate still >= reference
     (tmp_path / 'xeval.json').write_text(json.dumps(dict(xeval, model_sha256='0' * 64)))
     (out / 'gate.json').unlink()
     with pytest.raises(ValueError, match='xeval was not run'):

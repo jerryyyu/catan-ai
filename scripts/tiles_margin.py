@@ -27,9 +27,24 @@ Commands (``--max-rows`` / ``--epochs`` are smoke overrides, marked ``smoke: tru
     tiles_margin.py win --config ... --out runs/tiles-margin-v1
         # tiles_margin-win.pt: the trunk + win head as a plain arch-bakeoff 'tiles'
         # checkpoint (margin head dropped) for cross_eval_arch.py and export_tiles_npz.py
+    cross_eval_arch.py --model runs/tiles-margin-v1/tiles_margin-win.pt \
+        --pv2-data-config experiments/pv2-test-v2-data.json --pv2-train-config experiments/pv2b-train.json \
+        --pv2-data runs/pv2-test-v2 --output runs/tiles-margin-v1/xeval.json
+    cross_eval_arch.py --model runs/arch-bakeoff-v1/tiles.pt ... --output runs/tiles-margin-v1/xeval-reference.json
     tiles_margin.py gate --config ... --base-config ... --data ... --final-points ... \
         --out runs/tiles-margin-v1 --reference runs/arch-bakeoff-v1/tiles.pt \
-        --xeval runs/tiles-margin-v1/xeval.json
+        --xeval runs/tiles-margin-v1/xeval.json --reference-xeval runs/tiles-margin-v1/xeval-reference.json \
+        --pv2-data runs/pv2-test-v2
+
+Gate (``offline_gate.primary`` as amended 2026-11-08): the AUC part against the reference
+tiles checkpoint, and a same-data cross-eval: both receipts must be on the declared pv2 test
+root (their ``test_corpus_sha256`` equal to the corpus recomputed from ``--pv2-data`` under
+the declared data config; anything else is refused), tiles_margin's pick - served point
+estimate >= the reference's, and tiles_margin's receipt eligible (LCB > 0, rollout
+truncation recorded and zero). Anything missing leaves ``pass`` null (never true).
+
+The binding screen config is experiments/tiles-margin-screen.json (260 seeds per table after
+``check_design``); the prose screen block in experiments/tiles-margin.json is not read.
 """
 import argparse
 import hashlib
@@ -65,12 +80,14 @@ def gate_constants(cfg):
     """The offline gate as written in ``offline_gate.primary``."""
     text = cfg['offline_gate']['primary'].replace('−', '-')
     m = re.search(r'AUC\(arch-bakeoff-v1 tiles, ([\d.]+)\) >= (-?[\d.]+) with the game-clustered bootstrap 95% '
-                  r'LCB > (-?[\d.]+) \(([\d,]+) resamples, seed (\d+)\).*>= the tiles model\'s \+([\d.]+)', text)
+                  r'LCB > (-?[\d.]+) \(([\d,]+) resamples, seed (\d+)\), AND within-decision cross-eval on (\S+) '
+                  r'\((experiments/[\w.-]+\.json):.*pick - served point estimate >= the arch-bakeoff-v1 tiles '
+                  r'model\'s on the same decisions, with tiles_margin\'s cross-eval eligible', text)
     if not m:
         raise ValueError('cannot read the gate constants from offline_gate.primary')
     return {'reference_auc': float(m.group(1)), 'min_diff': float(m.group(2)), 'lcb_gt': float(m.group(3)),
             'resamples': int(m.group(4).replace(',', '')), 'seed': int(m.group(5)),
-            'xeval_min': float(m.group(6))}
+            'xeval_data': m.group(6), 'xeval_data_config': m.group(7), 'xeval_rule': 'candidate >= reference'}
 
 
 def check_configs(cfg, base):
@@ -339,24 +356,49 @@ def win_checkpoint(args, cfg, base):
 
 
 # ------------------------------------------------------------------ gate
-def xeval_check(xeval, bar):
-    """Reasons the cross-eval receipt fails (empty: it passes). Fail closed (Codex HOLD @b426ea8,
-    P1): besides the declared point bar, ``cross_eval_arch``'s own eligibility must be
-    explicitly true, i.e. its 95% LCB > 0 and rollout truncation recorded and zero; a
-    missing field fails."""
+def _number(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v
+
+
+def xeval_check(xeval, reference):
+    """Reasons the candidate's cross-eval fails (empty: it passes). Fail closed (Codex HOLD
+    @b426ea8, P1; amended gate): its pick - served point estimate must be >= the reference's
+    on the same decisions, and ``cross_eval_arch``'s own eligibility must be explicitly true,
+    i.e. its 95% LCB > 0 and rollout truncation recorded and zero; a missing field fails."""
     out = []
-    point = xeval.get('pick_minus_served')
-    if not isinstance(point, (int, float)) or not point >= bar:
-        out.append(f'pick_minus_served {point} < declared bar {bar}')
+    point, ref = xeval.get('pick_minus_served'), reference.get('pick_minus_served')
+    if not _number(point) or not _number(ref) or not point >= ref:
+        out.append(f'pick_minus_served {point} is not >= the reference\'s {ref}')
     if xeval.get('eligible_for_next_gate') is not True:
         out.append(f"cross_eval_arch eligibility not true: {xeval.get('ineligible_reason', 'field missing')}")
     lcb = xeval.get('pick_minus_served_lcb95')
-    if not isinstance(lcb, (int, float)) or not lcb > 0:
+    if not _number(lcb) or not lcb > 0:
         out.append(f'pick_minus_served_lcb95 {lcb} is not > 0')
     trunc = xeval.get('truncation') or {}
     if trunc.get('violation') is not None or trunc.get('rollout_truncations') != 0:
         out.append(f"rollout truncation not recorded as zero: {trunc.get('violation', 'truncation missing')}")
     return out
+
+
+def same_data(xeval, reference, corpus):
+    """Refuse receipts that are not both on the declared pv2 test corpus."""
+    for name, r in (('xeval', xeval), ('reference xeval', reference)):
+        if r.get('test_corpus_sha256') != corpus:
+            raise ValueError(f'{name} was not run on the declared pv2 test data (corpus '
+                             f"{r.get('test_corpus_sha256')} != {corpus})")
+    if xeval.get('test_decisions') != reference.get('test_decisions'):
+        raise ValueError('xeval receipts scored different decision sets')
+
+
+def pv2_corpus(root, config_path):
+    """The corpus SHA-256 ``cross_eval_arch`` reports for the declared pv2 test split of ``root``."""
+    from train_pv2 import load
+    dcfg = json.loads(Path(config_path).read_text())
+    manifest = json.loads((Path(root) / 'manifest.json').read_text())
+    if manifest['config'] != dcfg:
+        raise ValueError('pv2 data root was produced with a different data config')
+    lo, n = dcfg['split']['test']
+    return load(root, lo, n, manifest['identity_sha256'])[1]
 
 
 def gate(args, cfg, base):
@@ -422,24 +464,31 @@ def gate(args, cfg, base):
     diff = result[ARM]['auc'] - result['tiles_reference']['auc']
     lcb, ucb = diffs[int(.025 * len(diffs))], diffs[int(.975 * len(diffs)) - 1]
     auc_pass = bool(diff >= g['min_diff'] and lcb > g['lcb_gt'])
-    xeval, xeval_pass, xeval_failures, missing = None, None, None, []
-    if args.xeval:
+    xeval, ref_xeval, xeval_diff, xeval_pass, xeval_failures, corpus = None, None, None, None, None, None
+    missing = [k for k in ('xeval', 'reference_xeval', 'pv2_data') if getattr(args, k) is None]
+    if not missing:
         xeval = json.loads(Path(args.xeval).read_text())
+        ref_xeval = json.loads(Path(args.reference_xeval).read_text())
+        if ref_xeval.get('model_sha256') != sha256(args.reference):
+            raise ValueError('reference xeval was not run on the --reference checkpoint')
         win_pt = args.out / f'{ARM}-win.pt'
         if not win_pt.exists() or xeval['model_sha256'] != sha256(win_pt):
             raise ValueError('xeval was not run on this checkpoint\'s tiles_margin-win.pt')
         derived = torch.load(win_pt, weights_only=False, map_location='cpu')['derived_from']
         if derived['pt_sha256'] != sha256(path):
             raise ValueError('tiles_margin-win.pt was derived from a different tiles_margin.pt')
-        xeval_failures = xeval_check(xeval, g['xeval_min'])
+        corpus = pv2_corpus(args.pv2_data, ab.ROOT / g['xeval_data_config'])
+        same_data(xeval, ref_xeval, corpus)
+        if _number(xeval.get('pick_minus_served')) and _number(ref_xeval.get('pick_minus_served')):
+            xeval_diff = xeval['pick_minus_served'] - ref_xeval['pick_minus_served']
+        xeval_failures = xeval_check(xeval, ref_xeval)
         xeval_pass = not xeval_failures
-    else:
-        missing.append('xeval')
     passed = None if missing else bool(auc_pass and xeval_pass)
     return {'arms': result, 'vs_reference': {'auc_diff': diff, 'ci95': [lcb, ucb], 'pass': auc_pass},
             'reference_auc_declared': g['reference_auc'],
             'reference_auc_matches_declared': abs(result['tiles_reference']['auc'] - g['reference_auc']) < 5e-5,
-            'xeval': xeval, 'xeval_pass': xeval_pass, 'xeval_failures': xeval_failures, 'missing': missing, 'pass': passed, 'bar': g,
+            'xeval': xeval, 'reference_xeval': ref_xeval, 'xeval_minus_reference': xeval_diff,
+            'xeval_corpus_sha256': corpus, 'xeval_pass': xeval_pass, 'xeval_failures': xeval_failures, 'missing': missing, 'pass': passed, 'bar': g,
             'test_rows': len(y), 'test_games': len(ids), 'test_identity': test['identity'],
             'test_arrays_sha256': test['arrays_sha256'], 'train_identity': train_binding['identity'],
             'train_arrays_sha256': train_binding['arrays_sha256'],
@@ -459,6 +508,8 @@ def main(argv=None):
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--reference', type=Path, help='gate: the arch-bakeoff-v1 tiles.pt')
     parser.add_argument('--xeval', type=Path, help='gate: cross_eval_arch.py output for tiles_margin-win.pt')
+    parser.add_argument('--reference-xeval', type=Path, help='gate: cross_eval_arch.py output for --reference')
+    parser.add_argument('--pv2-data', type=Path, help='gate: the declared pv2 test root both xevals ran on')
     parser.add_argument('--device', default='auto', help='auto (mps if available, else cpu), cpu or mps')
     parser.add_argument('--max-rows', type=int, default=None, help='smoke only')
     parser.add_argument('--epochs', type=int, default=None, help='smoke only')
