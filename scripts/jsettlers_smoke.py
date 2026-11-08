@@ -14,6 +14,14 @@ runs. The server is started in its own process group, which is killed on timeout
 exit so no robot or bridge process outlives the run.
 
     uv run python scripts/jsettlers_smoke.py --config experiments/jsettlers-smoke.json
+
+Seeded runs (opt-in; need the declared seeding patch, see tools/jsettlers/README.md): config
+``jsettlers.patch`` names the patch file and its SHA-256, ``jsettlers.seed`` is the base seed
+(passed as ``jsettlers.catanai.seed``; games run one at a time so game N always gets the same
+name and seed) and ``jsettlers.all_smart`` makes every local robot SMART
+(``jsettlers.catanai.allsmart``). The receipt then records the patch SHA-256, base seed, each
+game's derived seeds, the board/first player/seats/dice the server logged, and which robots sat
+with which strategy. ``--compare A B`` diffs two such receipts game by game.
 """
 from __future__ import annotations
 
@@ -26,7 +34,9 @@ import platform
 import signal
 import subprocess
 import sys
+import re
 import time
+import zlib
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -176,6 +186,158 @@ class RunRefused(SystemExit):
     pass
 
 
+# ------------------------------------------------------------------ seeding (mirrors soc.game.CatanAiSeed)
+
+SEED_ROLES = ('game', 'board', 'seats', 'brain0', 'brain1', 'brain2', 'brain3')
+_M64 = (1 << 64) - 1
+
+
+def _signed64(x: int) -> int:
+    x &= _M64
+    return x - (1 << 64) if x >> 63 else x
+
+
+def derive_seed(base: int, game: str, role: str) -> int:
+    """FNV-1a 64 over ``game + NUL + role`` from (offset basis XOR base), then SplitMix64 (Java long)."""
+    h = (0xcbf29ce484222325 ^ base) & _M64
+    for b in (game + '\0' + role).encode('utf-8'):
+        h = ((h ^ b) * 0x100000001b3) & _M64
+    z = (h + 0x9e3779b97f4a7c15) & _M64
+    z = ((z ^ (z >> 30)) * 0xbf58476d1ce4e5b9) & _M64
+    z = ((z ^ (z >> 27)) * 0x94d049bb133111eb) & _M64
+    return _signed64(z ^ (z >> 31))
+
+
+def game_seeds(base: int, game: str) -> dict[str, int]:
+    return {role: derive_seed(base, game, role) for role in SEED_ROLES}
+
+
+def policy_seed(bridge_seed: int, game: str) -> int:
+    """Our policy's per-game seed (same formula as ``jsbridge.decide.Bridge.policy_for``)."""
+    return (bridge_seed * 1_000_003 + zlib.crc32(game.encode())) % (2 ** 31)
+
+
+def bot_strategy(name: str, all_smart: bool) -> str:
+    """JSettlers' default params by name ("robot " SMART, else FAST); all-smart makes every bot SMART."""
+    return 'SMART' if all_smart or name.startswith('robot ') else 'FAST'
+
+
+_KV = re.compile(r'(\w+)=(\S*)')
+
+
+def server_games(server_log: Path) -> dict[str, dict]:
+    """Per-game facts the server printed: patch lines (catanai-*) and robot join lines."""
+    games: dict[str, dict] = {}
+    robots: dict[str, str] = {}
+    config = None
+    if not server_log.exists():
+        return {}
+
+    def g(name):
+        return games.setdefault(name, {'joined': [], 'dice': []})
+
+    for line in server_log.read_text(errors='replace').splitlines():
+        if line.startswith('catanai-'):
+            tag = line.split(' ', 1)[0]
+            kv = dict(_KV.findall(line))
+            if tag == 'catanai-config':
+                config = kv
+            elif tag == 'catanai-robot':
+                name = line.split('name=', 1)[1].rsplit(' strategy=', 1)
+                robots[name[0]] = name[1]
+            elif tag == 'catanai-seed':
+                g(kv['game'])['game_seed_logged'] = int(kv['game_seed'])
+            elif tag == 'catanai-start':
+                row = g(kv['game'])
+                row['first_player'] = int(kv['first'])
+                row['seats'] = line.split(' seats=', 1)[1].split(' hexes=', 1)[0].split('|')
+                for key in ('hexes', 'numbers', 'ports', 'deck'):
+                    m = re.search(rf' {key}=(\[[^\]]*\]|null)', line)
+                    row[key] = m.group(1) if m else None
+            elif tag == 'catanai-dice':
+                prefix = f"{kv['roll']}:" if 'roll' in kv else ''  # roll index (patch v2 and later)
+                g(kv['game'])['dice'].append(f"{prefix}{kv['turn']}:{kv['pn']}:{kv['dice']}")
+        else:
+            m = re.match(r'\*\*\* (.+) joined the game (\S+) at ', line)
+            if m:
+                g(m.group(2))['joined'].append(m.group(1))
+    for row in games.values():
+        row['robot_strategies'] = {n: robots.get(n) for n in row.get('seats') or row['joined'] if n}
+    return {'_config': config, '_robots': robots, **games}
+
+
+def decision_sequences(log_rows) -> dict[str, list]:
+    seqs: dict[str, list] = {}
+    for row in log_rows:
+        if row.get('type') in ('decision', 'fallback') and row.get('game'):
+            seqs.setdefault(row['game'], []).append(
+                [row['type'], row.get('decision'), row.get('turn_count'), row.get('cmd'), row.get('action'),
+                 row.get('reason')])
+    return seqs
+
+
+def seq_sha(seq) -> str:
+    return hashlib.sha256(json.dumps(seq, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
+
+
+def seeded_game_facts(games: list[dict], log_rows, server_log: Path, jset: dict, bridge_seed: int) -> dict:
+    """Attach per-game seeds, server-logged layout/dice and seated robots to each game record."""
+    srv = server_games(server_log)
+    seqs = decision_sequences(log_rows)
+    base, all_smart = jset.get('seed'), bool(jset.get('all_smart'))
+    mismatched_seeds = []
+    for g in games:
+        name = g['game']
+        s = srv.get(name, {})
+        g['policy_seed'] = policy_seed(bridge_seed, name)
+        if base is not None:
+            g['seeds'] = game_seeds(base, name)
+            logged = s.get('game_seed_logged')
+            g['seed_logged_matches'] = logged == g['seeds']['game']
+            if not g['seed_logged_matches']:
+                mismatched_seeds.append(name)
+        for key in ('first_player', 'hexes', 'numbers', 'ports', 'deck'):
+            if key in s:
+                g['server_' + key] = s[key]
+        if 'hexes' in s:
+            g['server_board_sha'] = seq_sha([s['hexes'], s['numbers'], s['ports']])
+        g['dice'] = s.get('dice', [])
+        g['dice_sha'] = seq_sha(g['dice'])
+        players = g.get('players') or s.get('seats') or []
+        g['robots'] = [{'seat': i, 'name': n, 'strategy_expected': bot_strategy(n, all_smart),
+                        'strategy_logged': (s.get('robot_strategies') or {}).get(n)}
+                       for i, n in enumerate(players) if n]
+        g['joined_server_log'] = s.get('joined', [])
+        g['seats_server_log'] = s.get('seats')
+        g['decision_seq_sha'] = seq_sha(seqs.get(name, []))
+        g['decision_seq_len'] = len(seqs.get(name, []))
+    return {'server_config': srv.get('_config'), 'robot_strategies_logged': srv.get('_robots'),
+            'seed_mismatches': mismatched_seeds}
+
+
+def jsettlers_settings(config: dict) -> dict:
+    """Validate the optional patch / seed / all-smart settings; refuse inconsistent configs."""
+    jset = config.get('jsettlers', {})
+    seed, all_smart, patch = jset.get('seed'), bool(jset.get('all_smart')), jset.get('patch')
+    if (seed is not None or all_smart) and not patch:
+        raise RunRefused('jsettlers.seed / jsettlers.all_smart need the declared seeding patch (jsettlers.patch)')
+    if seed is not None:
+        if not isinstance(seed, int) or isinstance(seed, bool):
+            raise RunRefused(f'jsettlers.seed must be an integer, got {seed!r}')
+        if config['server'].get('botgames_parallel') != 1:
+            raise RunRefused('a seeded run needs server.botgames_parallel = 1 (game N must get the same seed)')
+    return {'seed': seed, 'all_smart': all_smart, 'patch': patch}
+
+
+def server_props(jset: dict) -> list[str]:
+    props = []
+    if jset['seed'] is not None:
+        props.append(f'-Djsettlers.catanai.seed={jset["seed"]}')
+    if jset['all_smart']:
+        props.append('-Djsettlers.catanai.allsmart=Y')
+    return props
+
+
 def write_exclusive(path: Path, data: dict) -> None:
     with open(path, 'x') as f:
         f.write(json.dumps(data, indent=2) + '\n')
@@ -242,12 +404,147 @@ def supervise(cmd, cwd, log_path: Path, timeout: float, env=None) -> tuple[int, 
     return rc, timed_out
 
 
+def _common_prefix(a: list, b: list) -> int:
+    n = 0
+    for x, y in zip(a, b):
+        if x != y:
+            break
+        n += 1
+    return n
+
+
+SETUP_KEYS = ('server_board_sha', 'board_id', 'server_first_player', 'seat', 'players')
+OUTCOME_KEYS = ('dice_sha', 'winner', 'turns', 'decision_seq_sha')
+# Settings two receipts must share before any of their games can be paired.
+COMPAT_KEYS = (('jsettlers', 'seed'), ('jsettlers', 'patch_sha256'), ('jsettlers', 'all_smart'),
+               ('config', 'policy'), ('config', 'seed'), ('games_requested',))
+
+
+def _dig(d, path):
+    for k in path:
+        d = d.get(k) if isinstance(d, dict) else None
+    return d
+
+
+def _missing_facts(g: dict, decisions: list) -> list[str]:
+    """Facts a game must carry before it can count as identical to anything (absent never matches)."""
+    missing = [k for k in SETUP_KEYS + OUTCOME_KEYS if g.get(k) in (None, '', [])]
+    if not g.get('finished'):
+        missing.append('finished')
+    if not g.get('dice'):
+        missing.append('dice (no rolls logged)')
+    if not decisions:
+        missing.append('decisions (none logged)')
+    elif g.get('decision_seq_sha') and seq_sha(decisions) != g['decision_seq_sha']:
+        missing.append('decisions (log does not match receipt decision_seq_sha)')
+    return missing
+
+
+def receipt_problems(ra: dict, rb: dict) -> list[str]:
+    """Receipt-level reasons the two runs cannot be paired at all."""
+    problems = []
+    for path in COMPAT_KEYS:
+        va, vb = _dig(ra, path), _dig(rb, path)
+        if va != vb:
+            problems.append(f'{".".join(path)} differs: {va!r} vs {vb!r}')
+    if _dig(ra, ('jsettlers', 'seed')) is None:
+        problems.append('receipt is not a seeded run (jsettlers.seed missing)')
+    for name, r in (('a', ra), ('b', rb)):
+        names = [g.get('game') for g in r.get('games') or []]
+        if not names:
+            problems.append(f'receipt {name} has no games')
+        if len(set(names)) != len(names) or None in names:
+            problems.append(f'receipt {name} has missing or duplicate game names')
+    sa = {g.get('game') for g in ra.get('games') or []}
+    sb = {g.get('game') for g in rb.get('games') or []}
+    if sa != sb:
+        problems.append(f'game sets differ: only in a {sorted(sa - sb)[:5]}, only in b {sorted(sb - sa)[:5]}')
+    return problems
+
+
+def compare_receipts(path_a: Path, path_b: Path) -> dict:
+    """Game-by-game comparison of two seeded receipts; fails closed on absent evidence.
+
+    Receipts must agree on seed, patch, all-smart, policy and game count and have the same unique
+    game names (``compatible``). A game with any required fact missing in either run (setup facts,
+    outcome hashes, a nonempty dice log, a nonempty decision log matching its hash) is reported as
+    incomplete and never counted as identical.
+    """
+    ra, rb = (json.loads(Path(p).read_text()) for p in (path_a, path_b))
+    problems = receipt_problems(ra, rb)
+
+    def decisions(r):
+        path = (r.get('artifacts') or {}).get('decisions')
+        return decision_sequences(read_jsonl(Path(path))) if path else {}
+
+    seqs = [decisions(ra), decisions(rb)]
+    gb = {g.get('game'): g for g in rb.get('games') or []}
+    rows = []
+    for a in ra.get('games') or []:
+        name = a.get('game')
+        b = gb.get(name)
+        if b is None:
+            rows.append({'game': name, 'incomplete': ['missing in b']})
+            continue
+        sa, sb = seqs[0].get(name, []), seqs[1].get(name, [])
+        missing = [f'a: {m}' for m in _missing_facts(a, sa)] + [f'b: {m}' for m in _missing_facts(b, sb)]
+        if missing:
+            rows.append({'game': name, 'incomplete': missing})
+            continue
+        setup_same = {k: a[k] == b[k] for k in SETUP_KEYS}
+        dice_prefix = _common_prefix(a['dice'], b['dice'])
+        # Paired luck: the k-th roll's values, for every k both runs reached (turn/roller may differ).
+        va, vb = ([d.rsplit(':', 1)[-1] for d in g['dice']] for g in (a, b))
+        n = min(len(va), len(vb))
+        dec_prefix = _common_prefix(sa, sb)
+        row = {'game': name, 'setup_identical': all(setup_same.values()),
+               'setup_diff': [k for k, v in setup_same.items() if not v],
+               'dice': [len(a['dice']), len(b['dice'])], 'dice_common_prefix': dice_prefix,
+               'dice_values_identical_for_every_k': va[:n] == vb[:n],
+               'dice_values_common_prefix': _common_prefix(va, vb),
+               'decisions': [len(sa), len(sb)], 'decision_common_prefix': dec_prefix,
+               'winner': [a['winner'], b['winner']], 'turns': [a['turns'], b['turns']],
+               'seat': a['seat'], 'first_player': a['server_first_player']}
+        row['end_to_end_identical'] = row['setup_identical'] and all(a[k] == b[k] for k in OUTCOME_KEYS)
+        if not row['end_to_end_identical']:
+            row['first_decision_divergence'] = None if dec_prefix == max(len(sa), len(sb)) else {
+                'decision_index': dec_prefix,
+                'a': sa[dec_prefix] if dec_prefix < len(sa) else None,
+                'b': sb[dec_prefix] if dec_prefix < len(sb) else None}
+            if dice_prefix < max(len(a['dice']), len(b['dice'])):
+                row['first_dice_divergence'] = {
+                    'index': dice_prefix,
+                    'a': a['dice'][dice_prefix] if dice_prefix < len(a['dice']) else None,
+                    'b': b['dice'][dice_prefix] if dice_prefix < len(b['dice']) else None}
+        rows.append(row)
+    complete = [r for r in rows if 'incomplete' not in r] if not problems else []
+    return {'a': str(path_a), 'b': str(path_b), 'compatible': not problems, 'problems': problems,
+            'games': len(rows), 'complete_games': len(complete),
+            'incomplete_games': len(rows) - len(complete),
+            'end_to_end_identical': sum(r['end_to_end_identical'] for r in complete),
+            'setup_identical': sum(r['setup_identical'] for r in complete),
+            'setup_and_full_dice_identical': sum(r['setup_identical'] and r['dice'][0] == r['dice'][1]
+                                                 == r['dice_common_prefix'] for r in complete),
+            'setup_and_dice_k_identical': sum(r['setup_identical'] and r['dice_values_identical_for_every_k']
+                                              for r in complete),
+            'same_winner': sum(r['winner'][0] == r['winner'][1] for r in complete),
+            'rows': rows}
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--config', required=True)
+    parser.add_argument('--config')
+    parser.add_argument('--compare', nargs=2, metavar=('RECEIPT_A', 'RECEIPT_B'),
+                        help='compare two seeded receipts game by game and exit')
     parser.add_argument('--out', help='new output directory (default runs/jsettlers-smoke/<utc stamp>); must not exist')
     parser.add_argument('--games', type=int, help='override the configured game count (not for receipts)')
     args = parser.parse_args(argv)
+    if args.compare:
+        result = compare_receipts(*args.compare)
+        print(json.dumps(result, indent=1))
+        return 0 if result['compatible'] and result['incomplete_games'] == 0 else 1
+    if not args.config:
+        parser.error('--config is required')
     config_path = Path(args.config)
     config_bytes = config_path.read_bytes()
     config = json.loads(config_bytes)
@@ -259,10 +556,13 @@ def main(argv=None) -> int:
                                                          jsettlers_build.JSETTLERS_TAG):
         raise RunRefused(f'config pins JSettlers {declared}, build verifies '
                          f'{jsettlers_build.JSETTLERS_TAG} {jsettlers_build.JSETTLERS_COMMIT}')
+    jset = jsettlers_settings(config)
     decision_log, bridge_log = out / 'decisions.jsonl', out / 'bridge.jsonl'
     server_log, bridge_err = out / 'server.log', out / 'bridge.stderr'
 
-    build = jsettlers_build.build_manifest()
+    # Private class path inside this run: no other run or build can change what this JVM loads.
+    build = jsettlers_build.build_manifest(out / 'build', patch=jset['patch'])
+    build_dir = Path(build['build_dir'])
     write_exclusive(out / 'build-manifest.json', build)
     manifest = {
         'name': config['name'],
@@ -279,6 +579,8 @@ def main(argv=None) -> int:
                   'bridge_java_sources_digest': build['bridge_java']['sources_digest'],
                   'bridge_java_classes_digest': build['bridge_java']['classes_digest']},
         'bridge': bridge_identity(config['policy']),
+        'jsettlers': {'patch_sha256': build['jsettlers']['patch_sha256'], 'seed': jset['seed'],
+                      'all_smart': jset['all_smart'], 'build_dir': str(build_dir)},
     }
     write_exclusive(out / 'manifest.json', manifest)
 
@@ -286,7 +588,7 @@ def main(argv=None) -> int:
     bridge_cmd = ' '.join([sys.executable, str(ROOT / 'scripts' / 'jsettlers_bridge.py'),
                            '--policy', config['policy'], '--seed', str(config['seed']),
                            '--log', str(bridge_log)])
-    cmd = [jsettlers_build.java(), '-cp', jsettlers_build.classpath(),
+    cmd = [jsettlers_build.java(), '-cp', jsettlers_build.classpath(build_dir=build_dir),
            f'-Dcatanai.bridge.cmd={bridge_cmd}', f'-Dcatanai.bridge.cwd={ROOT}',
            f'-Dcatanai.bridge.stderr={bridge_err}', f'-Dcatanai.decision.log={decision_log}',
            f'-Dcatanai.bridge.timeout_ms={int(config.get("bridge_timeout_ms", 30000))}',
@@ -300,17 +602,22 @@ def main(argv=None) -> int:
            '-Djsettlers.bots.botgames.shutdown=Y',
            f'-Djsettlers.bots.fast_pause_percent={srv["fast_pause_percent"]}',
            f'-Djsettlers.bots.timeout.turn={srv["timeout_turn_sec"]}',
+           *server_props(jset),
            str(srv['port']), str(srv['max_connections'])]
     jsettlers_build.verify_loaded(build)  # nothing on the class path changed since verification
     started = time.time()
-    rc, timed_out = supervise(cmd, jsettlers_build.BUILD, server_log,
+    rc, timed_out = supervise(cmd, build_dir, server_log,
                               config['timeout_sec_per_game'] * games, env=dict(os.environ))
     elapsed = round(time.time() - started, 1)
-    summary = summarize(read_jsonl(decision_log), bridge_log, games)
+    log_rows = read_jsonl(decision_log)
+    summary = summarize(log_rows, bridge_log, games)
+    seeding = seeded_game_facts(summary['games'], log_rows, server_log, jset, config['seed'])
     retired = [r for r in read_jsonl(decision_log) if r.get('type') == 'bridge_retired']
     receipt = {
         **{k: manifest[k] for k in ('name', 'created_utc', 'config_path', 'config_sha256', 'config',
-                                    'games_requested', 'source_revision', 'source_dirty', 'build', 'bridge')},
+                                    'games_requested', 'source_revision', 'source_dirty', 'build', 'bridge',
+                                    'jsettlers')},
+        'seeding': seeding,
         'manifest_sha256': jsettlers_build.sha256(out / 'manifest.json'),
         'server_rc': rc,
         'timed_out': timed_out,
@@ -324,7 +631,8 @@ def main(argv=None) -> int:
     receipt['pass'] = (summary['games_completed'] >= min(bar.get('completed_games', games), games)
                        and summary['games_completed'] <= games
                        and summary['bridge_errors'] <= bar.get('bridge_errors', 0)
-                       and not retired and not timed_out)
+                       and not retired and not timed_out
+                       and not seeding['seed_mismatches'])
     write_exclusive(out / 'receipt.json', receipt)
     print(json.dumps({k: receipt[k] for k in ('games_completed', 'our_wins', 'bridge_errors', 'fallbacks_total',
                                               'fallbacks_by_type', 'latency_ms', 'elapsed_sec', 'pass')}))
