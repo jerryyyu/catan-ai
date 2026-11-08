@@ -15,19 +15,23 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 import arch_bakeoff as ab  # noqa: E402
 from train_value import auc  # noqa: E402
-from train_value_v2 import DATA_KEYS, symmetry_index  # noqa: E402
+from train_value_v2 import DATA_KEYS, expected_shards, shards, symmetry_index  # noqa: E402
 
 CONFIG = ROOT / 'experiments' / 'arch-bakeoff.json'
 
 
 def make_fixture(tmp, train_games=(14, 6), test_games=10, rows_per_game=16, seed=0):
-    """Synthetic shards + game records consistent with the declared split and encoder layout.
-    Train games: ``train_games[0]`` before the validation cut, ``train_games[1]`` after it."""
+    """Synthetic shards + game records consistent with the declared split and encoder layout,
+    written as ``reencode_v2.py`` does (full shard inventory, NPZ SHA-256 in each sidecar) so
+    the verified loader ``train_value_v2.shards`` accepts them. Train games:
+    ``train_games[0]`` before the validation cut, ``train_games[1]`` after it; every other
+    seed of each block is an empty shard slot with a placeholder source hash."""
     rng = np.random.default_rng(seed)
     data, runs = tmp / 'shards', tmp / 'runs'
     data.mkdir()
     ref = json.loads((ROOT / 'experiments' / 'value-v2-100k-aug-b.json').read_text())
-    (data / 'DONE.json').write_text(json.dumps({'config': {k: ref[k] for k in DATA_KEYS}}))
+    done = {k: ref[k] for k in DATA_KEYS}
+    (data / 'DONE.json').write_text(json.dumps({'config': done}))
     (lo, n), (tlo, _) = ref['split']['train'], ref['split']['test']
     cut = lo + n - 5000
     splits = {'train': [lo + k for k in range(train_games[0])] + [cut + k for k in range(train_games[1])],
@@ -54,11 +58,20 @@ def make_fixture(tmp, train_games=(14, 6), test_games=10, rows_per_game=16, seed
                 xs.append(x)
                 ys.append(int(won))
                 gs.append(s)
-        np.savez(data / f'{split}-0000.npz', x=np.asarray(xs, dtype=np.float16), y=np.asarray(ys, dtype=np.uint8),
-                 game=np.asarray(gs, dtype=np.int32), leaf=np.zeros(len(ys), dtype=np.float32),
-                 shared=np.zeros(len(ys), dtype=np.float32))
-        (data / f'{split}-0000.json').write_text(json.dumps(
-            {'split': split, 'seeds': [seeds[0], seeds[-1]], 'rows': len(ys), 'source_sha256': hashes}))
+        x, y, g = np.asarray(xs, dtype=np.float16), np.asarray(ys, dtype=np.uint8), np.asarray(gs, dtype=np.int32)
+        for stem, (first, last) in expected_shards(done, split).items():
+            keep = (g >= first) & (g <= last)
+            npz = data / f'{stem}.npz'
+            with npz.open('wb') as stream:
+                np.savez(stream, x=x[keep].reshape(-1, ab.WIDTH), y=y[keep], game=g[keep],
+                         leaf=np.zeros(int(keep.sum()), dtype=np.float32),
+                         shared=np.zeros(int(keep.sum()), dtype=np.float32))
+            meta = {'split': split, 'seeds': [first, last], 'rows': int(keep.sum()),
+                    'npz_sha256': hashlib.sha256(npz.read_bytes()).hexdigest(),
+                    'source_sha256': {str(s): hashes.get(str(s), 'ab' * 32) for s in range(first, last + 1)}}
+            if keep.any():
+                meta['row_games'] = [int(g[keep].min()), int(g[keep].max())]
+            (data / f'{stem}.json').write_text(json.dumps(meta))
     return data, runs
 
 
@@ -219,3 +232,58 @@ def test_smoke_train_and_gate_all_arms(tmp_path):
     assert written['bar'] == {'auc_diff_min': .01, 'lcb_gt': 0., 'min_diff': .01, 'resamples': 1000, 'seed': 29}
     with pytest.raises(FileExistsError):
         ab.main(['gate', *common])
+
+
+def test_train_binds_verified_arrays_and_gate_checks_them(tmp_path):
+    """Codex HOLD @b48f61d P1: the checkpoint carries the verified array hash; gate refuses
+    a mismatch and labels a legacy checkpoint that has no binding."""
+    data, runs = make_fixture(tmp_path)
+    arrays = shards(data, 'train')['arrays_sha256']
+    out = tmp_path / 'out'
+    common = ['--config', str(CONFIG), '--data', str(data), '--records', str(runs), '--device', 'cpu']
+    trained = ab.main(['train', '--arm', 'base', '--epochs', '1', '--out', str(out), *common])
+    assert trained['train_arrays_sha256'] == arrays and trained['train_sealed_after_the_fact'] is None
+    saved = torch.load(out / 'base.pt', weights_only=False)
+    assert saved['train_arrays_sha256'] == arrays and saved['train_sealed_after_the_fact'] is None
+    gate = ab.main(['gate', '--out', str(out), *common])
+    assert gate['train_arrays_sha256'] == arrays and gate['arms']['base']['train_arrays_bound_in_checkpoint']
+    assert gate['legacy_seal'] is False and gate['identity_limitations'] == []
+    assert gate['test_arrays_sha256'] == shards(data, 'test')['arrays_sha256']
+
+    wrong = tmp_path / 'wrong'
+    wrong.mkdir()
+    torch.save({**saved, 'train_arrays_sha256': '0' * 64}, wrong / 'base.pt')
+    with pytest.raises(ValueError, match='different shard arrays'):
+        ab.main(['gate', '--out', str(wrong), *common])
+
+    legacy = tmp_path / 'legacy'
+    legacy.mkdir()
+    torch.save({k: v for k, v in saved.items() if k not in ('train_arrays_sha256', 'train_sealed_after_the_fact')},
+               legacy / 'base.pt')
+    gate = ab.main(['gate', '--out', str(legacy), *common])
+    assert gate['arms']['base']['train_arrays_bound_in_checkpoint'] is False
+    assert len(gate['identity_limitations']) == 1 and 'predates array binding' in gate['identity_limitations'][0]
+
+    changed = tmp_path / 'changed'
+    changed.mkdir()
+    torch.save({**saved, 'train_identity': '0' * 64}, changed / 'base.pt')
+    with pytest.raises(ValueError, match='provenance'):
+        ab.main(['gate', '--out', str(changed), *common])
+
+
+def test_gate_refuses_tampered_train_arrays(tmp_path):
+    data, runs = make_fixture(tmp_path)
+    out = tmp_path / 'out'
+    common = ['--config', str(CONFIG), '--data', str(data), '--records', str(runs), '--out', str(out),
+              '--device', 'cpu']
+    ab.main(['train', '--arm', 'base', '--epochs', '1', *common])
+    npz = data / 'train-0000.npz'
+    with np.load(npz) as z:
+        arrays = {k: z[k] for k in z.files}
+    arrays['y'] = 1 - arrays['y']
+    with npz.open('wb') as stream:
+        np.savez(stream, **arrays)
+    with pytest.raises(ValueError, match='NPZ bytes differ'):
+        ab.main(['gate', *common])
+    assert not (out / 'gate.json').exists()
+

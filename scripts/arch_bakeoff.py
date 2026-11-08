@@ -28,6 +28,16 @@ in host memory. The epoch is chosen by the validation BCE of P(I win) on the las
 
 ``--max-rows`` / ``--epochs`` are smoke-test overrides; any output they touch is
 marked ``smoke: true``.
+
+Array binding (Codex HOLD @b48f61d, P1; same rule as ``train_value_v2`` after PR #30):
+the shards are read through the verified loader ``train_value_v2.shards`` (inventory,
+NPZ SHA-256, split and seed blocks). ``train`` stores ``train_arrays_sha256`` (the hash
+of the verified NPZ digests) and ``train_sealed_after_the_fact`` in each checkpoint;
+``gate`` re-verifies the train shards and refuses a checkpoint whose sidecar identity or
+recorded array hash differs. A checkpoint written before this binding carries only the
+sidecar identity: ``gate`` accepts it but labels it (``train_arrays_bound_in_checkpoint:
+false`` and an entry in ``identity_limitations``), as it labels shards whose NPZ hashes
+were sealed after the fact (``legacy_seal``).
 """
 import argparse
 import hashlib
@@ -379,7 +389,8 @@ def train(args, cfg):
     torch.manual_seed(common['seed'])
     device = device_of(torch, args.device)
     board = layout()
-    data = subsample(shards(args.data, 'train'), args.max_rows, common['seed'])
+    verified = shards(args.data, 'train')
+    data = subsample(verified, args.max_rows, common['seed'])
     sources = manifests(args.data, 'train')[1]
     lo, n = declared_split(cfg)['train']
     if data['game'].min() < lo or data['game'].max() >= lo + n:
@@ -454,14 +465,16 @@ def train(args, cfg):
     path = args.out / f'{arm}.pt'
     publish(path, lambda tmp: torch.save({
         'arm': arm, 'state': best[2], 'mean': mean, 'sd': sd, 'epoch': best[1], 'val_bce': best[0], 'config': cfg,
-        'train_identity': data['identity'], 'params': params, 'train_seconds': seconds, 'smoke': smoke,
+        'train_identity': verified['identity'], 'train_arrays_sha256': verified['arrays_sha256'],
+        'train_sealed_after_the_fact': verified['sealed_after_the_fact'], 'params': params, 'train_seconds': seconds, 'smoke': smoke,
         'max_rows': args.max_rows, 'epochs': epochs}, tmp))
     return {'arm': arm, 'fit_rows': len(fit_rows), 'val_rows': len(val_rows),
             'fit_games': int(len(np.unique(data['game'][fit_rows]))),
             'val_games': int(len(np.unique(data['game'][val_rows]))),
             'chosen_epoch': best[1], 'chosen_val_bce': best[0], 'history': history, 'params': params,
             'train_seconds': seconds, 'device': str(device), 'epochs': epochs, 'max_rows': args.max_rows,
-            'smoke': smoke, 'train_identity': data['identity'], 'model_sha256': sha256(path), **extra}
+            'smoke': smoke, 'train_identity': verified['identity'], 'train_arrays_sha256': verified['arrays_sha256'],
+            'train_sealed_after_the_fact': verified['sealed_after_the_fact'], 'model_sha256': sha256(path), **extra}
 
 
 # --------------------------------------------------------------------- gate
@@ -499,7 +512,9 @@ def gate(args, cfg):
     arms = [a for a in ARMS if (args.out / f'{a}.pt').exists()]
     if 'base' not in arms:
         raise ValueError('the gate needs the base checkpoint')
-    train_identity = manifests(args.data, 'train')[0]
+    trained = shards(args.data, 'train')
+    train_binding = {k: trained[k] for k in ('identity', 'arrays_sha256', 'sealed_after_the_fact')}
+    del trained
     test = subsample(shards(args.data, 'test'), args.max_rows, cfg['common']['seed'])
     lo, n = declared_split(cfg)['test']
     if test['game'].min() < lo or test['game'].max() >= lo + n:
@@ -514,8 +529,11 @@ def gate(args, cfg):
     for arm in arms:
         path = args.out / f'{arm}.pt'
         saved = torch.load(path, weights_only=False, map_location='cpu')
-        if saved['config'] != cfg or saved['train_identity'] != train_identity or saved['arm'] != arm:
+        if saved['config'] != cfg or saved['train_identity'] != train_binding['identity'] or saved['arm'] != arm:
             raise ValueError(f'{arm}: checkpoint provenance does not match this declaration and training data')
+        bound = 'train_arrays_sha256' in saved
+        if bound and saved['train_arrays_sha256'] != train_binding['arrays_sha256']:
+            raise ValueError(f'{arm}: checkpoint was trained on different shard arrays')
         smoke = smoke or saved['smoke']
         net = make_net(torch, arm, board)
         net.load_state_dict(saved['state'])
@@ -528,7 +546,8 @@ def gate(args, cfg):
             raise ValueError('fast AUC disagrees with train_value.auc')
         result[arm] = {'auc': point, 'log_loss': log_loss(p, y), 'ece10': ece(p, y), 'params': saved['params'],
                        'train_seconds': saved['train_seconds'], 'chosen_epoch': saved['epoch'],
-                       'chosen_val_bce': saved['val_bce'], 'smoke': saved['smoke'], 'model_sha256': sha256(path)}
+                       'chosen_val_bce': saved['val_bce'], 'smoke': saved['smoke'], 'model_sha256': sha256(path),
+                       'train_arrays_bound_in_checkpoint': bound}
         if arm == 'heads' and heads_targets is not None:
             rel, _, counts = heads_targets
             m = rel >= 0
@@ -554,8 +573,16 @@ def gate(args, cfg):
         diff = result[a]['auc'] - result['base']['auc']
         lcb, ucb = d[int(.025 * len(d))], d[int(.975 * len(d)) - 1]
         result[a]['vs_base'] = {'auc_diff': diff, 'ci95': [lcb, ucb], 'pass': bool(diff >= bar and lcb > 0)}
+    sealed = {'train': train_binding['sealed_after_the_fact'], 'test': test['sealed_after_the_fact']}
+    limitations = [f'{a}: checkpoint predates array binding (sidecar identity only; its training arrays are '
+                   'checked only through the current shard verification, not against the checkpoint)'
+                   for a in arms if not result[a]['train_arrays_bound_in_checkpoint']]
+    limitations += [f'{split} shards: NPZ hashes sealed after the fact ({info}), not by the producer'
+                    for split, info in sealed.items() if info is not None]
     return {'arms': result, 'test_rows': len(y), 'test_games': len(ids), 'test_identity': test['identity'],
-            'train_identity': train_identity, 'bar': {'auc_diff_min': bar, 'lcb_gt': 0., **cfg_gate(cfg)},
+            'test_arrays_sha256': test['arrays_sha256'], 'train_identity': train_binding['identity'],
+            'train_arrays_sha256': train_binding['arrays_sha256'], 'sealed_after_the_fact': sealed,
+            'legacy_seal': any(v is not None for v in sealed.values()), 'identity_limitations': limitations, 'bar': {'auc_diff_min': bar, 'lcb_gt': 0., **cfg_gate(cfg)},
             'device': str(device), 'max_rows': args.max_rows, 'smoke': smoke,
             'heads_four_way': heads_targets is not None}
 
