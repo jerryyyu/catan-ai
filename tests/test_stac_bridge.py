@@ -198,9 +198,9 @@ def test_player_trades_mode_keeps_offers(monkeypatch):
     import jsbridge.decide as jd
     offer = {'cmd': 'offer', 'to': 1, 'give': {'1': 1}, 'get': {'4': 1}, 'action': {'type': 'offer_trade'},
              'think_ms': 1.0}
-    monkeypatch.setattr(jd.Bridge, 'decide', lambda self, s: dict(offer))
-    bridge = StacBridge(seed=1, player_trades=True)
-    assert bridge.decide(snap) == offer and bridge.offers_suppressed == 0
-    monkeypatch.undo()
+    with monkeypatch.context() as m:  # scoped: the autouse checkpoint fixture must stay in force
+        m.setattr(jd.Bridge, 'decide', lambda self, s: dict(offer))
+        bridge = StacBridge(seed=1, player_trades=True)
+        assert bridge.decide(snap) == offer and bridge.offers_suppressed == 0
     policy = StacBridge(seed=1, player_trades=True).policy_for('G_0')
     assert getattr(policy, 'offers', True) is not False
