@@ -1,0 +1,52 @@
+{
+  "name": "value-v2-100k-aug-b",
+  "stage": "re-encode + offline gate",
+  "roots": [
+    {
+      "root": "value100k-v1",
+      "identity_sha256": "466fc3655f232c22ab0d7323a3af6070fb3be86ddc53f68ecdf6c477207b02c5"
+    },
+    {
+      "root": "value100k-v1b",
+      "identity_sha256": "83bef53dfba99cd558033132b9c0905ab8a31b6f1c1d4a8070b09203924a1a48"
+    }
+  ],
+  "point": "end_turn",
+  "stride": 3,
+  "max_turns": 1000,
+  "shard_games": 5000,
+  "split": {
+    "train": [
+      2650000,
+      95000
+    ],
+    "test": [
+      2745000,
+      5000
+    ]
+  },
+  "model": {
+    "arch": "resmlp",
+    "hidden": 512,
+    "blocks": 3,
+    "dropout": 0.1,
+    "optimizer": "adamw",
+    "learning_rate": 0.0007,
+    "weight_decay": 0.05,
+    "schedule": "cosine",
+    "warmup_fraction": 0.03,
+    "augment": true,
+    "epochs": 16,
+    "batch": 4096,
+    "validation_games": 5000,
+    "seed": 0,
+    "threads": 8
+  },
+  "gate": {
+    "primary": "pooled AUC of the network on the 5,000 test games' end-of-turn rows minus the better of the served leaf and shared score; game-clustered bootstrap 95% LCB > 0",
+    "bootstrap_resamples": 1000,
+    "bootstrap_seed": 23
+  },
+  "note": "Predeclared 2026-11-05 before training, after value-v2-100k (plain MLP, Adam) overfit from epoch 0 (val loss .483 -> .707) and matched but did not beat the 40-feature model (AUC .746). Same re-encoded shards (runs/value-v2-100k-shards; identical data keys) and the same test split, gate and predeclared pv2b within-decision cross-eval. Changes: AlphaGo-style board-symmetry augmentation (a random one of the 12 hex symmetries per row per batch; standardization symmetrized over the orbit), AdamW with decoupled weight decay, cosine learning-rate decay with 3% warmup. Arm B adds capacity: residual MLP (input 1324->512, 3 residual blocks LayerNorm-Linear-ReLU-Dropout(.1)-Linear, LayerNorm head; ~1.8M parameters). Arms are reported side by side; which one feeds a search screen is chosen by validation loss, never by test results.",
+  "cross_eval_predeclared": "Once runs/pv2-data-v1 exists, this model is also scored with the pv2 within-decision gate on the pv2 test decisions (picked candidate's 24-playout win rate minus the served candidate's, game-clustered LCB). That answers whether 100k on-policy outcome data with encoder v2 orders a decision's options; it is reported alongside pv2-train and is not a substitute for it."
+}
