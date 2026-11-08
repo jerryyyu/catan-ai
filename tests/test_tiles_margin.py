@@ -203,11 +203,58 @@ def test_final_points_must_come_from_the_shard_source_records(tmp_path):
     fp = write_final_points(np, data_dir, runs)
     data = ab.shards(data_dir, 'train')
     sources = ab.manifests(data_dir, 'train')[1]
-    final, binding = tm.load_final_points(fp, np.unique(data['game']), sources)
+    final, binding, digest = tm.load_final_points(fp, np.unique(data['game']), sources)
     assert set(final) == {int(g) for g in np.unique(data['game'])} and set(binding) == {'value100k-v1', 'value100k-v1b'}
+    assert tm.load_final_points(fp, np.unique(data['game'])[::-1], sources)[2] == digest  # order-free
+    # mutation (Codex HOLD @b426ea8, P2): a losing seat's final VP 7 -> 2 changes the digests
+    before = tm.margin_binding(fp, data, sources)[3]
+    path, rec = _losing_seat_record(fp, data)
+    rec['points'][rec['loser']] = 2
+    path.write_text(json.dumps({k: v for k, v in rec.items() if k != 'loser'}))
+    after = tm.margin_binding(fp, data, sources)[3]
+    assert before['manifests'] == after['manifests']  # producer metadata alone cannot see it
+    assert before['records_sha256'] != after['records_sha256'] and before['targets_sha256'] != after['targets_sha256']
     g = int(data['game'][0])
     with pytest.raises(ValueError, match='different game record'):
         tm.load_final_points(fp, [g], {**sources, g: 'f' * 64})
+
+
+def _losing_seat_record(fp, data):
+    """A matched train game's final-points file with a losing seat set to 7 VP (rewritten)."""
+    for g in sorted({int(v) for v in data['game']}):
+        path = next(Path(fp).glob(f'*/games/{g}.json'))
+        rec = json.loads(path.read_text())
+        if rec['match'] and rec['winner'] is not None:
+            loser = (rec['winner'] + 1) % 4
+            rec['points'][loser] = 7
+            path.write_text(json.dumps(rec))
+            return path, {**rec, 'loser': loser}
+    raise AssertionError('no matched game')
+
+
+ELIGIBLE = {'pick_minus_served': .01, 'pick_minus_served_lcb95': .001, 'eligible_for_next_gate': True,
+            'ineligible_reason': None, 'truncation': {'rollout_truncations': 0, 'violation': None}}
+
+
+@pytest.mark.parametrize('change, reason', [
+    ({}, None),
+    ({'pick_minus_served': .006}, 'declared bar'),
+    ({'eligible_for_next_gate': False, 'ineligible_reason': 'pick_minus_served_lcb95 <= 0',
+      'pick_minus_served_lcb95': -.1}, 'eligibility not true'),
+    ({'truncation': {'rollout_truncations': None, 'candidates_without_truncation_record': 9,
+                     'violation': '9 candidates do not record rollout truncation (pre-fix producer)'}},
+     'truncation not recorded as zero'),
+    ({'truncation': {'rollout_truncations': 3, 'violation': '3 truncated rollouts over 2 candidates'}},
+     'truncation not recorded as zero'),
+    ({'pick_minus_served_lcb95': -.1}, 'lcb95'),
+    ({'eligible_for_next_gate': None}, 'eligibility not true'),
+])
+def test_xeval_needs_the_bar_and_cross_eval_eligibility(change, reason):
+    _, _, _, tm = _modules()
+    failures = tm.xeval_check({**ELIGIBLE, **change}, .0062)
+    assert (failures == []) if reason is None else any(reason in f for f in failures)
+    for key in ('eligible_for_next_gate', 'truncation', 'pick_minus_served_lcb95'):  # missing fails closed
+        assert tm.xeval_check({k: v for k, v in ELIGIBLE.items() if k != key}, .0062)
 
 
 def test_synthetic_train_win_xeval_binding_and_gate_end_to_end(tmp_path):
@@ -233,8 +280,8 @@ def test_synthetic_train_win_xeval_binding_and_gate_end_to_end(tmp_path):
     assert saved['arm'] == 'tiles' and saved['derived_from']['dropped'] == ['margin.bias', 'margin.weight']
     assert saved['params'] == trained['params'] - (ab.TILES_D + 1)
     # the gate binds an xeval result to this checkpoint's win-head file
-    xeval = {'model_sha256': win['win_sha256'], 'pick_minus_served': .01, 'pick_minus_served_lcb95': .001,
-             'eligible_for_next_gate': True}
+    assert saved['derived_from']['final_points_records_sha256'] == trained['final_points']['records_sha256']
+    xeval = {'model_sha256': win['win_sha256'], **ELIGIBLE}
     (tmp_path / 'xeval.json').write_text(json.dumps(xeval))
     gated = tm.main(['gate', *common, '--data', str(data_dir), '--final-points', str(fp),
                      '--reference', str(ref_out / 'tiles.pt'), '--xeval', str(tmp_path / 'xeval.json')])
@@ -243,11 +290,29 @@ def test_synthetic_train_win_xeval_binding_and_gate_end_to_end(tmp_path):
     for arm in ('tiles_margin', 'tiles_reference'):
         assert {'auc', 'log_loss', 'ece10'} <= set(gated['arms'][arm])
     assert gated['arms']['tiles_margin']['margin_head_test']['rows'] > 0
+    gate_args = ['gate', *common, '--data', str(data_dir), '--final-points', str(fp),
+                 '--reference', str(ref_out / 'tiles.pt'), '--xeval', str(tmp_path / 'xeval.json')]
+    # an ineligible receipt (unknown truncation, failed LCB) never advances, whatever the point estimate
+    (tmp_path / 'xeval.json').write_text(json.dumps(dict(
+        xeval, eligible_for_next_gate=False, pick_minus_served_lcb95=-.1,
+        ineligible_reason='rollout truncation: 9 candidates do not record rollout truncation (pre-fix producer)',
+        truncation={'rollout_truncations': None, 'violation': '9 candidates do not record rollout truncation'})))
+    (out / 'gate.json').unlink()
+    blocked = tm.main(gate_args)
+    assert blocked['xeval_pass'] is False and blocked['pass'] is False and len(blocked['xeval_failures']) == 3
     (tmp_path / 'xeval.json').write_text(json.dumps(dict(xeval, model_sha256='0' * 64)))
     (out / 'gate.json').unlink()
     with pytest.raises(ValueError, match='xeval was not run'):
-        tm.main(['gate', *common, '--data', str(data_dir), '--reference', str(ref_out / 'tiles.pt'),
-                 '--xeval', str(tmp_path / 'xeval.json')])
+        tm.main(gate_args)
+    # replay targets changed after training (losing seat 7 -> 2 VP): the gate refuses the checkpoint
+    path = next(fp.glob(f'*/games/{int(data["game"][0])}.json'))
+    rec = json.loads(path.read_text())
+    loser = next(i for i in range(4) if i != rec['winner'])
+    rec['points'][loser] = 2 if rec['points'][loser] != 2 else 3
+    path.write_text(json.dumps(rec))
+    (tmp_path / 'xeval.json').write_text(json.dumps(xeval))
+    with pytest.raises(ValueError, match='different replay targets'):
+        tm.main(gate_args)
 
 
 def _synthetic_export(np, torch, ab, tm, tmp_path):
@@ -261,7 +326,8 @@ def _synthetic_export(np, torch, ab, tm, tmp_path):
     torch.save({'arm': tm.ARM, 'state': net.state_dict(), 'mean': torch.zeros(ab.WIDTH), 'sd': torch.ones(ab.WIDTH),
                 'epoch': 0, 'val_bce': .5, 'config': cfg, 'train_identity': 'i', 'train_arrays_sha256': 'a',
                 'train_sealed_after_the_fact': None, 'train_seconds': 1., 'smoke': False, 'max_rows': None,
-                'epochs': 12, 'params': sum(p.numel() for p in net.parameters())}, out / 'tiles_margin.pt')
+                'epochs': 12, 'params': sum(p.numel() for p in net.parameters()),
+                'final_points': {'records_sha256': 'r', 'targets_sha256': 't'}}, out / 'tiles_margin.pt')
     tm.main(['win', '--config', str(CONFIG), '--base-config', str(BASE), '--out', str(out)])
     stem = tmp_path / 'value_tiles_margin_v1'
     ex.main(['--pt', str(out / 'tiles_margin-win.pt'), '--npz', f'{stem}.npz', '--meta', f'{stem}.meta.json',

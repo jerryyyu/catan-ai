@@ -129,19 +129,23 @@ def batch_loss(torch, win_logit, margin_pred, y, target, mask, weight, delta):
 
 # ------------------------------------------------------------------ targets
 def load_final_points(root, seeds, sources):
-    """{seed: final-points record} for ``seeds``, each bound to the game record the
-    shards were made from (``record_sha256`` == the shard manifest's source hash)."""
+    """({seed: final-points record}, replay manifests, digest) for ``seeds``, each record bound
+    to the game record the shards were made from (``record_sha256`` == the shard manifest's
+    source hash). The digest is the SHA-256 over ``seed:sha256(file bytes)`` lines in seed
+    order: it binds the exact replay records consumed (points included), not only their
+    producer metadata (Codex HOLD @b426ea8, P2)."""
     dirs = sorted(p.parent for p in Path(root).glob('*/manifest.json'))
     if not dirs:
         raise ValueError(f'no replay directories (*/manifest.json) under {root}')
     manifests = {d.name: json.loads((d / 'manifest.json').read_text()) for d in dirs}
-    out = {}
-    for s in seeds:
-        s = int(s)
+    out, lines = {}, []
+    for s in sorted(int(v) for v in seeds):
         hits = [d for d in dirs if (d / 'games' / f'{s}.json').exists()]
         if len(hits) != 1:
             raise ValueError(f'seed {s}: {len(hits)} final-points records (need exactly one)')
-        rec = json.loads((hits[0] / 'games' / f'{s}.json').read_text())
+        raw = (hits[0] / 'games' / f'{s}.json').read_bytes()
+        lines.append(f'{s}:{hashlib.sha256(raw).hexdigest()}\n')
+        rec = json.loads(raw)
         if rec['seed'] != s or rec['manifest_sha256'] != manifests[hits[0].name]['manifest_sha256']:
             raise ValueError(f'final points for seed {s} do not belong to their replay manifest')
         if rec['record_sha256'] != sources[s]:
@@ -150,7 +154,24 @@ def load_final_points(root, seeds, sources):
     binding = {name: {k: m.get(k) for k in ('manifest_sha256', 'producer_commit', 'root_identity_sha256',
                                              'script_sha256', 'engine_backend', 'source_drift')}
                for name, m in manifests.items()}
-    return out, binding
+    return out, binding, hashlib.sha256(''.join(lines).encode()).hexdigest()
+
+
+def targets_digest(target, mask, games):
+    """SHA-256 of the supervised margin arrays (row order of the verified shards)."""
+    h = hashlib.sha256()
+    for a in (np.ascontiguousarray(target, dtype=np.float32), np.ascontiguousarray(mask, dtype=np.bool_),
+              np.ascontiguousarray(games, dtype=np.int64)):
+        h.update(a.tobytes())
+    return h.hexdigest()
+
+
+def margin_binding(final_points, data, sources):
+    """Replay-record and target-array digests for ``data``'s rows (train or test)."""
+    final, manifests, records = load_final_points(final_points, np.unique(data['game']), sources)
+    target, mask, counts = margin_targets(data, final)
+    return target, mask, counts, {'manifests': manifests, 'records_sha256': records,
+                                  'targets_sha256': targets_digest(target, mask, data['game'])}
 
 
 def margin_targets(data, final):
@@ -225,8 +246,7 @@ def train(args, cfg, base):
     val_rows = np.flatnonzero(data['game'] >= cut)
     if not len(fit_rows) or not len(val_rows):
         raise ValueError('empty fit or validation rows')
-    final, fp_binding = load_final_points(args.final_points, np.unique(data['game']), sources)
-    target_np, mask_np, counts = margin_targets(data, final)
+    target_np, mask_np, counts, fp_binding = margin_binding(args.final_points, data, sources)
     x, y = data['x'], torch.from_numpy(data['y'].astype(np.float32))
     target, mask = torch.from_numpy(target_np), torch.from_numpy(mask_np)
     perms_cpu = symmetry_index(torch)
@@ -312,27 +332,55 @@ def win_checkpoint(args, cfg, base):
         **{k: saved[k] for k in keep}, 'arm': 'tiles', 'state': state,
         'params': sum(p.numel() for p in net.parameters()),
         'derived_from': {'arm': ARM, 'pt_sha256': sha256(src), 'params_with_margin': saved['params'],
+                         'final_points_records_sha256': saved['final_points']['records_sha256'],
+                         'margin_targets_sha256': saved['final_points']['targets_sha256'],
                          'dropped': sorted(k for k in saved['state'] if k.startswith('margin.'))}}, tmp))
     return {'win_pt': str(path), 'win_sha256': sha256(path), 'source_sha256': sha256(src), 'smoke': saved['smoke']}
 
 
 # ------------------------------------------------------------------ gate
+def xeval_check(xeval, bar):
+    """Reasons the cross-eval receipt fails (empty: it passes). Fail closed (Codex HOLD @b426ea8,
+    P1): besides the declared point bar, ``cross_eval_arch``'s own eligibility must be
+    explicitly true, i.e. its 95% LCB > 0 and rollout truncation recorded and zero; a
+    missing field fails."""
+    out = []
+    point = xeval.get('pick_minus_served')
+    if not isinstance(point, (int, float)) or not point >= bar:
+        out.append(f'pick_minus_served {point} < declared bar {bar}')
+    if xeval.get('eligible_for_next_gate') is not True:
+        out.append(f"cross_eval_arch eligibility not true: {xeval.get('ineligible_reason', 'field missing')}")
+    lcb = xeval.get('pick_minus_served_lcb95')
+    if not isinstance(lcb, (int, float)) or not lcb > 0:
+        out.append(f'pick_minus_served_lcb95 {lcb} is not > 0')
+    trunc = xeval.get('truncation') or {}
+    if trunc.get('violation') is not None or trunc.get('rollout_truncations') != 0:
+        out.append(f"rollout truncation not recorded as zero: {trunc.get('violation', 'truncation missing')}")
+    return out
+
+
 def gate(args, cfg, base):
     import torch
     g = gate_constants(cfg)
     device = ab.device_of(torch, args.device)
     board = ab.layout()
+    path = args.out / f'{ARM}.pt'
+    saved = torch.load(path, weights_only=False, map_location='cpu')
     trained = shards(args.data, 'train')
     train_binding = {k: trained[k] for k in ('identity', 'arrays_sha256', 'sealed_after_the_fact')}
+    # the replay records and margin arrays the checkpoint was trained on (Codex HOLD @b426ea8, P2)
+    train_fp = margin_binding(args.final_points, ab.subsample(trained, saved['max_rows'], base['common']['seed']),
+                              ab.manifests(args.data, 'train')[1])[3]
     del trained
+    for key in ('records_sha256', 'targets_sha256'):
+        if saved.get('final_points', {}).get(key) != train_fp[key]:
+            raise ValueError(f'tiles_margin checkpoint was trained on different replay targets ({key})')
     test = ab.subsample(shards(args.data, 'test'), args.max_rows, base['common']['seed'])
     lo, n = ab.declared_split(base)['test']
     if test['game'].min() < lo or test['game'].max() >= lo + n:
         raise ValueError('test shards hold games outside the declared test split')
     rows = np.arange(len(test['y']))
     y = test['y'].astype(np.float64)
-    path = args.out / f'{ARM}.pt'
-    saved = torch.load(path, weights_only=False, map_location='cpu')
     if (saved['arm'] != ARM or saved['config'] != cfg or saved['train_identity'] != train_binding['identity']
             or saved['train_arrays_sha256'] != train_binding['arrays_sha256']):
         raise ValueError('tiles_margin checkpoint provenance does not match this declaration and training data')
@@ -358,13 +406,8 @@ def gate(args, cfg, base):
         result[name] = {'auc': point, 'log_loss': ab.log_loss(pred, y), 'ece10': ab.ece(pred, y),
                         'params': ck['params'], 'chosen_epoch': ck['epoch'], 'chosen_val_bce': ck['val_bce'],
                         'train_seconds': ck['train_seconds'], 'smoke': ck.get('smoke'), 'model_sha256': sha256(cpath)}
-    margin = None
-    if args.final_points:
-        final, fp_binding = load_final_points(args.final_points, np.unique(test['game']),
-                                              ab.manifests(args.data, 'test')[1])
-        target, mask, counts = margin_targets(test, final)
-        margin = {**margin_report(mp, target, mask), 'counts': counts, 'final_points': fp_binding}
-    result[ARM]['margin_head_test'] = margin
+    target, mask, counts, test_fp = margin_binding(args.final_points, test, ab.manifests(args.data, 'test')[1])
+    result[ARM]['margin_head_test'] = {**margin_report(mp, target, mask), 'counts': counts, 'final_points': test_fp}
     by_game = {}
     for i, gid in enumerate(test['game']):
         by_game.setdefault(int(gid), []).append(i)
@@ -379,7 +422,7 @@ def gate(args, cfg, base):
     diff = result[ARM]['auc'] - result['tiles_reference']['auc']
     lcb, ucb = diffs[int(.025 * len(diffs))], diffs[int(.975 * len(diffs)) - 1]
     auc_pass = bool(diff >= g['min_diff'] and lcb > g['lcb_gt'])
-    xeval, xeval_pass, missing = None, None, []
+    xeval, xeval_pass, xeval_failures, missing = None, None, None, []
     if args.xeval:
         xeval = json.loads(Path(args.xeval).read_text())
         win_pt = args.out / f'{ARM}-win.pt'
@@ -388,14 +431,15 @@ def gate(args, cfg, base):
         derived = torch.load(win_pt, weights_only=False, map_location='cpu')['derived_from']
         if derived['pt_sha256'] != sha256(path):
             raise ValueError('tiles_margin-win.pt was derived from a different tiles_margin.pt')
-        xeval_pass = bool(xeval['pick_minus_served'] >= g['xeval_min'])
+        xeval_failures = xeval_check(xeval, g['xeval_min'])
+        xeval_pass = not xeval_failures
     else:
         missing.append('xeval')
     passed = None if missing else bool(auc_pass and xeval_pass)
     return {'arms': result, 'vs_reference': {'auc_diff': diff, 'ci95': [lcb, ucb], 'pass': auc_pass},
             'reference_auc_declared': g['reference_auc'],
             'reference_auc_matches_declared': abs(result['tiles_reference']['auc'] - g['reference_auc']) < 5e-5,
-            'xeval': xeval, 'xeval_pass': xeval_pass, 'missing': missing, 'pass': passed, 'bar': g,
+            'xeval': xeval, 'xeval_pass': xeval_pass, 'xeval_failures': xeval_failures, 'missing': missing, 'pass': passed, 'bar': g,
             'test_rows': len(y), 'test_games': len(ids), 'test_identity': test['identity'],
             'test_arrays_sha256': test['arrays_sha256'], 'train_identity': train_binding['identity'],
             'train_arrays_sha256': train_binding['arrays_sha256'],
@@ -428,8 +472,8 @@ def main(argv=None):
         ab.check_data(base, args.data)
     if args.command == 'train' and args.final_points is None:
         parser.error('train needs --final-points')
-    if args.command == 'gate' and args.reference is None:
-        parser.error('gate needs --reference')
+    if args.command == 'gate' and (args.reference is None or args.final_points is None):
+        parser.error('gate needs --reference and --final-points')
     if args.command != 'train' and args.epochs:
         parser.error('--epochs applies to train only')
     args.out.mkdir(parents=True, exist_ok=True)
