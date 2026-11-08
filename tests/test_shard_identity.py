@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 import sys
 
-import numpy as np
 import pytest
+
+np = pytest.importorskip('numpy')  # the CI python job has no numpy; the native job and local runs do
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import train_value_v2  # noqa: E402
