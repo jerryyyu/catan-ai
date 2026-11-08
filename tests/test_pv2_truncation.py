@@ -5,11 +5,23 @@ import sys
 
 import pytest
 
+from catan_ai.experiments import source_files
+from catan_ai.parameter_planner import DEFAULT
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import pv2_data  # noqa: E402
 import train_pv2  # noqa: E402
 
 CONFIG = {'policy': 'planner_offer_accept', 'max_turns': 14, 'decision_rate': 1.0, 'candidates': 2, 'explore': 0.0}
+
+
+@pytest.fixture(autouse=True)
+def checkpoint(tmp_path, monkeypatch):
+    """A test checkpoint bound to the active backend's sources, as the other planner tests do
+    (the CI native job's Cython binary is not the one the production binding pins)."""
+    path = tmp_path / 'model.json'
+    path.write_text(json.dumps({'schema': 1, 'weights': DEFAULT, 'source': source_files()}))
+    monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
 
 
 def _game_at_actions():

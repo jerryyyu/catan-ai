@@ -6,6 +6,9 @@ import sys
 
 import pytest
 
+from catan_ai.experiments import source_files
+from catan_ai.parameter_planner import DEFAULT
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import analyze_search_diagnostic  # noqa: E402
 import phase_diagnostic  # noqa: E402
@@ -150,3 +153,13 @@ def test_legacy_root_needs_explicit_flag(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['x', '--root', str(root), '--output', str(tmp_path / 'out.json'), '--legacy'])
     analyze_search_diagnostic.main()
     assert json.loads((tmp_path / 'out.json').read_text())['_identity']['legacy_unbound'] is True
+
+
+@pytest.fixture(autouse=True)
+def checkpoint(tmp_path, monkeypatch):
+    """A test checkpoint bound to the active backend's sources, as the other planner tests do
+    (the root binding hashes the served policy's model; the CI native job's Cython binary is
+    not the one the production binding pins)."""
+    path = tmp_path / 'model.json'
+    path.write_text(json.dumps({'schema': 1, 'weights': DEFAULT, 'source': source_files()}))
+    monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
