@@ -1,0 +1,46 @@
+{
+  "name": "stac-smoke",
+  "purpose": "Bridge smoke: the served policy plays StacSettlers games (STAC's own Simulation harness, patched pin) as one seat against 3 copies of STAC's POMCP-TS-CR agent and, separately, 3 STAC-bundled JSettlers 1.1.16 robots. Measures bridge errors, fallbacks, MCTS cap hits and decision latency; not a strength claim.",
+  "policy": "planner_offer_accept",
+  "seed": 20261108,
+  "stac": {
+    "repo": "https://github.com/ruflab/StacSettlers",
+    "commit": "c9e3b66f69e796b1cdd56a508ec32a6ceed1141d",
+    "patch": {
+      "file": "runs/external/stac-catanai-v2.patch",
+      "sha256": "ebadcfcb42c1dc272d9b2e6f25225e68c25ee877b45f6f72e7c69c91c52aa052"
+    },
+    "seed": 20261108,
+    "no_player_trades": true,
+    "fully_observable": false,
+    "observable_vp": false,
+    "chat_negotiation": false,
+    "force_end_turn_sec": 30,
+    "jvm_heap": "3g"
+  },
+  "agents": {
+    "pomcp_ts_cr": {
+      "source": "Dobre & Lascarides, POMCP with Human Preferences in Settlers of Catan (AIIDE 2018), POMCP-TS-CR; paper setting 10k iterations, 4 threads, C=4 with PUCT, offers limit 3",
+      "flags": ["MCTS_ITERATIONS:10000", "MCTS_THREADS:4", "MCTS_Cp:4.0", "MCTS_TYPED_ROLLOUTS", "MCTS_FACTORED_BELIEF",
+                "MCTS_OFFERS_LIMIT:3", "MCTS_POMCP", "MCTS_LIST_POMS", "MCTS_HUMAN_ACTION_TYPE_PDF_CONDITIONED_SEEDING",
+                "MCTS_PUCT", "MCTS_HUMAN_ACTION_TYPE_PDF_SEEDING_TEMPERATURE:7",
+                "MCTS_HUMAN_ACTION_TYPE_CONDITIONED_DIST_ROLLOUTS", "NO_TRADES"],
+      "time_cap_ms": 10000
+    },
+    "jsettlers": {
+      "source": "STAC-bundled JSettlers 1.1.16 robot (SOCDefaultRobotFactory, server default parameters: FAST strategy)"
+    }
+  },
+  "blocks": [
+    {"name": "StacSmokePomcp", "opponent": "pomcp_ts_cr", "games": 8, "jvm_heap": "8g"},
+    {"name": "StacSmokeJset", "opponent": "jsettlers", "games": 8}
+  ],
+  "parallel_blocks": 2,
+  "bridge_timeout_ms": 30000,
+  "timeout_sec_per_game": 1200,
+  "pass_bar": {
+    "completed_games": 16,
+    "bridge_errors": 0
+  },
+  "limitations": "Player trading is off in both directions (bank and port trades stay), so neither side's negotiation is measured. STAC's MCTS agents use 4-thread tree parallelism and their own internal RNG, so their play is not reproducible even with a seed; seeding pins the environment (board, deck, first player, seats, dice by roll index, steals, forced discards, JSettlers robot tie-breaks). Seats come from the seeded shuffle, not a rotation. The MCTS time cap (10 s per search) is a deviation from the paper's uncapped 10k iterations and is counted per search."
+}
