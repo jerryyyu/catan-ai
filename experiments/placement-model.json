@@ -1,0 +1,37 @@
+{
+  "name": "placement-model",
+  "stage": "offline (placement-data-v1 only; no new data generation)",
+  "data": {
+    "root": "runs/placement-data-v1",
+    "produced_by": "experiments/placement-data.json @ 8b0c4fce63b28f43064686ce75c7126adf1cff0b (branch claude/placement-search), ultra, finished 2026-11-08 03:16 UTC",
+    "games": 500,
+    "split": {"train": [2896000, 450], "test": [2896450, 50]},
+    "validation": "the last 45 train games (2896405-2896449) choose the epoch; the test split is read once by the gate and never used for fitting or selection",
+    "known_before_training": "4,000 setup_settlement decisions, 64,000 candidate rows (16 per decision: served top-12 by the served bot's own placement value + 4 uniformly random other legal vertices), 8 playouts each by the game's true lineup; the served placement (served_rank 0) is the in-sample playout-best candidate in 11.8% of decisions (chance 6.25%)"
+  },
+  "rows": {
+    "x": "encoder-v2 features of the afterstate from the chooser's view (1,324)",
+    "extra": "the opponents' public style posterior at the decision (3 opponents x 4 styles, seat-relative order), setup_index one-hot (8), served_rank/16; appended to the tile transformer's global token",
+    "label": "wins/playouts (soft)"
+  },
+  "model": {
+    "arch": "tile-token transformer as arch_bakeoff.make_net('tiles') (arch-bakeoff-v1 PASS, +.0138 AUC), with the extra inputs concatenated into the global-token projection",
+    "d": 128, "layers": 4, "heads": 4, "mlp": 256, "dropout": 0.1,
+    "augment": "one of the 12 hex symmetries per row per batch (encoder-v2 permutation before tokenizing)",
+    "optimizer": "adamw", "learning_rate": 0.0007, "weight_decay": 0.05, "schedule": "cosine", "warmup_fraction": 0.03,
+    "epochs": 30, "batch": 1024, "seed": 0,
+    "loss": "soft BCE to the playout rate + 1.0 x within-decision listwise cross-entropy (softmax over the decision's candidates vs playout rates normalized to sum 1; decisions with all-zero rates contribute BCE only)",
+    "epoch_selection": "lowest validation within-decision listwise loss"
+  },
+  "baselines": {
+    "served": "the served bot's own placement (served_rank 0)",
+    "random": "a uniformly random candidate (expected value of the mean candidate rate)"
+  },
+  "gate": {
+    "primary": "on the 50 test games (400 decisions): the model's top-ranked candidate's playout rate minus the served candidate's playout rate; game-clustered bootstrap 95% lower bound > 0 (1,000 resamples, seed 29)",
+    "reported": "pick minus served by setup_index (first vs second placement) and by seat; mean regret vs the in-sample best candidate (descriptive only: 8-playout selection noise biases it); top-1 agreement with the in-sample best; mean within-decision Spearman between model scores and rates; row log loss and AUC vs the playout rate; the same for the served and random baselines",
+    "next": "PASS: planner_placement_model (fast: at each setup settlement the served top-K vertices are scored by this model instead of 24 playouts; everything else served) gets a separately predeclared, powered e2e screen on the three tables. FAIL: recorded; no retuning of the bar."
+  },
+  "limitations": "8 playouts per candidate make per-row labels noisy (rate SD about .17 at p=.3); the listwise term targets within-decision order, which is what placement choice uses. The data's opponents are the four known styles, so a pass says nothing about unseen opponents. The posterior input is the public one the bot would have at play time.",
+  "note": "Predeclared 2026-11-08 before any training (Jerry 2026-11-07: 'Yes and allow'; follows placement-infer-screen-v1 FAIL (+.103/+.025/+.031) and arch-bakeoff-v1). Weights stay local; only metadata is committed. Ultra MPS."
+}
