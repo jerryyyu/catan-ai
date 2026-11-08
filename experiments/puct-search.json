@@ -18,9 +18,9 @@
   "gate": "+.02 paired lift over planner_pv2_tiles on each of tactical / mixed / self, 0 truncations, p95 decision <= 2 s, step max <= 2 s, turn max <= 10 s",
   "power": "alternative +.04, planning sigma .22, power .8 (as tiles-margin); check_design must admit it before any game",
   "fresh_seeds": [
-    2950000,
-    2951000,
-    2952000
+    2970000,
+    2971000,
+    2972000
   ],
   "note": "Predeclared 2026-11-08 before any code or game. Phase 2 (only if this passes): retrain the value on positions the search visits (expert iteration), predeclared separately. Diagnostic expectation stated in advance: our value nets over-rank 'build a city' vs 'end turn' (.92 vs .56 in playouts), and deeper search can amplify such errors; the screen is the arbiter.",
   "amendment_1_2026_11_08": {
@@ -35,5 +35,15 @@
     "gate": "unchanged (+.02 over planner_pv2_tiles on every table, 0 truncations, p95 decision <= 2 s, step max <= 2 s, turn max <= 10 s); screen config experiments/puct-screen.json (260 seeds/panel) unchanged except the process cap note",
     "pre_screen_check": "re-profile 4 seeded games vs 3 Tactical before any screen game; proceed only if fallbacks <= 10% of searched decisions, simulations p50 >= 64, and every latency gate holds in the profile; otherwise stop and report",
     "note": "Amended 2026-11-08 before any screen game; the algorithm's idea (AlphaGo-Zero open-loop PUCT with selective depth over the tiles value) is unchanged."
+  },
+  "amendment_2_2026_11_08": {
+    "reason": "Codex HOLD on PR #46 at a59002a: the pre-screen profile (scripts/puct_profile.py default seed 2950000) played candidate games on the screen's reserved Tactical seeds before any screen game.",
+    "exposure": "Profiles at 6c97f0e (seeds 2950000-2950001, candidate in seats 0-1) and a59002a (seeds 2950000-2950003, seats 0-3), all vs 3 Tactical, candidate-only games; outcomes were not used for any decision beyond the predeclared fallback/latency check.",
+    "changes": {
+      "screen_seeds": "fresh, never-used blocks 2970000 / 2971000 / 2972000 (tactical / mixed / self), 260 seeds each; the 2950000-2952259 blocks are retired and will not be used for this screen",
+      "profile_seeds": "scripts/puct_profile.py defaults to a separate DEV/profile block starting at 2969000, disjoint from every screen block"
+    },
+    "unchanged": "algorithm, gate, power, budgets, pre-screen thresholds",
+    "note": "Amended 2026-11-08 before any screen game."
   }
 }

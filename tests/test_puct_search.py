@@ -346,3 +346,16 @@ def test_at_most_four_searched_decisions_per_turn(monkeypatch):
     assert planner.choose(view, 0) == control.choose(Observation.for_policy(game, 0, control), 0)
     assert [d['reason'] for d in planner.diagnostics] == ['turn_cap']
     assert planner._tiles_turn == (view.turn, 0)
+
+
+def test_profile_seeds_never_overlap_the_screen_blocks():
+    """Codex HOLD @a59002a: profiling must not play on reserved screen seeds."""
+    import json
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    screen = json.loads((root / 'experiments' / 'puct-screen.json').read_text())
+    reserved = {p['seed'] + i for p in screen['panels'] for i in range(screen['seeds_per_panel'])}
+    text = (root / 'scripts' / 'puct_profile.py').read_text()
+    default = int(re.search(r"'--seed', type=int, default=(\d+)", text).group(1))
+    assert not ({default + g for g in range(64)} & reserved)

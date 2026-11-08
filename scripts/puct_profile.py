@@ -35,7 +35,7 @@ def summary(values):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--games', type=int, default=4)
-    parser.add_argument('--seed', type=int, default=2950000)
+    parser.add_argument('--seed', type=int, default=2969000)
     parser.add_argument('--opponent', default='tactical')
     parser.add_argument('--candidate', default='planner_pv2_puct')
     parser.add_argument('--max-turns', type=int, default=1000)
