@@ -1,0 +1,27 @@
+{
+  "name": "pv2-tiles-screen",
+  "stage": "dev",
+  "candidate": "planner_pv2_tiles",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 80,
+  "max_turns": 1000,
+  "panels": [
+    {"name": "tactical", "seed": 2900000, "opponents": ["tactical", "tactical", "tactical"]},
+    {"name": "mixed", "seed": 2901000, "opponents": ["builder", "tactical", "expander"]},
+    {"name": "self", "seed": 2902000, "opponents": ["planner_offer_accept", "planner_offer_accept", "planner_offer_accept"]}
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.05,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.1,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-08 before any game (Jerry: 'Can we screen transformer'). Candidate planner_pv2_tiles = planner_pv2_b_fix with its value net replaced by the arch-bakeoff-v1 'tiles' model (tile-token transformer, 555,009 params; offline test AUC .7859 vs .7721 base, PASS at +.0138; within-decision xeval +.0062 [+.0027, +.0098]; weights runs/arch-bakeoff-v1/tiles.pt sha256 fb239324ad2195b77965f69aa28e7f8dcf3caa756e84d1892ba5f804a33972ae, local artifact, metadata only in git). Same candidate generation (served end-now + top-4 sequences), same afterstate encoding, same integration (served offers kept; end-now through the served end-of-turn path); only the scorer changes. Serving: NumPy forward of the transformer with a torch parity check on load. Standard three tables, +.05 paired lift on every table vs the served default, 0 truncations, p95 decision <= 2 s, step/turn maxima gated (this bot is meant to be fast). check_design: 78 seeds/panel for family pass .80 at alternative +.10, sigma .30 (largest observed .317); 80 used. Honest expectation, stated in advance: the predecessor planner_pv2_b_fix measured +.025/+.015/+.019 at 512 seeds and the diagnostics put the per-decision stakes of build/trade choices below 1 pp, so a PASS at +.05 on all three tables is unlikely; the screen is the owner's requested e2e read of the best offline model. Reported alongside: the paired lift vs planner_pv2_b_fix is NOT measured here (different control); if this screen passes, a 512-seed precise comparison vs pv2_b_fix follows under its own predeclaration. Fresh seeds 2900000/2901000/2902000. Ultra, process-cap 4."
+  }
+}
