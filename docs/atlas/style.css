@@ -95,3 +95,6 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outlin
 .cell.bad b { color: var(--neg); }
 .cell.ok b { color: var(--accent); }
 .cell.none { color: var(--dim); text-align: center; font-size: 0.8rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 0.8rem; color: var(--dim); }
+.legend .cell { padding: 1px 8px; border-radius: 4px; }
+.matrix td.txt { max-width: 190px; }

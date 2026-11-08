@@ -146,17 +146,17 @@ def _share_cell(v) -> str:
     w, lo, hi, n = v
     retired = w >= 0.5 and lo > 0.4
     kind = 'good' if retired else ('ok' if lo > 0.25 else ('bad' if hi < 0.25 else 'mid'))
-    tag = ' · retired' if retired else ''
+    tag = ' · ret.' if retired else ''
     return (f'<td class="n cell {kind}"><b>{w * 100:.1f}%</b>'
-            f'<span class="ci-t">{lo * 100:.0f}–{hi * 100:.0f}% · {n} games{tag}</span></td>')
+            f'<span class="ci-t">{lo * 100:.0f}–{hi * 100:.0f} · n{n}{tag}</span></td>')
 
 
 def policy_matrix(reg: dict) -> str:
     ext = reg.get('external_columns', [])
     head1 = ('<tr class="grp"><th colspan="3"></th><th colspan="4" class="g">vs production '
-             f'(<code>{esc(reg["production"]["served"])}</code>): paired lift, win-rate points</th>'
-             f'<th colspan="{len(ext)}" class="g">vs external AIs: our win share (fair share 25%)</th></tr>')
-    head2 = ('<tr><th>Policy</th><th>How it searches</th><th>Value model</th>'
+             f'(<code>{esc(reg["production"]["served"])}</code>): lift, pp</th>'
+             f'<th colspan="{len(ext)}" class="g">vs external AIs: win share</th></tr>')
+    head2 = ('<tr><th>Policy</th><th>Search</th><th>Value model</th>'
              '<th class="n">Tactical</th><th class="n">Mixed</th><th class="n">Prod copies</th><th class="n">Seeds</th>'
              + ''.join(f'<th class="n">{esc(c["label"])}</th>' for c in ext) + '</tr>')
     body, group = [], None
@@ -173,8 +173,7 @@ def policy_matrix(reg: dict) -> str:
         shares = ''.join(_share_cell((pol.get('external') or {}).get(c['key'])) for c in ext)
         status = pol['status']
         chip = 'pass' if status == 'served' else ('fail' if status == 'FAIL' else 'run')
-        note = f'<div class="note">{esc(pol["note"])}</div>' if pol.get('note') else ''
-        body.append(f'<tr><td class="pol"><code>{esc(pol["name"])}</code><span class="chip {chip}">{esc(status)}</span>{note}</td>'
+        body.append(f'<tr><td class="pol"><code>{esc(pol["name"])}</code><span class="chip {chip}">{esc(status)}</span></td>'
                     f'<td class="txt">{esc(pol["search"])}</td><td class="txt">{esc(pol["model"])}</td>{lift}{shares}</tr>')
     return f'<div class="scroll matrix"><table>{head1}{head2}{"".join(body)}</table></div>'
 
@@ -205,19 +204,20 @@ def model_table(reg: dict) -> str:
         f'<tr><td>{esc(m["name"])}</td><td class="n">{fmt(m["auc"], signed=False) if m["auc"] else "—"}</td>'
         f'<td class="n">{fmt(m["xeval"]) if m["xeval"] is not None else "—"}</td>'
         f'<td>{"<code>" + esc(m["played"]) + "</code>" if m["played"] not in ("no", "pending") else esc(m["played"])}</td>'
-        f'<td class="note">{esc(m["note"])}</td></tr>' for m in reg['models'])
+        '</tr>' for m in reg['models'])
     return ('<div class="scroll"><table><tr><th>Value model</th><th class="n">Test AUC</th>'
-            '<th class="n">In-turn pick gain</th><th>Played as</th><th>Note</th></tr>' + rows + '</table></div>')
+            '<th class="n">Pick gain</th><th>Played as</th></tr>' + rows + '</table></div>')
 
 
 def render(reg: dict) -> str:
     prod, ev = reg['production'], reg['evaluation']
     css = (HERE / 'style.css').read_text()
-    ais = ''.join(f'<article class="ai"><h4>{esc(a["name"])}</h4><p>{esc(a["decides"])}</p>'
-                  f'<p class="dim">{esc(a["connection"])}</p><span class="chip flat">{esc(a["status"])}</span></article>'
+    ais = ''.join(f'<tr><td>{esc(a["name"])}</td><td>{esc(a["search"])}</td><td>{esc(a["hidden"])}</td>'
+                  f'<td class="n">{esc(a["per_decision"])}</td><td><span class="chip flat">{esc(a["status"])}</span></td></tr>'
                   for a in reg['external_ais'])
-    flight = ''.join(f'<li><span class="chip run">{esc(f["status"])}</span> {esc(f["name"])} '
-                     f'<span class="dim">· {esc(f["where"])}</span></li>' for f in reg['in_flight'])
+    rules = ''.join('<tr>' + ''.join(f'<td>{esc(c)}</td>' for c in row) + '</tr>' for row in ev['current_rules'])
+    flight = ''.join(f'<tr><td>{esc(f["name"])}</td><td class="dim">{esc(f["where"])}</td>'
+                     f'<td><span class="chip run">{esc(f["status"])}</span></td></tr>' for f in reg['in_flight'])
     return f"""<title>Catan Bot Atlas</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -235,36 +235,30 @@ def render(reg: dict) -> str:
 
 <section>
   <h2>Every policy at a glance</h2>
-  <p class="lead">One row per policy. The first columns say how it decides; the next group is its paired gain over the production bot on our three standard tables; the last group is its win share alone against three copies of each external AI. Green: interval above zero (or an external AI retired). Red: interval below zero (or below fair share).</p>
+  <div class="legend"><span class="cell good"><b>green</b></span> CI above 0 / AI retired <span class="cell bad"><b>red</b></span> CI below 0 / below 25%</div>
   {policy_matrix(reg)}
 </section>
 
 <section>
   <h2>Evaluation strategy <span class="chip run">{esc(ev['status'])}</span></h2>
-  <p class="lead">{esc(ev['owner_direction'])}</p>
-  <div class="cols">
-    <div><h3>Current rules</h3><ul>{''.join(f'<li>{esc(x)}</li>' for x in ev['current_rules'])}</ul></div>
-    <div><h3>Open questions</h3><ul>{''.join(f'<li>{esc(x)}</li>' for x in ev['open_questions'])}</ul></div>
-  </div>
+  <div class="scroll"><table><tr><th>Step</th><th>Opponents</th><th>Bar</th></tr>{rules}</table></div>
 </section>
 
 <section>
-  <h2>The external AIs</h2>
-  <p class="lead">Who the external columns above refer to. An AI is retired as a benchmark for a bot once that bot wins at least 50% with the lower bound above 40%.</p>
-  <div class="ais">{ais}</div>
+  <h2>External AIs</h2>
+  <div class="scroll"><table><tr><th>AI</th><th>Search</th><th>Hidden cards</th><th class="n">Time / move</th><th>Status</th></tr>{ais}</table></div>
 </section>
 
 <section>
   <h2>Value models</h2>
-  <p class="lead">Same 100k self-play games and 5,000 held-out games. In-turn pick gain is the chosen option's playout win rate minus the served option's, per decision.</p>
   {model_table(reg)}
 </section>
 
-<section class="cols">
-  <div><h2>What we have learned</h2><ul>{''.join(f'<li>{esc(x)}</li>' for x in reg['findings'])}</ul></div>
-  <div><h2>In flight</h2><ul class="flight">{flight}</ul></div>
+<section>
+  <h2>In flight</h2>
+  <div class="scroll"><table>{flight}</table></div>
 </section>
-<footer class="dim">Built from <code>docs/atlas/registry.json</code> by <code>docs/atlas/build.py</code>. Served trace <code>{esc(prod['served_trace_sha256'][:12])}</code> · candidate trace <code>{esc(prod['candidate_trace_sha256'][:12])}</code>.</footer>
+<footer class="dim">Source <code>docs/atlas/registry.json</code> · served trace <code>{esc(prod['served_trace_sha256'][:12])}</code> · candidate trace <code>{esc(prod['candidate_trace_sha256'][:12])}</code></footer>
 </div>
 """
 

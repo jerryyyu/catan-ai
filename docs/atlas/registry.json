@@ -5,17 +5,38 @@
   "served_since": "2026-11-03",
   "rollback": "planner_offer_guard",
   "candidate": "planner_pv2_tiles",
-  "candidate_status": "Owner promotion decided 2026-11-08; confirmatory held-out running (internal tables + paired seeded JSettlers). PASS confirms the promotion, FAIL keeps planner_offer_accept.",
+  "candidate_status": "held-out running",
   "served_trace_sha256": "9fd2805e9678f4f225a76fa7e2e522c55e3c981cdcba60d1e6e28c774921b4c1",
   "candidate_trace_sha256": "c7d07a76c9f3249f170ade344e3564df62b3a127c4b311b05eeea586334cb815"
  },
  "evaluation": {
   "status": "evolving",
   "current_rules": [
-   "Every run is seeded and predeclared with a numeric bar and a power block before any game; a failed bar is a result and is not retuned.",
-   "Internal tables are paired: each seed is played with the candidate rotated through all four seats and again with the control in the same seats and dice. Tables: tactical (3 Tactical), mixed (Builder, Tactical, Expander), self (3 copies of the served bot).",
-   "Promotion path in PLAN.md: +5 pp on every table in a DEV screen earns a held-out run; a held-out pass (LCB > 0 on every table) supports promotion; promotion is the owner's call.",
-   "External ladders: one bot vs three copies of an outside AI, rotated through every seat; fair share .25. Retirement rule: retire an outside AI as a benchmark for a bot once that bot wins >= .50 with the 95% lower bound > .40."
+   [
+    "DEV screen",
+    "candidate vs best internal policy",
+    "predeclared bar + power"
+   ],
+   [
+    "Internal tables",
+    "3 Tactical · mixed · 3 prod copies",
+    "paired, seat-rotated"
+   ],
+   [
+    "Held-out",
+    "fresh seeds, same tables",
+    "LCB > 0 every table"
+   ],
+   [
+    "External ladder",
+    "1 bot vs 3 copies",
+    "fair share 25%"
+   ],
+   [
+    "Retirement",
+    "external AI dropped for a bot",
+    "share ≥ 50%, LCB > 40%"
+   ]
   ],
   "owner_direction": "Evaluate candidates by screens against our best policies and the best external policies (Jerry 2026-11-08).",
   "open_questions": [
@@ -348,33 +369,38 @@
  "external_ais": [
   {
    "name": "Catanatron AlphaBeta",
-   "decides": "Expectimax/alpha-beta over a hand-tuned value function (depth 2 is the author's best).",
-   "connection": "Belief-sampled adapter into Catanatron's engine.",
-   "status": "Retired as a benchmark for planner_pv2_tiles."
+   "search": "Expectimax, depth 2–3",
+   "hidden": "Belief-sampled",
+   "per_decision": "ms",
+   "status": "retired for pv2_tiles"
   },
   {
-   "name": "JSettlers2 robots (SMART/FAST)",
-   "decides": "Plan-based: building-speed estimates, per-player win-time estimates, a trade negotiator; no lookahead search.",
-   "connection": "Third-party robot bridge; opt-in seed patch for paired luck and all-SMART tables.",
-   "status": "Current automated bar."
+   "name": "JSettlers2 SMART",
+   "search": "Plan heuristics, no lookahead",
+   "hidden": "Tracks hands",
+   "per_decision": "ms",
+   "status": "current bar"
   },
   {
    "name": "STAC POMCP-TS-CR",
-   "decides": "POMCP tree search over sampled hidden hands, 10k iterations x 4 threads, human-guided priors and rollouts, typed actions.",
-   "connection": "STAC bridge inside STAC's simulator (under review); player trading off.",
-   "status": "Smoke only; likely the strongest automated opponent."
+   "search": "POMCP, 10k sims × 4 threads",
+   "hidden": "Belief over hands",
+   "per_decision": "~0.8 s",
+   "status": "smoke only, trades off"
   },
   {
    "name": "Settlers-RL",
-   "decides": "PPO with tile-token attention and multi-head actions.",
-   "connection": "Not built.",
-   "status": "Not benchmarked."
+   "search": "PPO policy, no search",
+   "hidden": "—",
+   "per_decision": "—",
+   "status": "not built"
   },
   {
    "name": "Colonist.io bots",
-   "decides": "Unknown.",
-   "connection": "Not used: terms prohibit automated access and derived statistics without written consent.",
-   "status": "Excluded."
+   "search": "Unknown",
+   "hidden": "—",
+   "per_decision": "—",
+   "status": "excluded (ToS)"
   }
  ],
  "models": [
@@ -444,24 +470,24 @@
  ],
  "in_flight": [
   {
-   "name": "Confirmatory held-out for planner_pv2_tiles",
+   "name": "pv2_tiles held-out",
    "where": "ultra + Mac",
    "status": "running"
   },
   {
    "name": "Margin-head transformer",
    "where": "ultra",
-   "status": "replaying final points"
+   "status": "replaying"
   },
   {
-   "name": "PUCT selective-depth search",
-   "where": "build",
-   "status": "building"
-  },
-  {
-   "name": "STAC bridge",
-   "where": "PR #41",
+   "name": "PUCT screen",
+   "where": "#46",
    "status": "review"
+  },
+  {
+   "name": "STAC trading",
+   "where": "bridge",
+   "status": "scoping"
   }
  ],
  "policies": [
@@ -469,8 +495,8 @@
    "group": "Production",
    "name": "planner_offer_accept",
    "status": "served",
-   "search": "One-turn build search over builds, bank trades and cards, plus one priced trade offer per turn",
-   "model": "Fitted economic score (hand-built features, fitted weights)",
+   "search": "1-turn build search + 1 trade offer",
+   "model": "Fitted econ score",
    "vs_prod": null,
    "external": {
     "catanatron_d2": [
@@ -497,15 +523,14 @@
      0.32,
      8
     ]
-   },
-   "note": "Production since 2026-11-03. STAC is an 8-game smoke, not a benchmark."
+   }
   },
   {
    "group": "Candidates",
    "name": "planner_pv2_tiles",
-   "status": "promotion pending held-out",
-   "search": "PV search: the production bot proposes 'end now' + its top-4 turn plans; the value net picks one",
-   "model": "Tile transformer (win probability; 555k params)",
+   "status": "held-out running",
+   "search": "PV: prod top-4 turn plans",
+   "model": "Tile transformer",
    "vs_prod": {
     "tactical": [
      0.0454,
@@ -544,25 +569,23 @@
      0.491,
      512
     ]
-   },
-   "note": "Owner promotion; confirmatory held-out running. Catanatron retired for this bot."
+   }
   },
   {
    "group": "Candidates",
    "name": "planner_pv2_puct",
    "status": "screen queued",
-   "search": "PUCT tree search (AlphaGo-Zero style): selective depth over our future turns, sampled hidden cards and dice",
-   "model": "Tile transformer (same as above)",
+   "search": "PUCT, selective depth (~4.5 turns)",
+   "model": "Tile transformer",
    "vs_prod": null,
-   "external": {},
-   "note": "Screen is vs planner_pv2_tiles (+2 pp every table). Pre-screen: 100 simulations/decision, principal lines ~4.5 turns deep."
+   "external": {}
   },
   {
    "group": "Candidates",
    "name": "planner_pv2_b_fix",
-   "status": "previous research baseline",
-   "search": "PV search (as planner_pv2_tiles)",
-   "model": "Residual MLP (win probability)",
+   "status": "old baseline",
+   "search": "PV: prod top-4 turn plans",
+   "model": "Residual MLP",
    "vs_prod": {
     "tactical": [
      0.0254,
@@ -582,14 +605,13 @@
     "seeds": 512,
     "receipt": "pv2-b-fix-precise-v1"
    },
-   "external": {},
-   "note": "Superseded by the transformer."
+   "external": {}
   },
   {
-   "group": "Offline experts (too slow to serve)",
+   "group": "Offline experts (too slow)",
    "name": "planner_placement_mix",
    "status": "FAIL",
-   "search": "Production bot, except opening placements: top-12 spots x 24 full-game playouts each",
+   "search": "Placement playouts, mixed opps",
    "model": "None (playouts)",
    "vs_prod": {
     "tactical": [
@@ -610,14 +632,13 @@
     "seeds": 80,
     "receipt": "placement-mix-screen-v1"
    },
-   "external": {},
-   "note": "Playout opponents drawn from a mix of styles. ~30 s per placement."
+   "external": {}
   },
   {
-   "group": "Offline experts (too slow to serve)",
+   "group": "Offline experts (too slow)",
    "name": "planner_placement_search",
    "status": "FAIL",
-   "search": "As above, playouts assume production-bot opponents",
+   "search": "Placement playouts, prod opps",
    "model": "None (playouts)",
    "vs_prod": {
     "tactical": [
@@ -634,14 +655,13 @@
     "seeds": 64,
     "receipt": "placement-search-screen-v1"
    },
-   "external": {},
-   "note": ""
+   "external": {}
   },
   {
-   "group": "Offline experts (too slow to serve)",
+   "group": "Offline experts (too slow)",
    "name": "planner_placement_infer",
    "status": "FAIL",
-   "search": "As above, opponent styles inferred from their observed placements",
+   "search": "Placement playouts, inferred opps",
    "model": "None (playouts)",
    "vs_prod": {
     "tactical": [
@@ -662,14 +682,13 @@
     "seeds": 80,
     "receipt": "placement-infer-screen-v1"
    },
-   "external": {},
-   "note": ""
+   "external": {}
   },
   {
    "group": "Screened, not taken",
    "name": "planner_pv2_b",
    "status": "FAIL",
-   "search": "PV search (offers suppressed by a bug)",
+   "search": "PV, offers off (bug)",
    "model": "Residual MLP",
    "vs_prod": {
     "tactical": [
@@ -690,14 +709,13 @@
     "seeds": 128,
     "receipt": "pv2-b-screen-v1"
    },
-   "external": {},
-   "note": ""
+   "external": {}
   },
   {
    "group": "Screened, not taken",
    "name": "planner_pv2_s1",
    "status": "FAIL",
-   "search": "PV search, committing to the picked turn plan",
+   "search": "PV, plan commit",
    "model": "Residual MLP",
    "vs_prod": {
     "tactical": [
@@ -718,15 +736,14 @@
     "seeds": 128,
     "receipt": "pv2-s1-screen-v1"
    },
-   "external": {},
-   "note": ""
+   "external": {}
   },
   {
    "group": "Screened, not taken",
    "name": "planner_pv2_s1_m1",
    "status": "FAIL",
-   "search": "As planner_pv2_s1",
-   "model": "Residual MLP fine-tuned on search data",
+   "search": "PV, plan commit",
+   "model": "Residual MLP + search FT",
    "vs_prod": {
     "tactical": [
      -0.025,
@@ -746,8 +763,7 @@
     "seeds": 128,
     "receipt": "pv2-s1-m1-screen-v1"
    },
-   "external": {},
-   "note": ""
+   "external": {}
   }
  ],
  "external_columns": [
