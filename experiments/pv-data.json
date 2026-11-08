@@ -1,0 +1,13 @@
+{
+  "name": "pv-data",
+  "stage": "data-generation",
+  "schema": 2,
+  "policy": "planner_offer_accept",
+  "max_turns": 1000,
+  "seeds": [2620000, 1000],
+  "decision_rate": 0.08,
+  "candidates": 4,
+  "playouts": 8,
+  "split": {"train": [2620000, 800], "test": [2620800, 200]},
+  "note": "Predeclared 2026-11-04 before any data (Jerry: shengji-style policy/value model, AlphaGo-inspired). Supersedes rank-data v1 (stopped after ~3 minutes, 9 partial games preserved on ultra, never read). Self-play of the served planner_offer_accept; ~8% of own-turn first-action decisions sampled; per decision the pre-move observation (40 observation-only features) and up to 4 candidate first moves (served choice + best 3 others by the served one-step leaf), each with a 16-number action encoding, its post-move observation and its win rate over 8 full playouts from the true state (common random numbers across candidates). Every turn-start position is also stored with the final winner (value-head rows). Seeds 2620000-2620999 (fresh): train = first 800 games, test = last 200. The PV architecture, targets, fit and offline bars are fixed in a separate config committed before the test split is read; a pass licenses a predeclared head-driven integration screen at the standard +.05 bar. Runs on ultra from a frozen snapshot; outputs copied back to runs/ on the mini."
+}

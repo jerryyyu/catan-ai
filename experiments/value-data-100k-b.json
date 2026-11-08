@@ -1,0 +1,33 @@
+{
+  "name": "value-data-100k-b",
+  "stage": "data-generation",
+  "schema": 2,
+  "policy": "planner_offer_accept",
+  "max_turns": 1000,
+  "seeds": [
+    2650000,
+    100000
+  ],
+  "decision_rate": 0.0,
+  "candidates": 4,
+  "playouts": 0,
+  "value_points": [
+    "roll",
+    "end_turn"
+  ],
+  "split": {
+    "train": [
+      2650000,
+      95000
+    ],
+    "test": [
+      2745000,
+      5000
+    ]
+  },
+  "note": "Completion of value-data-100k (Jerry 2026-11-04: pause the 100k run and finish with the optimized version). The first root runs/value100k-v1 (producer aec5881, pure Python) was paused at 42,492 valid games (seeds 2650000-2692511, 0 partial files). This root produces every remaining seed of the same declaration (seeds 2650000-2749999, split train 95,000 / test 5,000) with the output-identical optimized producer (PR #28: trace hash and data rows identical) on the Cython engine (trace hash identical to pure Python on ultra), skipping seeds already in the first root after verifying their identity. The union of the two roots is the 100k corpus; the training loader validates each root against its own manifest. Test split still unread.",
+  "complete_from": {
+    "root": "value100k-v1",
+    "identity_sha256": "466fc3655f232c22ab0d7323a3af6070fb3be86ddc53f68ecdf6c477207b02c5"
+  }
+}
