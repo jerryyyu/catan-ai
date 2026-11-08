@@ -1,0 +1,21 @@
+{
+  "name": "value-v2-100k",
+  "stage": "re-encode + offline gate",
+  "roots": [
+    {"root": "value100k-v1", "identity_sha256": "466fc3655f232c22ab0d7323a3af6070fb3be86ddc53f68ecdf6c477207b02c5"},
+    {"root": "value100k-v1b", "identity_sha256": "83bef53dfba99cd558033132b9c0905ab8a31b6f1c1d4a8070b09203924a1a48"}
+  ],
+  "point": "end_turn",
+  "stride": 3,
+  "max_turns": 1000,
+  "shard_games": 5000,
+  "split": {"train": [2650000, 95000], "test": [2745000, 5000]},
+  "model": {"hidden": 256, "layers": 2, "learning_rate": 0.0005, "weight_decay": 0.0001, "epochs": 12,
+            "batch": 4096, "validation_games": 5000, "seed": 0, "threads": 24},
+  "gate": {
+    "primary": "pooled AUC of the network on the 5,000 test games' end-of-turn rows minus the better of the served leaf and shared score; game-clustered bootstrap 95% LCB > 0",
+    "bootstrap_resamples": 1000, "bootstrap_seed": 23
+  },
+  "cross_eval_predeclared": "Once runs/pv2-data-v1 exists, this model is also scored with the pv2 within-decision gate on the pv2 test decisions (picked candidate's 24-playout win rate minus the served candidate's, game-clustered LCB). That answers whether 100k on-policy outcome data with encoder v2 orders a decision's options; it is reported alongside pv2-train and is not a substitute for it.",
+  "note": "Predeclared 2026-11-05 before any re-encoding or test read (Jerry: train a model first on the 100k with the audit fixes). Applies encoder v2 (fix 3/4) to the 100k on-policy value data by deterministic replay (each replayed row verified against the stored row's legacy features). It cannot apply the counterfactual-support fix (on-policy data only) or the within-decision gate on its own data; hence the predeclared cross-eval on pv2 test decisions. Every third end-of-turn row per game (deterministic offset). Epoch chosen on the last 5,000 train games; no other tuning."
+}
