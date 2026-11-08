@@ -1,0 +1,806 @@
+{
+ "reconciled": "2026-11-08",
+ "production": {
+  "served": "planner_offer_accept",
+  "served_since": "2026-11-03",
+  "rollback": "planner_offer_guard",
+  "candidate": "planner_pv2_tiles",
+  "candidate_status": "held-out FAIL: internal pass, JSettlers paired +.053 (LCB −.005)",
+  "served_trace_sha256": "9fd2805e9678f4f225a76fa7e2e522c55e3c981cdcba60d1e6e28c774921b4c1",
+  "candidate_trace_sha256": "c7d07a76c9f3249f170ade344e3564df62b3a127c4b311b05eeea586334cb815"
+ },
+ "evaluation": {
+  "status": "evolving",
+  "current_rules": [
+   [
+    "DEV screen",
+    "candidate vs best internal policy",
+    "predeclared bar + power"
+   ],
+   [
+    "Internal tables",
+    "3 Tactical · mixed · 3 prod copies",
+    "paired, seat-rotated"
+   ],
+   [
+    "Held-out",
+    "fresh seeds, same tables",
+    "LCB > 0 every table"
+   ],
+   [
+    "External ladder",
+    "1 bot vs 3 copies",
+    "fair share 25%"
+   ],
+   [
+    "Retirement",
+    "external AI dropped for a bot",
+    "share ≥ 50%, LCB > 40%"
+   ]
+  ],
+  "owner_direction": "Evaluate candidates by screens against our best policies and the best external policies (Jerry 2026-11-08).",
+  "open_questions": [
+   "Which internal comparator: the served bot or our strongest candidate? (Recent screens use the strongest candidate, e.g. +.02 over planner_pv2_tiles.)",
+   "JSettlers as a required table: added (as in the held-out) or replacing the internal tables? Paired seeded JSettlers became possible with the seed patch (#40).",
+   "STAC POMCP-TS-CR as the strongest external opponent: benchmark design (seat rotation, soft time cap) after the bridge review (#41).",
+   "Metric: wins per paired round stay the decision metric; final-VP margin is about as sensitive and may be reported as a secondary.",
+   "Bar size: the transformer's true Tactical/mixed lift (~+4.5) sits just under +5, so a +5 DEV screen is close to a coin flip for it."
+  ]
+ },
+ "screens": [
+  {
+   "id": "pv2-b-screen-v1",
+   "bot": "planner_pv2_b",
+   "family": "PV search",
+   "vs": "planner_offer_accept",
+   "seeds": 128,
+   "bar": 0.05,
+   "tables": {
+    "tactical": [
+     -0.076,
+     null,
+     null
+    ],
+    "mixed": [
+     -0.025,
+     null,
+     null
+    ],
+    "self": [
+     0.008,
+     null,
+     null
+    ]
+   },
+   "verdict": "FAIL",
+   "note": "Offer-suppression bug."
+  },
+  {
+   "id": "pv2-b-fix-precise-v1",
+   "bot": "planner_pv2_b_fix",
+   "family": "PV search",
+   "vs": "planner_offer_accept",
+   "seeds": 512,
+   "bar": 0.0,
+   "tables": {
+    "tactical": [
+     0.0254,
+     0.0026,
+     0.0482
+    ],
+    "mixed": [
+     0.0146,
+     -0.0039,
+     0.0332
+    ],
+    "self": [
+     0.019,
+     0.002,
+     0.0361
+    ]
+   },
+   "verdict": "measurement",
+   "note": "Residual MLP value net; previous research baseline."
+  },
+  {
+   "id": "pv2-s1-screen-v1",
+   "bot": "planner_pv2_s1",
+   "family": "PV search",
+   "vs": "planner_offer_accept",
+   "seeds": 128,
+   "bar": 0.05,
+   "tables": {
+    "tactical": [
+     0.023,
+     null,
+     null
+    ],
+    "mixed": [
+     -0.012,
+     null,
+     null
+    ],
+    "self": [
+     -0.008,
+     null,
+     null
+    ]
+   },
+   "verdict": "FAIL",
+   "note": "Commit to the picked sequence."
+  },
+  {
+   "id": "pv2-s1-m1-screen-v1",
+   "bot": "planner_pv2_s1_m1",
+   "family": "PV search",
+   "vs": "planner_offer_accept",
+   "seeds": 128,
+   "bar": 0.05,
+   "tables": {
+    "tactical": [
+     -0.025,
+     null,
+     null
+    ],
+    "mixed": [
+     -0.004,
+     null,
+     null
+    ],
+    "self": [
+     0.0,
+     null,
+     null
+    ]
+   },
+   "verdict": "FAIL",
+   "note": "Fine-tuned value net."
+  },
+  {
+   "id": "pv2-tiles-screen-v1",
+   "bot": "planner_pv2_tiles",
+   "family": "PV search",
+   "vs": "planner_offer_accept",
+   "seeds": 80,
+   "bar": 0.05,
+   "tables": {
+    "tactical": [
+     0.0187,
+     -0.0304,
+     0.0679
+    ],
+    "mixed": [
+     0.05,
+     0.0044,
+     0.0956
+    ],
+    "self": [
+     0.0969,
+     0.048,
+     0.1458
+    ]
+   },
+   "verdict": "FAIL",
+   "note": "Tile-transformer value; failed the all-tables rule on Tactical."
+  },
+  {
+   "id": "pv2-tiles-precise-v1",
+   "bot": "planner_pv2_tiles",
+   "family": "PV search",
+   "vs": "planner_offer_accept",
+   "seeds": 512,
+   "bar": 0.0,
+   "tables": {
+    "tactical": [
+     0.0454,
+     0.0238,
+     0.067
+    ],
+    "mixed": [
+     0.0439,
+     0.026,
+     0.0619
+    ],
+    "self": [
+     0.106,
+     0.0872,
+     0.1247
+    ]
+   },
+   "verdict": "measurement",
+   "note": "Zero-lift gate PASS on every table; used as DEV for the held-out (owner exception)."
+  },
+  {
+   "id": "placement-search-screen-v1",
+   "bot": "planner_placement_search",
+   "family": "Placement search (expert)",
+   "vs": "planner_offer_accept",
+   "seeds": 64,
+   "bar": 0.05,
+   "tables": {
+    "tactical": [
+     0.0195,
+     -0.059,
+     0.098
+    ],
+    "self": [
+     0.1172,
+     0.066,
+     0.168
+    ]
+   },
+   "verdict": "FAIL",
+   "note": "Playouts assume served opponents."
+  },
+  {
+   "id": "placement-mix-screen-v1",
+   "bot": "planner_placement_mix",
+   "family": "Placement search (expert)",
+   "vs": "planner_offer_accept",
+   "seeds": 80,
+   "bar": 0.05,
+   "tables": {
+    "tactical": [
+     0.1,
+     0.038,
+     0.162
+    ],
+    "mixed": [
+     0.0437,
+     -0.0171,
+     0.1046
+    ],
+    "self": [
+     0.0437,
+     -0.0119,
+     0.0994
+    ]
+   },
+   "verdict": "FAIL",
+   "note": "Playouts draw opponent styles from a mix."
+  },
+  {
+   "id": "placement-infer-screen-v1",
+   "bot": "planner_placement_infer",
+   "family": "Placement search (expert)",
+   "vs": "planner_offer_accept",
+   "seeds": 80,
+   "bar": 0.05,
+   "tables": {
+    "tactical": [
+     0.1031,
+     0.0411,
+     0.1652
+    ],
+    "mixed": [
+     0.025,
+     -0.0277,
+     0.0777
+    ],
+    "self": [
+     0.0312,
+     -0.0176,
+     0.0801
+    ]
+   },
+   "verdict": "FAIL",
+   "note": "Opponent styles inferred from observed placements."
+  },
+  {
+   "id": "pv2-tiles-heldout-v2",
+   "bot": "planner_pv2_tiles",
+   "seeds": 512,
+   "tables": {
+    "tactical": [
+     0.0464,
+     null,
+     null
+    ],
+    "mixed": [
+     0.0396,
+     null,
+     null
+    ],
+    "self": [
+     0.0957,
+     null,
+     null
+    ]
+   },
+   "verdict": "FAIL",
+   "note": "Confirmatory held-out. Internal seed LCBs +.023/+.016/+.072 (pass); paired seeded JSettlers 222 vs 195 of 512, +.053, LCB −.005 at α .05/4 (fail)."
+  }
+ ],
+ "external": [
+  {
+   "opponent": "Catanatron AlphaBeta depth 2",
+   "bot": "planner_offer_accept",
+   "games": 512,
+   "win": 0.488,
+   "ci": [
+    0.444,
+    0.533
+   ],
+   "receipt": "external-ladder-v1"
+  },
+  {
+   "opponent": "Catanatron AlphaBeta depth 2",
+   "bot": "planner_pv2_tiles",
+   "games": 512,
+   "win": 0.613,
+   "ci": [
+    0.568,
+    0.659
+   ],
+   "receipt": "external-ladder-tiles-v1"
+  },
+  {
+   "opponent": "Catanatron AlphaBeta depth 3",
+   "bot": "planner_offer_accept",
+   "games": 512,
+   "win": 0.455,
+   "ci": [
+    0.41,
+    0.501
+   ],
+   "receipt": "external-ladder-v1"
+  },
+  {
+   "opponent": "Catanatron AlphaBeta depth 3",
+   "bot": "planner_pv2_tiles",
+   "games": 512,
+   "win": 0.545,
+   "ci": [
+    0.501,
+    0.589
+   ],
+   "receipt": "external-ladder-tiles-v1"
+  },
+  {
+   "opponent": "JSettlers2 2.6.10 robots",
+   "bot": "planner_offer_accept",
+   "games": 512,
+   "win": 0.373,
+   "ci": [
+    0.332,
+    0.416
+   ],
+   "receipt": "jsettlers-match-v1"
+  },
+  {
+   "opponent": "JSettlers2 2.6.10 robots",
+   "bot": "planner_pv2_tiles",
+   "games": 512,
+   "win": 0.447,
+   "ci": [
+    0.405,
+    0.491
+   ],
+   "receipt": "jsettlers-match-tiles-v1"
+  },
+  {
+   "opponent": "STAC POMCP-TS-CR (smoke)",
+   "bot": "planner_offer_accept",
+   "games": 8,
+   "win": 0.0,
+   "ci": [
+    0.0,
+    0.32
+   ],
+   "receipt": "stac-smoke-20261108-v2"
+  }
+ ],
+ "external_ais": [
+  {
+   "name": "Catanatron AlphaBeta",
+   "search": "Expectimax, depth 2–3",
+   "hidden": "Belief-sampled",
+   "per_decision": "ms",
+   "status": "retired for pv2_tiles"
+  },
+  {
+   "name": "JSettlers2 SMART",
+   "search": "Plan heuristics, no lookahead",
+   "hidden": "Tracks hands",
+   "per_decision": "ms",
+   "status": "current bar"
+  },
+  {
+   "name": "STAC POMCP-TS-CR",
+   "search": "POMCP, 10k sims × 4 threads",
+   "hidden": "Belief over hands",
+   "per_decision": "~0.8 s",
+   "status": "smoke only, trades off"
+  },
+  {
+   "name": "Settlers-RL",
+   "search": "PPO policy, no search",
+   "hidden": "—",
+   "per_decision": "—",
+   "status": "not built"
+  },
+  {
+   "name": "Colonist.io bots",
+   "search": "Unknown",
+   "hidden": "—",
+   "per_decision": "—",
+   "status": "excluded (ToS)"
+  }
+ ],
+ "models": [
+  {
+   "name": "Plain MLP",
+   "data": "100k self-play, encoder v2",
+   "auc": 0.746,
+   "xeval": null,
+   "played": "no",
+   "note": "Memorized boards before symmetry augmentation."
+  },
+  {
+   "name": "MLP + symmetry",
+   "data": "same",
+   "auc": 0.77,
+   "xeval": null,
+   "played": "no",
+   "note": ""
+  },
+  {
+   "name": "Residual MLP",
+   "data": "same",
+   "auc": 0.7721,
+   "xeval": 0.0024,
+   "played": "planner_pv2_b_fix",
+   "note": "Retrained reference in the bake-off; served arm B scored .7715 / +.0045."
+  },
+  {
+   "name": "Who-wins + turns-left heads",
+   "data": "same",
+   "auc": 0.7739,
+   "xeval": 0.0034,
+   "played": "no",
+   "note": "Missed the +.010 AUC bar."
+  },
+  {
+   "name": "Hex-grid CNN",
+   "data": "same",
+   "auc": 0.7811,
+   "xeval": 0.0036,
+   "played": "no",
+   "note": "Just missed the bar."
+  },
+  {
+   "name": "Tile transformer",
+   "data": "same",
+   "auc": 0.7859,
+   "xeval": 0.0062,
+   "played": "planner_pv2_tiles",
+   "note": "Best offline; 555k params."
+  },
+  {
+   "name": "Margin-head transformer",
+   "data": "same + replayed final points",
+   "auc": null,
+   "xeval": null,
+   "played": "pending",
+   "note": "Offline gate, then +.02 screen vs planner_pv2_tiles."
+  }
+ ],
+ "findings": [
+  "Build/trade decisions: a 32-playout selector gains under 1 pp per decision over the served move (label reliability .23 to .30).",
+  "Opening placement: +.105 [+.035, +.180] per decision vs Tactical (reliability .82); robber and trade answers show no headroom.",
+  "Search gains follow the opponent model the playouts assume.",
+  "Tile tokens beat flat features and a hex CNN offline; every value model over-ranks 'build a city' against 'end the turn' (.92 vs .56 in playouts).",
+  "STAC's POMCP spends ~0.8 s and 10k simulations per decision; our bots look one turn ahead in milliseconds. Deeper search (PUCT) is the next lever."
+ ],
+ "in_flight": [
+  {
+   "name": "Margin-head transformer",
+   "where": "ultra",
+   "status": "training queued"
+  },
+  {
+   "name": "PUCT screen",
+   "where": "#46",
+   "status": "merge pending"
+  },
+  {
+   "name": "STAC chat trading",
+   "where": "claude/stac-trades",
+   "status": "smoke running"
+  }
+ ],
+ "policies": [
+  {
+   "group": "Production",
+   "name": "planner_offer_accept",
+   "status": "served",
+   "search": "1-turn build search + 1 trade offer",
+   "model": "Fitted econ score",
+   "vs_prod": null,
+   "external": {
+    "catanatron_d2": [
+     0.488,
+     0.444,
+     0.533,
+     512
+    ],
+    "catanatron_d3": [
+     0.455,
+     0.41,
+     0.501,
+     512
+    ],
+    "jsettlers": [
+     0.373,
+     0.332,
+     0.416,
+     512
+    ],
+    "stac_pomcp": [
+     0.0,
+     0.0,
+     0.32,
+     8
+    ]
+   }
+  },
+  {
+   "group": "Candidates",
+   "name": "planner_pv2_tiles",
+   "status": "held-out FAIL",
+   "search": "PV: prod top-4 turn plans",
+   "model": "Tile transformer",
+   "vs_prod": {
+    "tactical": [
+     0.0454,
+     0.0238,
+     0.067
+    ],
+    "mixed": [
+     0.0439,
+     0.026,
+     0.0619
+    ],
+    "self": [
+     0.106,
+     0.0872,
+     0.1247
+    ],
+    "seeds": 512,
+    "receipt": "pv2-tiles-precise-v1"
+   },
+   "external": {
+    "catanatron_d2": [
+     0.613,
+     0.568,
+     0.659,
+     512
+    ],
+    "catanatron_d3": [
+     0.545,
+     0.501,
+     0.589,
+     512
+    ],
+    "jsettlers": [
+     0.447,
+     0.405,
+     0.491,
+     512
+    ]
+   }
+  },
+  {
+   "group": "Candidates",
+   "name": "planner_pv2_puct",
+   "status": "screen queued",
+   "search": "PUCT, selective depth (~4.5 turns)",
+   "model": "Tile transformer",
+   "vs_prod": null,
+   "external": {}
+  },
+  {
+   "group": "Candidates",
+   "name": "planner_pv2_b_fix",
+   "status": "old baseline",
+   "search": "PV: prod top-4 turn plans",
+   "model": "Residual MLP",
+   "vs_prod": {
+    "tactical": [
+     0.0254,
+     0.0026,
+     0.0482
+    ],
+    "mixed": [
+     0.0146,
+     -0.0039,
+     0.0332
+    ],
+    "self": [
+     0.019,
+     0.002,
+     0.0361
+    ],
+    "seeds": 512,
+    "receipt": "pv2-b-fix-precise-v1"
+   },
+   "external": {}
+  },
+  {
+   "group": "Offline experts (too slow)",
+   "name": "planner_placement_mix",
+   "status": "FAIL",
+   "search": "Placement playouts, mixed opps",
+   "model": "None (playouts)",
+   "vs_prod": {
+    "tactical": [
+     0.1,
+     0.038,
+     0.162
+    ],
+    "mixed": [
+     0.0437,
+     -0.0171,
+     0.1046
+    ],
+    "self": [
+     0.0437,
+     -0.0119,
+     0.0994
+    ],
+    "seeds": 80,
+    "receipt": "placement-mix-screen-v1"
+   },
+   "external": {}
+  },
+  {
+   "group": "Offline experts (too slow)",
+   "name": "planner_placement_search",
+   "status": "FAIL",
+   "search": "Placement playouts, prod opps",
+   "model": "None (playouts)",
+   "vs_prod": {
+    "tactical": [
+     0.0195,
+     -0.059,
+     0.098
+    ],
+    "mixed": null,
+    "self": [
+     0.1172,
+     0.066,
+     0.168
+    ],
+    "seeds": 64,
+    "receipt": "placement-search-screen-v1"
+   },
+   "external": {}
+  },
+  {
+   "group": "Offline experts (too slow)",
+   "name": "planner_placement_infer",
+   "status": "FAIL",
+   "search": "Placement playouts, inferred opps",
+   "model": "None (playouts)",
+   "vs_prod": {
+    "tactical": [
+     0.1031,
+     0.0411,
+     0.1652
+    ],
+    "mixed": [
+     0.025,
+     -0.0277,
+     0.0777
+    ],
+    "self": [
+     0.0312,
+     -0.0176,
+     0.0801
+    ],
+    "seeds": 80,
+    "receipt": "placement-infer-screen-v1"
+   },
+   "external": {}
+  },
+  {
+   "group": "Screened, not taken",
+   "name": "planner_pv2_b",
+   "status": "FAIL",
+   "search": "PV, offers off (bug)",
+   "model": "Residual MLP",
+   "vs_prod": {
+    "tactical": [
+     -0.076,
+     null,
+     null
+    ],
+    "mixed": [
+     -0.025,
+     null,
+     null
+    ],
+    "self": [
+     0.008,
+     null,
+     null
+    ],
+    "seeds": 128,
+    "receipt": "pv2-b-screen-v1"
+   },
+   "external": {}
+  },
+  {
+   "group": "Screened, not taken",
+   "name": "planner_pv2_s1",
+   "status": "FAIL",
+   "search": "PV, plan commit",
+   "model": "Residual MLP",
+   "vs_prod": {
+    "tactical": [
+     0.023,
+     null,
+     null
+    ],
+    "mixed": [
+     -0.012,
+     null,
+     null
+    ],
+    "self": [
+     -0.008,
+     null,
+     null
+    ],
+    "seeds": 128,
+    "receipt": "pv2-s1-screen-v1"
+   },
+   "external": {}
+  },
+  {
+   "group": "Screened, not taken",
+   "name": "planner_pv2_s1_m1",
+   "status": "FAIL",
+   "search": "PV, plan commit",
+   "model": "Residual MLP + search FT",
+   "vs_prod": {
+    "tactical": [
+     -0.025,
+     null,
+     null
+    ],
+    "mixed": [
+     -0.004,
+     null,
+     null
+    ],
+    "self": [
+     0.0,
+     null,
+     null
+    ],
+    "seeds": 128,
+    "receipt": "pv2-s1-m1-screen-v1"
+   },
+   "external": {}
+  }
+ ],
+ "external_columns": [
+  {
+   "key": "catanatron_d2",
+   "label": "Catanatron depth 2"
+  },
+  {
+   "key": "catanatron_d3",
+   "label": "Catanatron depth 3"
+  },
+  {
+   "key": "jsettlers",
+   "label": "JSettlers robots"
+  },
+  {
+   "key": "stac_pomcp",
+   "label": "STAC POMCP"
+  }
+ ]
+}
