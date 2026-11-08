@@ -71,7 +71,11 @@ def load_session(game_id):
             if not record.get('model_sha256') or any(
                     bot.model_hash != record['model_sha256'] for bot in bots.values()):
                 raise ValueError('Saved checkpoint differs')
-    except (KeyError, OSError, ValueError) as exc:
+        if record['opponent'] in VALUE_WEIGHT_POLICIES:
+            if not record.get('value_sha256') or any(
+                    value_weights_hash(bot) != record['value_sha256'] for bot in bots.values()):
+                raise ValueError('Saved value weights differ')
+    except (KeyError, OSError, ValueError, ImportError) as exc:
         raise HTTPException(409, 'Saved checkpoint unavailable or changed; record is preserved.') from exc
     for row in record['trace']:
         seat = row['seat']
@@ -88,7 +92,14 @@ def load_session(game_id):
 
 # Policies that load the source-pinned fitted checkpoint; their games record its SHA256.
 CHECKPOINT_POLICIES = ('planner_parameter', 'planner_devfix', 'planner_unified', 'planner_unified_offer',
-                       'planner_offer_guard', 'planner_offer_accept')
+                       'planner_offer_guard', 'planner_offer_accept', 'planner_pv2_tiles')
+# Policies that also load local value-net weights (never committed; pinned by the
+# SHA256 in their .meta.json); their games record that SHA256 too.
+VALUE_WEIGHT_POLICIES = ('planner_pv2_tiles',)
+
+
+def value_weights_hash(bot) -> str:
+    return bot.net.meta['npz_sha256']
 
 
 class NewGame(BaseModel):
@@ -98,7 +109,7 @@ class NewGame(BaseModel):
     # None means the served default (see served_default).
     opponent: Literal['heuristic', 'mc', 'tactical', 'mc_mean', 'learned', 'planner_parameter',
                       'planner_devfix', 'planner_unified', 'planner_unified_offer',
-                      'planner_offer_guard', 'planner_offer_accept'] | None = None
+                      'planner_offer_guard', 'planner_offer_accept', 'planner_pv2_tiles'] | None = None
 
 
 # Since 2026-11-01 (owner-approved): the shared-score planner plus trade offers.
@@ -112,21 +123,71 @@ class NewGame(BaseModel):
 # runs/offer-guard-dev-v1.json; no held-out of its own). Since 2026-11-03 each offer is
 # weighted by the recipient's public acceptance rate (planner_offer_accept; held-out
 # mixed-table PASS vs planner_offer_guard, runs/offer-accept-heldout-v1.json).
+# Since 2026-11-08 (owner promotion, Jerry): the same planner with its own-turn build
+# decisions chosen by PV search scored by the tile-token value transformer
+# (planner_pv2_tiles; precise 512-seed lift vs planner_offer_accept on all three
+# tables, runs/pv2-tiles-precise-v1; the predeclared 80-seed screen FAILED its
+# all-tables +.05 rule and there is no held-out run). Its weights are a local file
+# pinned by SHA256; without them new games fall back to planner_offer_accept.
 # History: docs/POLICIES.md.
-SERVED_POLICY = 'planner_offer_accept'
+SERVED_POLICY = 'planner_pv2_tiles'
+CHECKPOINT_FALLBACK_POLICY = 'planner_offer_accept'
 FALLBACK_POLICY = 'tactical'
+CHECKPOINT_UNBOUND = 'Trained planner checkpoint is not bound to this server version'
+VALUE_WEIGHTS_UNAVAILABLE = 'Tiles value weights missing or unverified'
+
+# (stem, npz stat, meta stat) -> (available, detail). The weights are verified (SHA256,
+# tokenizer, parity probe) once per file version, not once per request.
+_value_weights_cache: dict[tuple, tuple[bool, str | None]] = {}
+
+
+def _stat_key(path: Path):
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    return st.st_mtime_ns, st.st_size, st.st_ino
+
+
+def value_weights_status() -> tuple[bool, str | None]:
+    """Return (available, detail) for the served tiles value weights; never raises."""
+    try:
+        from . import tiles_value
+        stem = str(tiles_value.TILES_V1)
+        key = (stem, _stat_key(Path(f'{stem}.npz')), _stat_key(Path(f'{stem}.meta.json')))
+        if key not in _value_weights_cache:
+            import numpy  # noqa: F401  (the scorer is NumPy; report its absence by name)
+            tiles_value.TilesValueNet(stem)
+            _value_weights_cache.clear()
+            _value_weights_cache[key] = (True, None)
+    except Exception as exc:  # any load failure is a visible fallback, not a crash
+        return False, type(exc).__name__ + ': ' + str(exc)
+    return _value_weights_cache[key]
+
+
+def serving_status() -> tuple[str, str | None, str | None]:
+    """The policy a new game gets when none is named, and why if it fell back.
+
+    Returns (policy, reason, detail). ``planner_pv2_tiles`` is served when its
+    source-pinned parameter checkpoint loads on this server (pure-Python engine,
+    matching source) and its local tiles value weights load and verify. Without the
+    weights (or NumPy) new games use ``planner_offer_accept``; without the checkpoint
+    they use Tactical. The reason is reported so the fallback is visible.
+    """
+    from .parameter_planner import served_status
+    available, detail = served_status()
+    if not available:
+        return FALLBACK_POLICY, CHECKPOINT_UNBOUND, detail
+    available, detail = value_weights_status()
+    if not available:
+        return CHECKPOINT_FALLBACK_POLICY, VALUE_WEIGHTS_UNAVAILABLE, detail
+    return SERVED_POLICY, None, None
 
 
 def served_default() -> tuple[str, str | None]:
-    """The policy a new game gets when none is named, and why if it fell back.
-
-    The fitted planner is served when its source-pinned checkpoint loads on this
-    server (pure-Python engine, matching source). Otherwise new games use
-    Tactical, and the reason is reported so the fallback is visible.
-    """
-    from .parameter_planner import served_status
-    available, reason = served_status()
-    return (SERVED_POLICY, None) if available else (FALLBACK_POLICY, reason)
+    """(policy, reason) for new games that name no opponent; see serving_status."""
+    policy, reason, _ = serving_status()
+    return policy, reason
 
 
 class ActionBody(BaseModel):
@@ -154,9 +215,10 @@ def health() -> dict:
 
 @app.get("/api/bots")
 def bots_info() -> dict:
-    policy, reason = served_default()
+    policy, reason, detail = serving_status()
     return {"default": policy, "served": SERVED_POLICY, "served_available": reason is None,
-            "fallback_reason": None if reason is None else "Trained planner checkpoint is not bound to this server version"}
+            "fallback_reason": reason, "fallback_detail": detail,
+            "checkpoint_available": policy != FALLBACK_POLICY}
 
 
 @app.post("/api/games")
@@ -174,7 +236,11 @@ def create_game(body: NewGame) -> dict:
         hashes = {bot.model_hash for bot in bots.values()} if body.opponent in CHECKPOINT_POLICIES else set()
         if hashes and len(hashes) != 1:
             raise ValueError('Checkpoint changed during game creation')
-    except (KeyError, OSError, ValueError) as exc:
+        value_hashes = ({value_weights_hash(bot) for bot in bots.values()}
+                        if body.opponent in VALUE_WEIGHT_POLICIES else set())
+        if value_hashes and len(value_hashes) != 1:
+            raise ValueError('Value weights changed during game creation')
+    except (KeyError, OSError, ValueError, ImportError) as exc:
         raise HTTPException(503, 'Requested bot checkpoint is not configured for this server version') from exc
     session = Session(
         game=game,
@@ -189,6 +255,8 @@ def create_game(body: NewGame) -> dict:
     )
     if hashes:
         session.metadata['model_sha256'] = next(iter(hashes))
+    if value_hashes:
+        session.metadata['value_sha256'] = next(iter(value_hashes))
     with session_lock:
         persist(session)
         sessions[game_id] = session

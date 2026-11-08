@@ -47,8 +47,12 @@ def test_new_games_default_to_the_served_policy():
     bots = sessions[created['game_id']].bots.values()
     info = client.get('/api/bots').json()
     if BACKEND == 'python':
-        # The committed checkpoint is bound to the pure-Python engine.
-        assert created['opponent'] == info['default'] == 'planner_offer_accept' and info['served_available']
+        # The committed checkpoint is bound to the pure-Python engine; the tiles value
+        # weights are a local file, so without them the served chain stops at
+        # planner_offer_accept (tests/test_serve_tiles.py covers both links).
+        from catan_ai.api import value_weights_status
+        served = 'planner_pv2_tiles' if value_weights_status()[0] else 'planner_offer_accept'
+        assert created['opponent'] == info['default'] == served and info['checkpoint_available']
         from catan_ai.unified_planner import AcceptanceOfferPlanner
         assert all(isinstance(p, AcceptanceOfferPlanner) for p in bots)
     else:
@@ -61,8 +65,10 @@ def test_unbound_checkpoint_falls_back_to_tactical_visibly(tmp_path, monkeypatch
     monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(tmp_path / 'missing.json'))
     client = TestClient(app)
     info = client.get('/api/bots').json()
-    assert info == {'default': 'tactical', 'served': 'planner_offer_accept', 'served_available': False,
-                    'fallback_reason': 'Trained planner checkpoint is not bound to this server version'}
+    assert {k: v for k, v in info.items() if k != 'fallback_detail'} == {
+        'default': 'tactical', 'served': 'planner_pv2_tiles', 'served_available': False,
+        'fallback_reason': 'Trained planner checkpoint is not bound to this server version',
+        'checkpoint_available': False}
     created = client.post('/api/games', json={'seed': 4}).json()
     assert created['opponent'] == 'tactical'
     assert all(isinstance(p, TacticalBot) for p in sessions[created['game_id']].bots.values())
