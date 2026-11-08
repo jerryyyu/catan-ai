@@ -390,3 +390,18 @@ class PVSearchTilesPlanner(PVSearchV2BFixPlanner):
 
     def _logits(self, rows):
         return [float(v) for v in self.net.logits(rows)] if rows else []
+
+
+TILES_MARGIN_V1 = Path(__file__).resolve().parents[2] / 'checkpoints' / 'value_tiles_margin_v1'
+
+
+class PVSearchTilesMarginPlanner(PVSearchTilesPlanner):
+    """``planner_pv2_tiles`` with the ``tiles_margin`` weights (experiments/tiles-margin.json):
+    the same tiles transformer trained with an auxiliary final-VP margin head; only its trunk
+    and P(I win) head are exported and served (``value_tiles_margin_v1``), so the forward
+    pass, candidates and integration are exactly ``planner_pv2_tiles``'s."""
+
+    def __init__(self, rng=None):
+        from .tiles_value import TilesValueNet
+        AcceptanceOfferPlanner.__init__(self, rng)
+        self.net = TilesValueNet(TILES_MARGIN_V1)
