@@ -19,7 +19,7 @@ import random
 from dataclasses import dataclass, replace
 from functools import lru_cache
 
-from catan_ai.engine import DESERT, Board, Resource, Tile
+from catan_ai.engine import DESERT, Board, Resource
 
 SQRT3 = math.sqrt(3)
 

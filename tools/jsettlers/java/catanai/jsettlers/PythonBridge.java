@@ -10,6 +10,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -18,9 +23,15 @@ import com.google.gson.JsonParser;
  * One long-lived Python bridge process ({@code scripts/jsettlers_bridge.py}) per JVM.
  * Requests and replies are single JSON lines; calls are serialized.
  *<P>
+ * Every request has a deadline ({@code catanai.bridge.timeout_ms}, default 30000). A request that
+ * gets no reply in time, or any transport failure, <b>retires</b> the transport: the process and
+ * its descendants are destroyed and every later call fails at once with an {@link IOException}
+ * (the brain counts each as a bridge error and falls back). The bridge is never silently restarted,
+ * because a fresh process would lose the per-game policy state.
+ *<P>
  * System properties: {@code catanai.bridge.cmd} (whitespace-separated command),
  * {@code catanai.bridge.cwd} (working directory), {@code catanai.bridge.stderr} (file for
- * the process's stderr; default inherit).
+ * the process's stderr; default inherit), {@code catanai.bridge.timeout_ms}.
  */
 public final class PythonBridge
 {
@@ -29,12 +40,20 @@ public final class PythonBridge
     private Process process;
     private BufferedWriter toPython;
     private BufferedReader fromPython;
+    private ExecutorService reader;
     private long nextId = 1;
+    private String retiredReason;
+    private final long timeoutMs;
+
+    PythonBridge(final long timeoutMs)
+    {
+        this.timeoutMs = timeoutMs;
+    }
 
     public static synchronized PythonBridge get()
     {
         if (instance == null)
-            instance = new PythonBridge();
+            instance = new PythonBridge(Long.getLong("catanai.bridge.timeout_ms", 30000L));
         return instance;
     }
 
@@ -56,24 +75,90 @@ public final class PythonBridge
         process = pb.start();
         toPython = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
         fromPython = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+        reader = Executors.newSingleThreadExecutor(r -> {
+            final Thread t = new Thread(r, "catanai-bridge-reader");
+            t.setDaemon(true);
+            return t;
+        });
     }
 
-    /** Send one request and wait for its reply. Throws on any transport failure. */
+    /** True once a stalled or broken transport has been retired. */
+    public synchronized boolean isRetired()
+    {
+        return retiredReason != null;
+    }
+
+    /** The bridge process, for supervision and tests; null before the first call. */
+    synchronized Process process()
+    {
+        return process;
+    }
+
+    private void retire(final String reason)
+    {
+        retiredReason = reason;
+        if (process != null)
+        {
+            process.descendants().forEach(ProcessHandle::destroyForcibly);
+            process.destroyForcibly();
+        }
+        if (reader != null)
+            reader.shutdownNow();
+        final JsonObject rec = new JsonObject();
+        rec.addProperty("type", "bridge_retired");
+        rec.addProperty("reason", reason);
+        DecisionLog.write(rec);
+    }
+
+    /** Send one request and wait (bounded) for its reply. Throws on any transport failure. */
     public synchronized JsonObject call(final JsonObject request) throws IOException
     {
-        if ((process == null) || ! process.isAlive())
-            start();
+        if (retiredReason != null)
+            throw new IOException("bridge retired: " + retiredReason);
         final long id = nextId++;
-        request.addProperty("id", id);
-        toPython.write(request.toString());
-        toPython.write('\n');
-        toPython.flush();
-        final String line = fromPython.readLine();
-        if (line == null)
-            throw new IOException("bridge process closed its output");
-        final JsonObject reply = JsonParser.parseString(line).getAsJsonObject();
-        if (! reply.has("id") || reply.get("id").isJsonNull() || reply.get("id").getAsLong() != id)
+        final String line;
+        try
+        {
+            if (process == null)
+                start();
+            if (! process.isAlive())
+                throw new IOException("bridge process exited with " + process.exitValue());
+            request.addProperty("id", id);
+            toPython.write(request.toString());
+            toPython.write('\n');
+            toPython.flush();
+            final Future<String> reply = reader.submit(fromPython::readLine);
+            try
+            {
+                line = reply.get(timeoutMs, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                reply.cancel(true);
+                throw new IOException("no bridge reply within " + timeoutMs + " ms");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("interrupted waiting for the bridge");
+            } catch (java.util.concurrent.ExecutionException e) {
+                throw new IOException("bridge read failed: " + e.getCause());
+            }
+            if (line == null)
+                throw new IOException("bridge process closed its output");
+        } catch (IOException e) {
+            retire(e.getMessage());
+            throw e;
+        }
+        final JsonObject parsed;
+        try
+        {
+            parsed = JsonParser.parseString(line).getAsJsonObject();
+        } catch (RuntimeException e) {
+            retire("unparseable bridge reply: " + e);
+            throw new IOException("unparseable bridge reply: " + e);
+        }
+        if (! parsed.has("id") || parsed.get("id").isJsonNull() || parsed.get("id").getAsLong() != id)
+        {
+            retire("bridge reply id mismatch: " + line);
             throw new IOException("bridge reply id mismatch: " + line);
-        return reply;
+        }
+        return parsed;
     }
 }

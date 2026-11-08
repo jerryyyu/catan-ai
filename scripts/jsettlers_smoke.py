@@ -6,6 +6,13 @@ bot in one seat (``percent3p``; seat and first player are chosen by the server a
 recorded per game). Writes a JSON receipt with per-game outcomes, decisions, fallbacks,
 bridge errors and decision latency.
 
+Run outputs are sealed: ``--out`` (or the default stamped directory) must not exist and is
+created exclusively; ``manifest.json`` (config, source and checkpoint identity, the verified
+build manifest) is written with exclusive create before anything is launched, and
+``receipt.json`` is published the same way, so a repeated command can never mix or overwrite
+runs. The server is started in its own process group, which is killed on timeout and after
+exit so no robot or bridge process outlives the run.
+
     uv run python scripts/jsettlers_smoke.py --config experiments/jsettlers-smoke.json
 """
 from __future__ import annotations
@@ -16,10 +23,11 @@ import json
 import math
 import os
 import platform
+import signal
 import subprocess
 import sys
 import time
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -142,7 +150,8 @@ def summarize(log_rows, bridge_log: Path, expected_games: int):
     return {
         'games_started': len(out),
         'games_completed': len(finished),
-        'truncated': expected_games - len(finished),
+        'truncated': max(expected_games - len(finished), 0),
+        'unexpected_games': max(len(finished) - expected_games, 0),
         'our_wins': wins,
         'win_rate': round(wins / len(finished), 4) if finished else None,
         'win_rate_wilson95': wilson(wins, len(finished)),
@@ -163,22 +172,116 @@ def summarize(log_rows, bridge_log: Path, expected_games: int):
     }
 
 
-def main() -> int:
+class RunRefused(SystemExit):
+    pass
+
+
+def write_exclusive(path: Path, data: dict) -> None:
+    with open(path, 'x') as f:
+        f.write(json.dumps(data, indent=2) + '\n')
+
+
+def allocate_out(out: Path) -> Path:
+    """Create a fresh run root; refuse (before anything else happens) if it exists."""
+    out = Path(os.path.abspath(out))
+    if out.exists() or out.is_symlink():
+        raise RunRefused(f'refusing existing run output {out}; choose a new --out')
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.mkdir(exist_ok=False)
+    return out
+
+
+def bridge_identity(policy: str) -> dict:
+    """What answers the robot's requests: bridge code, policy, served checkpoint, engine backend."""
+    from catan_ai.engine import BACKEND
+    from catan_ai.parameter_planner import load_parameters
+    files = {str(p.relative_to(ROOT)): jsettlers_build.sha256(p)
+             for p in [ROOT / 'scripts' / 'jsettlers_bridge.py',
+                       *sorted((ROOT / 'tools' / 'jsettlers' / 'jsbridge').glob('*.py'))]}
+    _, model_hash, path = load_parameters()
+    return {'policy': policy, 'files': files, 'files_digest': jsettlers_build.digest(files),
+            'checkpoint': str(path), 'checkpoint_model_hash': model_hash, 'engine_backend': BACKEND,
+            'python': sys.executable, 'python_version': platform.python_version(),
+            'parameter_model_env': os.environ.get('CATAN_PARAMETER_MODEL')}
+
+
+def kill_group(pgid: int) -> None:
+    """SIGTERM then SIGKILL every process in the group.
+
+    ESRCH means the group is empty. macOS answers EPERM when the only members left are zombies
+    (our own children are always signalable while running), so that also means nothing runs.
+    """
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(pgid, sig)
+        except (ProcessLookupError, PermissionError):
+            return
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            try:
+                os.killpg(pgid, 0)
+            except (ProcessLookupError, PermissionError):
+                return
+            time.sleep(0.1)
+
+
+def supervise(cmd, cwd, log_path: Path, timeout: float, env=None) -> tuple[int, bool]:
+    """Run ``cmd`` in its own process group; kill the whole group on timeout and after exit."""
+    with open(log_path, 'x') as log:
+        proc = subprocess.Popen(cmd, cwd=cwd, stdout=log, stderr=subprocess.STDOUT, env=env,
+                                start_new_session=True)
+        pgid = proc.pid
+        try:
+            rc, timed_out = proc.wait(timeout=timeout), False
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            kill_group(pgid)
+            rc = proc.wait()
+        finally:
+            kill_group(pgid)  # stragglers (robot clients, bridge) never outlive the run
+    return rc, timed_out
+
+
+def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', required=True)
-    parser.add_argument('--out', help='output directory (default runs/jsettlers-smoke/<utc stamp>)')
+    parser.add_argument('--out', help='new output directory (default runs/jsettlers-smoke/<utc stamp>); must not exist')
     parser.add_argument('--games', type=int, help='override the configured game count (not for receipts)')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     config_path = Path(args.config)
-    config = json.loads(config_path.read_text())
+    config_bytes = config_path.read_bytes()
+    config = json.loads(config_bytes)
     games = args.games or config['games']
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-    out = (Path(args.out) if args.out else ROOT / 'runs' / 'jsettlers-smoke' / stamp).resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    out = allocate_out(Path(args.out) if args.out else ROOT / 'runs' / 'jsettlers-smoke' / stamp)
+    declared = config.get('jsettlers', {})
+    if (declared.get('commit'), declared.get('tag')) != (jsettlers_build.JSETTLERS_COMMIT,
+                                                         jsettlers_build.JSETTLERS_TAG):
+        raise RunRefused(f'config pins JSettlers {declared}, build verifies '
+                         f'{jsettlers_build.JSETTLERS_TAG} {jsettlers_build.JSETTLERS_COMMIT}')
     decision_log, bridge_log = out / 'decisions.jsonl', out / 'bridge.jsonl'
     server_log, bridge_err = out / 'server.log', out / 'bridge.stderr'
 
-    jsettlers_build.build()
+    build = jsettlers_build.build_manifest()
+    write_exclusive(out / 'build-manifest.json', build)
+    manifest = {
+        'name': config['name'],
+        'created_utc': stamp,
+        'config_path': str(config_path),
+        'config_sha256': hashlib.sha256(config_bytes).hexdigest(),
+        'config': config,
+        'games_requested': games,
+        'source_revision': git('rev-parse', 'HEAD'),
+        'source_dirty': bool(git('status', '--porcelain', '--', 'tools/jsettlers', 'scripts', 'src', 'checkpoints')),
+        'build': {'manifest_sha256': jsettlers_build.sha256(out / 'build-manifest.json'),
+                  'jsettlers': {k: v for k, v in build['jsettlers'].items() if k != 'files'},
+                  'jdk_version': build['jdk']['version'].splitlines()[0],
+                  'bridge_java_sources_digest': build['bridge_java']['sources_digest'],
+                  'bridge_java_classes_digest': build['bridge_java']['classes_digest']},
+        'bridge': bridge_identity(config['policy']),
+    }
+    write_exclusive(out / 'manifest.json', manifest)
+
     srv = config['server']
     bridge_cmd = ' '.join([sys.executable, str(ROOT / 'scripts' / 'jsettlers_bridge.py'),
                            '--policy', config['policy'], '--seed', str(config['seed']),
@@ -186,6 +289,7 @@ def main() -> int:
     cmd = [jsettlers_build.java(), '-cp', jsettlers_build.classpath(),
            f'-Dcatanai.bridge.cmd={bridge_cmd}', f'-Dcatanai.bridge.cwd={ROOT}',
            f'-Dcatanai.bridge.stderr={bridge_err}', f'-Dcatanai.decision.log={decision_log}',
+           f'-Dcatanai.bridge.timeout_ms={int(config.get("bridge_timeout_ms", 30000))}',
            'soc.server.SOCServer',
            f'-Djsettlers.startrobots={srv["builtin_robots"]}',
            '-Djsettlers.bots.start3p=1,catanai.jsettlers.CatanAiClient',
@@ -197,40 +301,31 @@ def main() -> int:
            f'-Djsettlers.bots.fast_pause_percent={srv["fast_pause_percent"]}',
            f'-Djsettlers.bots.timeout.turn={srv["timeout_turn_sec"]}',
            str(srv['port']), str(srv['max_connections'])]
-    env = dict(os.environ)
+    jsettlers_build.verify_loaded(build)  # nothing on the class path changed since verification
     started = time.time()
-    timeout = config['timeout_sec_per_game'] * games
-    with open(server_log, 'w') as log:
-        proc = subprocess.Popen(cmd, cwd=jsettlers_build.BUILD, stdout=log, stderr=subprocess.STDOUT, env=env)
-        try:
-            rc = proc.wait(timeout=timeout)
-            timed_out = False
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            rc = proc.wait()
-            timed_out = True
+    rc, timed_out = supervise(cmd, jsettlers_build.BUILD, server_log,
+                              config['timeout_sec_per_game'] * games, env=dict(os.environ))
     elapsed = round(time.time() - started, 1)
     summary = summarize(read_jsonl(decision_log), bridge_log, games)
+    retired = [r for r in read_jsonl(decision_log) if r.get('type') == 'bridge_retired']
     receipt = {
-        'name': config['name'],
-        'created_utc': stamp,
-        'config_path': str(config_path),
-        'config': config,
-        'games_requested': games,
-        'source_revision': git('rev-parse', 'HEAD'),
-        'source_dirty': bool(git('status', '--porcelain', '--', 'tools/jsettlers', 'scripts', 'src')),
-        'python': platform.python_version(),
+        **{k: manifest[k] for k in ('name', 'created_utc', 'config_path', 'config_sha256', 'config',
+                                    'games_requested', 'source_revision', 'source_dirty', 'build', 'bridge')},
+        'manifest_sha256': jsettlers_build.sha256(out / 'manifest.json'),
         'server_rc': rc,
         'timed_out': timed_out,
         'elapsed_sec': elapsed,
+        'bridge_retired': retired,
         'artifacts': {k: str(v) for k, v in {'decisions': decision_log, 'bridge': bridge_log,
                                              'server_log': server_log, 'bridge_stderr': bridge_err}.items()},
         **summary,
     }
     bar = config.get('pass_bar', {})
     receipt['pass'] = (summary['games_completed'] >= min(bar.get('completed_games', games), games)
-                       and summary['bridge_errors'] <= bar.get('bridge_errors', 0) and not timed_out)
-    (out / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
+                       and summary['games_completed'] <= games
+                       and summary['bridge_errors'] <= bar.get('bridge_errors', 0)
+                       and not retired and not timed_out)
+    write_exclusive(out / 'receipt.json', receipt)
     print(json.dumps({k: receipt[k] for k in ('games_completed', 'our_wins', 'bridge_errors', 'fallbacks_total',
                                               'fallbacks_by_type', 'latency_ms', 'elapsed_sec', 'pass')}))
     print(f'receipt: {out / "receipt.json"}')

@@ -10,6 +10,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools' / 'jsettlers'))
 
+from catan_ai.engine import BACKEND  # noqa: E402
+from catan_ai.experiments import source_files  # noqa: E402
+from catan_ai.parameter_planner import DEFAULT  # noqa: E402
 from jsbridge.decide import POLICY, Bridge, translate  # noqa: E402
 from jsbridge.server import serve  # noqa: E402
 from jsbridge.state import reconstruct  # noqa: E402
@@ -20,6 +23,23 @@ CMDS = {'setup_settlement': {'settlement'}, 'setup_road': {'road'}, 'roll': {'ro
         'actions': {'settlement', 'road', 'city', 'buy_dev', 'bank', 'play_dev', 'offer', 'end_turn'},
         'free_roads': {'road'}, 'robber': {'robber'}, 'steal': {'steal'}, 'discard': {'discard'},
         'trade_response': {'accept', 'reject'}}
+
+
+@pytest.fixture(autouse=True)
+def checkpoint(tmp_path, monkeypatch):
+    """Bind the planner to the active engine backend.
+
+    Under the pure-Python engine the bridge loads the committed served checkpoint, exactly as in a
+    real run. Under the native engine that binding cannot load (it is pinned to the Python
+    sources), so a test checkpoint bound to the active backend is used, as in the other planner
+    tests; the production binding is unchanged.
+    """
+    if BACKEND == 'python':
+        monkeypatch.delenv('CATAN_PARAMETER_MODEL', raising=False)
+    else:
+        path = tmp_path / 'parameters.json'
+        path.write_text(json.dumps({'schema': 1, 'weights': DEFAULT, 'source': source_files()}))
+        monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
 
 
 def test_served_policy_is_the_bridge_default():

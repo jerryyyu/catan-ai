@@ -43,6 +43,32 @@ decision log. JSettlers properties are program arguments after the class name; t
 settings (`catanai.bridge.cmd`, `catanai.bridge.cwd`, `catanai.bridge.stderr`,
 `catanai.decision.log`) are JVM `-D` flags.
 
+## Run hygiene and identity
+
+- **Sealed outputs.** `--out` (or the default stamped directory) must not exist; it is created
+  exclusively before anything is built or launched. `build-manifest.json` and `manifest.json`
+  (config bytes hash, source revision and dirty flag, verified build identity, bridge code hash,
+  policy, served checkpoint `model_hash`, engine backend) are written with exclusive create before
+  launch, and `receipt.json` is published the same way. A repeated command cannot mix runs or
+  overwrite a receipt.
+- **Verified binaries.** `jsettlers_build.build_manifest()` refuses to run unless the JSettlers
+  checkout is at the pinned commit with no change under `src/`, a fresh `javac` of the pinned
+  sources with the pinned JDK reproduces every loaded `.class` byte for byte (no missing or extra
+  file), every other file on the class directory equals the checkout's `src/main/resources`
+  copy, and the Gson jar has its pinned SHA-256. Our bridge classes are rebuilt into a clean
+  directory. All of it is re-hashed right before launch (`verify_loaded`), and the config's
+  declared tag/commit must equal the verified pin. `uv run python scripts/jsettlers_build.py --verify`
+  runs the same check by hand.
+- **Bounded bridge.** Each Java-to-Python request has a deadline (`catanai.bridge.timeout_ms`,
+  default 30 s; config key `bridge_timeout_ms`). A missed deadline, a closed pipe or a garbled
+  reply retires the transport: the Python process tree is destroyed, a `bridge_retired` record is
+  logged, and every later request fails at once as a counted bridge error (with JSettlers'
+  fallback so the server can finish the game). The bridge is not restarted, since a new process
+  would lose per-game policy state; a run with a retired bridge fails its pass bar.
+- **Process cleanup.** The server runs in its own process group (`start_new_session`); the
+  group, including robot clients and the bridge, is killed on timeout and again after the
+  server exits.
+
 ## Board mapping
 
 JSettlers' classic board uses the v1 encoding: `0xAB`, two diagonal axes, centre hex `0x77`.
