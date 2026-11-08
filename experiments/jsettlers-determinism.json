@@ -1,0 +1,34 @@
+{
+  "name": "jsettlers-determinism",
+  "purpose": "Measured determinism check for the opt-in JSettlers2 seeding patch: the same base seed run twice must replay the same games (board, first player, seats, robots, dice, our decisions, winner) so a candidate and the default bot can be compared on paired games. Not a strength claim.",
+  "policy": "planner_offer_accept",
+  "seed": 20261108,
+  "games": 16,
+  "jsettlers": {
+    "tag": "release-2.6.10",
+    "commit": "c5141056d8e3fff548817b3a1712eb66085e897b",
+    "patch": {
+      "file": "runs/external/jsettlers-seed.patch",
+      "sha256": "64f2a955959df2ba3d6ab5e361bd5bd3d2fcc91e6a09f564eb863c0d98a6ace0"
+    },
+    "seed": 20261108,
+    "all_smart": true
+  },
+  "server": {
+    "port": 8891,
+    "max_connections": 50,
+    "builtin_robots": 6,
+    "percent3p": 25,
+    "botgames_parallel": 1,
+    "botgames_wait_sec": 5,
+    "fast_pause_percent": 1,
+    "timeout_turn_sec": 120
+  },
+  "timeout_sec_per_game": 900,
+  "pass_bar": {
+    "completed_games": 16,
+    "bridge_errors": 0
+  },
+  "analysis": "Run twice into two new --out dirs; compare with `scripts/jsettlers_smoke.py --compare A/receipt.json B/receipt.json`. Report games identical end to end, games with identical setup (board, first player, our seat, seated robots) and full dice sequence, and the first divergence point and cause for any game that differs. Residual nondeterminism from robot thread timing is expected and measured, not eliminated. Separately, 4 games without the seed property (all_smart kept) must give different boards across two runs (unseeded behaviour preserved).",
+  "limitations": "The patch file is GPLv3-derived and lives only in runs/external (never in this repo); its sha256 is pinned here. all_smart makes every locally started robot use JSettlers' SMART strategy params, including our extrabot's inherited fallback brain."
+}

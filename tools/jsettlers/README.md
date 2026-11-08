@@ -34,6 +34,7 @@ uv run python scripts/jsettlers_build.py                 # javac -> runs/externa
 uv run python scripts/jsettlers_build.py --dump-boards 60 > tools/jsettlers/fixtures/boards.json
 uv run --with pytest --with numpy python -m pytest -q tests/test_jsettlers_*.py
 uv run python scripts/jsettlers_smoke.py --config experiments/jsettlers-smoke.json
+uv run python scripts/jsettlers_build.py --config experiments/jsettlers-determinism.json  # pin + seeding patch
 ```
 
 The smoke script starts `soc.server.SOCServer` with `jsettlers.bots.start3p=1,catanai.jsettlers.CatanAiClient`,
@@ -162,10 +163,63 @@ JSettlers' (`legal_mismatches`).
 | Win | 10 VP (`VP` option default), only on own turn | 10 VP, checked for the turn owner | None. |
 | Opponents' hidden cards | Client sees gains/spends; unseen steals become unknown | Engine events carry the same public/private split | Synthetic history (above). |
 
+## Seeded runs (opt-in source patch)
+
+Upstream JSettlers draws boards, dice, the development deck, the first player, robot selection
+for seats and robot tie-breaks from unseeded `new Random()`s, so two runs never replay the same
+games. For paired comparisons (a candidate and the default bot on the same games) a small
+**opt-in patch** seeds them. The patch is a GPLv3 derivative of JSettlers source, so it is never
+committed here: it lives at `runs/external/jsettlers-seed.patch` (outside git) and a config pins
+its SHA-256. Current patch: `64f2a955959df2ba3d6ab5e361bd5bd3d2fcc91e6a09f564eb863c0d98a6ace0`
+(base `release-2.6.10` / `c5141056`, 16 hunks in `SOCGame`, `SOCServer`, `SOCRobotBrain`,
+`SOCRobotDM` plus one new class `soc.game.CatanAiSeed`). It is applied only to a separate worktree
+or a `git archive` export; the pinned checkout is never modified.
+
+What it does, only when its server properties are given (program arguments, like other
+`jsettlers.*` properties); without them every `Random` keeps its upstream construction:
+
+- `jsettlers.catanai.seed=<long>`: when the server creates a game it reseeds that game's own
+  stream (dice, dev-card shuffle, first player, random discards/steals), its board's layout stream
+  and a new seat-selection stream from (base seed, game name); robot selection and the
+  third-party-bot seat swap draw from the seat stream with candidates in robot-name order (so
+  connection order cannot change who sits where); each robot brain reseeds its tie-break stream
+  from (base seed, game name, seat) when it sits, with trade-response pause lengths on a separate
+  stream. Streams are derived per role (FNV-1a 64 over `game NUL role`, from offset basis XOR base,
+  then SplitMix64; mirrored by `jsettlers_smoke.derive_seed`). The server logs `catanai-seed`,
+  `catanai-start` (first player, seats, hex/number/port layout, dev deck) and `catanai-dice` lines.
+- `jsettlers.catanai.allsmart=Y`: every locally started robot uses the SMART strategy params
+  (names `robot 1..N`; also our `extrabot`'s inherited fallback brain). Logged as `catanai-robot`.
+
+Config (see `experiments/jsettlers-determinism.json`):
+
+```json
+"jsettlers": {"tag": "release-2.6.10", "commit": "c5141056...",
+              "patch": {"file": "runs/external/jsettlers-seed.patch", "sha256": "64f2a955..."},
+              "seed": 20261108, "all_smart": true}
+```
+
+`seed` / `all_smart` without a declared patch, or a seed with `botgames_parallel != 1`, is refused
+(games must run one at a time so game N always has the same name `~botsOnly~N` and seed; the same
+game count is needed to pair runs, since names count down from the total). With a patch,
+`jsettlers_build.build_manifest(patch=...)` checks the patch file's SHA-256, checks the checkout
+is the clean pin, exports the pinned `src/` from the commit object, applies the patch, builds into
+`runs/external/jsettlers-build-patched-<sha12>/` and verifies that a fresh `javac` of pin + patch
+reproduces every loaded class (the unpatched build directory is never touched). The build
+manifest and receipt record base commit, `patch_sha256` and per-class hashes; the receipt's
+`jsettlers` block records patch, base seed and all-smart, `seeding` records the server's
+configuration and each robot's logged strategy, and each game records its derived seeds (checked
+against the server's own log; a mismatch fails the pass bar), our policy's per-game seed, the
+server board/first player/seats/dice, the robots that sat with their strategies, and a hash of our
+decision sequence. `uv run python scripts/jsettlers_smoke.py --compare A/receipt.json B/receipt.json`
+diffs two seeded runs game by game. Our policy is seeded per game from (config `seed`, game name)
+in both modes. Residual nondeterminism can come from robot thread timing (e.g. which robot answers
+a trade offer first, timeouts); it is measured by the determinism check, not removed.
+
 ## Known limitations
 
 - The server chooses our seat and the first player; the smoke receipt records both (and our
-  position after the first player) per game but cannot rotate them.
+  position after the first player) per game but cannot rotate them. With the seeding patch they
+  replay for the same base seed and game count, but are still chosen by the server.
 - Latency is the JSettlers-side round trip, including snapshot serialization and JSON.
 - `public_vp_client_copy` in the receipt is the bot's client copy when the game-over message
   arrives; robot-only games are destroyed immediately, so it can lag the final position. The
