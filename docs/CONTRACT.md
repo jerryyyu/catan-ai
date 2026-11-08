@@ -108,14 +108,38 @@ plain 95% intervals well above zero. Excluding or penalising the three faulted
 boards changes neither by more than .002. The owner decided to promote on
 2026-11-01; the serving change is a separate PR.
 
+## External benchmarks (descriptive, not gates)
+
+The owner reopened external benchmarking on 2026-11-07 as information, with a
+predeclared retirement rule: an external bot is retired as a benchmark when the
+served bot's win share, alone against three copies, is at least .50 with the 95%
+lower bound above .40 (fair share .25). Neither has been retired.
+
+| opponent | games | served win share | 95% interval | receipt |
+|---|---|---|---|---|
+| Catanatron AlphaBeta depth 2 (1.5 s cap) | 512 | .488 | [.444, .533] | `runs/ultra/external-ladder-v1` |
+| Catanatron AlphaBeta depth 3 (20 s cap) | 512 | .455 | [.410, .501] | `runs/ultra/external-ladder-v1` |
+| JSettlers2 2.6.10 built-in robots | 512 | .373 | [.332, .416] | `runs/jsettlers-match-v1` |
+
+Catanatron games ran on our engine with the belief-sampled adapter (zero
+faults, zero truncations). JSettlers games ran on the JSettlers server through
+the third-party-robot bridge (`tools/jsettlers`; zero bridge errors, one
+fallback in 50,586 decisions); its server RNG is unseeded, so those games are
+not reproducible and are identified per game instead. JSettlers' robots are the
+harder table. Colonist.io was not used: its terms prohibit automated access and
+collecting derived statistics without written consent.
+
 ## What is not claimed
 
 - No competitive strength against ranked online humans. No Colonist
   integration exists or is authorized; its terms restrict automation and data
   use.
-- Beating the depth-2 Catanatron comparator is not beating a strong player.
-  Its belief recovery still faults rarely: on 3 of 3,200 held-out clusters in
-  the v13 rerun, all through solver timeouts in long games.
+- Beating Catanatron (either depth) or JSettlers' robots by the margins above
+  is not beating a strong player; both are open-source baselines, and the
+  JSettlers win share is well below the retirement bar. Catanatron's belief
+  recovery still faults rarely: on 3 of 3,200 held-out clusters in the v13
+  rerun, all through solver timeouts in long games (none in the 2026-11-07
+  ladder).
 - DEV passes are screens. Only a reserved held-out run with a predeclared
   analysis supports a promotion.
 - Correctness, latency, calibration and strength are separate claims. A
