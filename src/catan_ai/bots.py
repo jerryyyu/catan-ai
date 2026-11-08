@@ -177,6 +177,9 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_pv2_tiles':
         from .pv_search import PVSearchTilesPlanner
         return PVSearchTilesPlanner(rng)
+    if name == 'planner_pv2_puct':
+        from .puct_search import PUCTSearchPlanner
+        return PUCTSearchPlanner(rng)
     if name == 'planner_pv2_s1':
         from .pv_search import PVSearchS1Planner
         return PVSearchS1Planner(rng)
