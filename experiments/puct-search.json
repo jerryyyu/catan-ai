@@ -17,6 +17,23 @@
   "screen_config": "experiments/puct-screen.json (evaluator format; binding)",
   "gate": "+.02 paired lift over planner_pv2_tiles on each of tactical / mixed / self, 0 truncations, p95 decision <= 2 s, step max <= 2 s, turn max <= 10 s",
   "power": "alternative +.04, planning sigma .22, power .8 (as tiles-margin); check_design must admit it before any game",
-  "fresh_seeds": [2950000, 2951000, 2952000],
-  "note": "Predeclared 2026-11-08 before any code or game. Phase 2 (only if this passes): retrain the value on positions the search visits (expert iteration), predeclared separately. Diagnostic expectation stated in advance: our value nets over-rank 'build a city' vs 'end turn' (.92 vs .56 in playouts), and deeper search can amplify such errors; the screen is the arbiter."
+  "fresh_seeds": [
+    2950000,
+    2951000,
+    2952000
+  ],
+  "note": "Predeclared 2026-11-08 before any code or game. Phase 2 (only if this passes): retrain the value on positions the search visits (expert iteration), predeclared separately. Diagnostic expectation stated in advance: our value nets over-rank 'build a city' vs 'end turn' (.92 vs .56 in playouts), and deeper search can amplify such errors; the screen is the arbiter.",
+  "amendment_1_2026_11_08": {
+    "reason": "Pre-screen profile (scripts/puct_profile.py at 6c97f0e, no screen game played): opponent simulation is 93% of search time (served bot's offer search and robber scoring dominate), so 1.2 s often gives <16 simulations (16/48 fallbacks; one game 27/31); and priors from a softmax over raw served scores at temperature 1 are nearly one-hot, so the search mostly deepens the served move instead of comparing plans.",
+    "changes": {
+      "priors": "softmax over the served scores standardized within the decision (z-scores: subtract the mean, divide by the standard deviation; equal scores give a uniform prior), temperature 1; report mean prior entropy and top-prior mass per decision",
+      "opponent_model_in_simulations": "served bot with player-trade offers disabled inside simulations (opponents still answer offers and play everything else as served); our own non-plan decisions likewise without offers inside simulations; the real game is unchanged",
+      "parallelism": "root-parallel search: 4 worker processes per decision, each running the same algorithm on its own sampled worlds and simulation indices, visit counts and value sums merged at the root before the move choice; results depend only on (decision, simulation index), not on worker count, when max_simulations is set",
+      "turn_cap": "if a decision falls back, the fallback (planner_pv2_tiles) plays the rest of that turn without new searches; at most 4 searched decisions per turn",
+      "budget": "unchanged: 1.2 s per turn-plan decision, 1.5 s per setup decision, minimum 16 simulations"
+    },
+    "gate": "unchanged (+.02 over planner_pv2_tiles on every table, 0 truncations, p95 decision <= 2 s, step max <= 2 s, turn max <= 10 s); screen config experiments/puct-screen.json (260 seeds/panel) unchanged except the process cap note",
+    "pre_screen_check": "re-profile 4 seeded games vs 3 Tactical before any screen game; proceed only if fallbacks <= 10% of searched decisions, simulations p50 >= 64, and every latency gate holds in the profile; otherwise stop and report",
+    "note": "Amended 2026-11-08 before any screen game; the algorithm's idea (AlphaGo-Zero open-loop PUCT with selective depth over the tiles value) is unchanged."
+  }
 }
