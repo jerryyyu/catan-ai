@@ -17,6 +17,17 @@ bootstrap 95% lower bound > 0.
 
 ``--max-games`` / ``--epochs`` are smoke overrides; their outputs carry
 ``smoke: true`` and the gate refuses such a checkpoint unless ``--allow-smoke``.
+
+Rollout truncation (Codex HOLD @076fd7c, P2): a playout that reaches the turn cap
+without a winner is censored, not a loss. The loader reads an optional per-candidate
+``truncated`` count; placement-data-v1 records only wins/playouts, so its status is
+``unknown`` (censored playouts there are indistinguishable from losses and zero
+truncation cannot be established). ``gate.json`` reports ``rollout_truncation``
+(``status`` unknown|recorded, ``count``). ``primary.pass`` is the lift test alone;
+``primary.eligible`` is false when the status is unknown or the count is > 0, unless
+the declaration states ``"truncation_estimand": "losses"`` (only the owner changes the
+estimand, by a new predeclaration); ``primary.verdict`` is PASS only when both hold
+(NOT_ELIGIBLE: the lift passes but truncation disqualifies it; FAIL: the lift fails).
 """
 import argparse
 import hashlib
@@ -95,7 +106,7 @@ def load(root, cfg, split, max_games=None):
     lo, n = split_ranges(cfg)[split]
     xs, extra, wins, playouts, rank, game, dec_start, dec_meta, hashes = [], [], [], [], [], [], [], [], {}
     counts = {}
-    row = 0
+    row, trunc_count, trunc_missing = 0, 0, 0
     for s in seeds:
         path = Path(root) / 'games' / f'{s}.json'
         if not path.exists():
@@ -130,6 +141,12 @@ def load(root, cfg, split, max_games=None):
                     raise ValueError(f'seed {s}: x has length {len(c["x"])}, not {ab.WIDTH}')
                 if not 0 <= c['wins'] <= c['playouts'] or c['playouts'] <= 0:
                     raise ValueError(f'seed {s}: bad wins/playouts')
+                if 'truncated' in c:
+                    if not 0 <= c['truncated'] <= c['playouts'] - c['wins']:
+                        raise ValueError(f'seed {s}: bad truncated count')
+                    trunc_count += c['truncated']
+                else:
+                    trunc_missing += 1
                 xs.append(np.asarray(c['x'], dtype=np.float32))
                 extra.append(np.concatenate([post.ravel(), onehot, [c['served_rank'] / N_CANDIDATES]]))
                 wins.append(c['wins'])
@@ -147,7 +164,33 @@ def load(root, cfg, split, max_games=None):
             'start': np.asarray(dec_start + [row], dtype=np.int64),
             'dec_game': meta[:, 0], 'dec_seat': meta[:, 1], 'dec_setup': meta[:, 2],
             'seeds': seeds, 'hashes': hashes, 'identity': identity(hashes),
-            'candidate_counts': {str(k): v for k, v in sorted(counts.items())}}
+            'candidate_counts': {str(k): v for k, v in sorted(counts.items())},
+            'truncation': truncation_status(trunc_count, trunc_missing, row)}
+
+
+TRUNCATION_ESTIMANDS = ('losses',)
+
+
+def truncation_status(count, missing, candidates):
+    """``recorded`` only when every candidate carries a ``truncated`` count."""
+    if missing:
+        return {'status': 'unknown', 'count': None, 'candidates_without_record': missing, 'candidates': candidates,
+                'limitation': 'these records keep only wins/playouts: a censored (turn-capped) playout cannot be '
+                              'told from a loss, so absence of truncation cannot be established'}
+    return {'status': 'recorded', 'count': int(count), 'candidates_without_record': 0, 'candidates': candidates}
+
+
+def eligibility(truncation, estimand):
+    """(eligible, reason) of an ordinary win-rate gate PASS under the declared estimand."""
+    if estimand is not None and estimand not in TRUNCATION_ESTIMANDS:
+        raise ValueError(f'unknown truncation_estimand {estimand!r}')
+    if estimand == 'losses':
+        return True, None
+    if truncation['status'] != 'recorded':
+        return False, 'rollout truncation is unknown (not recorded by the producer)'
+    if truncation['count']:
+        return False, f"{truncation['count']} truncated rollouts recorded"
+    return True, None
 
 
 # -------------------------------------------------------------------- model
@@ -420,7 +463,7 @@ def mean_defined(values):
     return (float(np.mean(v)) if v else None), len(v)
 
 
-def gate_report(data, logits, consts, train_mean_rate):
+def gate_report(data, logits, consts, train_mean_rate, estimand=None):
     p = 1 / (1 + np.exp(-logits))
     st = decision_stats(data, logits)
     groups = data['dec_game']
@@ -435,9 +478,14 @@ def gate_report(data, logits, consts, train_mean_rate):
     sp, sp_n = mean_defined(st['spearman'])
     sps, sps_n = mean_defined(st['spearman_served'])
     rate, wins, playouts = data['rate'], data['wins'], data['playouts']
+    passed = bool(ci[0] > consts['lcb_gt'])
+    eligible, reason = eligibility(data['truncation'], estimand)
     return {
-        'primary': {'pick_minus_served': point, 'ci95': ci, 'lcb': ci[0], 'pass': bool(ci[0] > consts['lcb_gt']),
+        'primary': {'pick_minus_served': point, 'ci95': ci, 'lcb': ci[0], 'pass': passed,
+                    'eligible': eligible, 'ineligible_reason': reason,
+                    'verdict': ('PASS' if eligible else 'NOT_ELIGIBLE') if passed else 'FAIL',
                     'decisions': len(diff), 'games': int(len(np.unique(groups)))},
+        'rollout_truncation': {**data['truncation'], 'estimand': estimand},
         'rates': {'model_pick': float(st['pick'].mean()), 'served': float(st['served'].mean()),
                   'random': float(st['mean'].mean()), 'in_sample_best': float(st['best'].mean())},
         'by_setup_index': by(data['dec_setup'], [(k, str(k)) for k in range(N_SETUP)]),
@@ -491,7 +539,7 @@ def gate(args, cfg):
     decs = np.arange(len(data['start']) - 1)
     logits = score(torch, net, data, decs, saved['mean'].to(device), saved['sd'].to(device), device)
     consts = gate_constants(cfg)
-    report = gate_report(data, logits, consts, saved['fit_mean_rate'])
+    report = gate_report(data, logits, consts, saved['fit_mean_rate'], cfg.get('truncation_estimand'))
     return {**report, 'bar': consts, 'smoke': bool(saved['smoke']), 'allow_smoke': bool(args.allow_smoke),
             'device': str(device), 'test_rows': len(data['rate']), 'candidate_counts': data['candidate_counts'],
             'test_identity': data['identity'], 'test_file_sha256': {str(k): v for k, v in data['hashes'].items()},

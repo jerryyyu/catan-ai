@@ -169,7 +169,8 @@ def tiny_gate_data():
     rank = np.array([0, 1, 2, 1, 0, 2, 2, 1, 0])
     return {'rate': rate, 'rank': rank, 'wins': (rate * 8).astype(int), 'playouts': np.full(9, 8),
             'start': np.array([0, 3, 6, 9]), 'dec_game': np.array([10, 11, 12]),
-            'dec_seat': np.array([0, 1, 0]), 'dec_setup': np.array([0, 5, 2]), 'game': np.repeat([10, 11, 12], 3)}
+            'dec_seat': np.array([0, 1, 0]), 'dec_setup': np.array([0, 5, 2]), 'game': np.repeat([10, 11, 12], 3),
+            'truncation': pm.truncation_status(0, 9, 9)}
 
 
 def test_gate_arithmetic_tiny_example():
@@ -220,8 +221,69 @@ def test_train_and_gate_end_to_end(tmp_path):
         assert key in saved
     assert saved['primary']['decisions'] == 8 and saved['primary']['games'] == 4 and g['smoke']
     assert set(saved['baselines']) == {'served', 'random'}
+    assert saved['rollout_truncation']['status'] == 'unknown' and saved['primary']['eligible'] is False
+    assert saved['primary']['verdict'] in ('FAIL', 'NOT_ELIGIBLE')
     # a changed training file breaks the provenance check
     edit_game(root, LO, lambda g: g.update(turns=51))
     (out / 'gate.json').unlink()
     with pytest.raises(ValueError, match='train identity'):
         pm.main(['gate', *common, '--allow-smoke'])
+
+
+# ------------------------------------------------------------- truncation
+def test_unrecorded_truncation_makes_a_passing_lift_ineligible():
+    """Codex HOLD @076fd7c P2: placement-data-v1 records no truncation -> no ordinary PASS."""
+    data = tiny_gate_data()
+    logits = -data['rank'].astype(np.float64) + np.array([0, 5, 0, 0, 0, 5, 0, 0, 5])  # picks the best each time
+    consts = {'lcb_gt': -1., 'resamples': 40, 'seed': 29}  # lift test passes
+    data['truncation'] = pm.truncation_status(0, 9, 9)
+    report = pm.gate_report(data, logits, consts, .3)
+    assert report['primary']['pass'] is True and report['primary']['eligible'] is False
+    assert report['primary']['verdict'] == 'NOT_ELIGIBLE' and 'unknown' in report['primary']['ineligible_reason']
+    assert report['rollout_truncation']['status'] == 'unknown' and report['rollout_truncation']['count'] is None
+    # the owner's estimand (a new predeclaration) is the only way past it
+    report = pm.gate_report(data, logits, consts, .3, 'losses')
+    assert report['primary']['eligible'] is True and report['primary']['verdict'] == 'PASS'
+    with pytest.raises(ValueError, match='truncation_estimand'):
+        pm.gate_report(data, logits, consts, .3, 'censored')
+    # a failing lift is FAIL whatever the truncation status
+    report = pm.gate_report(data, logits, {**consts, 'lcb_gt': 1.}, .3)
+    assert report['primary']['pass'] is False and report['primary']['verdict'] == 'FAIL'
+
+
+def test_recorded_truncation_counts():
+    data = tiny_gate_data()
+    logits = -data['rank'].astype(np.float64)
+    consts = {'lcb_gt': -1., 'resamples': 40, 'seed': 29}
+    data['truncation'] = pm.truncation_status(0, 0, 9)
+    report = pm.gate_report(data, logits, consts, .3)
+    assert report['rollout_truncation'] == {'status': 'recorded', 'count': 0, 'candidates_without_record': 0,
+                                            'candidates': 9, 'estimand': None}
+    assert report['primary']['eligible'] is True and report['primary']['verdict'] == 'PASS'
+    data['truncation'] = pm.truncation_status(3, 0, 9)
+    report = pm.gate_report(data, logits, consts, .3)
+    assert report['primary']['eligible'] is False and report['primary']['verdict'] == 'NOT_ELIGIBLE'
+    assert report['primary']['ineligible_reason'] == '3 truncated rollouts recorded'
+
+
+def test_loader_truncation_status(tmp_path):
+    _, cfg = small_config(tmp_path)
+    root = make_data(tmp_path, cfg)
+    assert pm.load(root, cfg, 'test')['truncation']['status'] == 'unknown'  # as placement-data-v1
+    lo, n = cfg['data']['split']['test']
+
+    def mark(g, value=0):
+        for d in g['decisions']:
+            for c in d['candidates']:
+                c['truncated'] = value
+    for s in range(lo, lo + n):
+        edit_game(root, s, mark)
+    t = pm.load(root, cfg, 'test')['truncation']
+    assert t['status'] == 'recorded' and t['count'] == 0 and t['candidates'] == 28
+    edit_game(root, lo, lambda g: g['decisions'][0]['candidates'][0].update(truncated=1, wins=0))
+    assert pm.load(root, cfg, 'test')['truncation']['count'] == 1
+    edit_game(root, lo + 1, lambda g: g['decisions'][0]['candidates'][0].pop('truncated'))
+    assert pm.load(root, cfg, 'test')['truncation']['status'] == 'unknown'  # partial record is not a record
+    edit_game(root, lo, lambda g: g['decisions'][0]['candidates'][0].update(truncated=9))
+    with pytest.raises(ValueError, match='truncated'):
+        pm.load(root, cfg, 'test')
