@@ -135,7 +135,8 @@ def compile_jsettlers(src_root: Path, out: Path, jar: Path, java_home: Path = JA
     result = subprocess.run([java('javac', java_home), '-nowarn', '-encoding', 'UTF-8', '-cp', str(jar),
                              '-d', str(out), *sources], capture_output=True, text=True)
     if result.returncode != 0:
-        raise BuildIdentityError('compiling JSettlers failed: ' + result.stderr[-500:])
+        raise BuildIdentityError(f'compiling JSettlers failed (rc {result.returncode}): '
+                                 + (result.stderr + result.stdout)[-500:])
 
 
 def build_patched_jsettlers(patch: dict, checkout: Path = CHECKOUT, pin: str = JSETTLERS_COMMIT,
