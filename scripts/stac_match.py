@@ -10,7 +10,10 @@ STAC agent:
   (AIIDE 2018 "POMCP-TS-CR"; 10k iterations, 4 threads, C=4, PUCT, seeding temperature 7, at most
   3 offers), with player trading off (``NO_TRADES``) and a declared per-decision time cap
   (``MCTS_TIME_LIMIT_MS``; every search is logged with its iterations and whether the cap cut it);
-* ``jsettlers``: STAC's bundled JSettlers 1.1.16 robot (default FAST parameters).
+* ``jsettlers``: STAC's bundled JSettlers 1.1.16 robot (default FAST parameters); trading off only,
+  since it ignores STAC's chat negotiation;
+* ``stac_negotiator``: STAC's JSettlers-derived negotiating agent (``StacRobotBrain``, default type),
+  chat trading only.
 
 Match settings are fixed and checked: FullyObservable and ObservableVP off (the patched server logs
 both per game and the receipt fails closed if either is on), bank and port trades on. Player trading
@@ -58,8 +61,12 @@ import stac_build  # noqa: E402
 ROOT = stac_build.ROOT
 OUR_NAME = 'CatanAi'
 OUR_FACTORY = 'class:catanai.stac.CatanAiStacFactory'
-AGENT_NAMES = {'pomcp_ts_cr': 'POMCPTSCR', 'jsettlers': 'JSettlers'}
-AGENT_FACTORIES = {'pomcp_ts_cr': 'mcts', 'jsettlers': 'jsettlers'}
+AGENT_NAMES = {'pomcp_ts_cr': 'POMCPTSCR', 'jsettlers': 'JSettlers', 'stac_negotiator': 'StacNeg'}
+AGENT_FACTORIES = {'pomcp_ts_cr': 'mcts', 'jsettlers': 'jsettlers', 'stac_negotiator': 'stac'}
+# Opponents that negotiate in STAC's chat format; plain JSettlers robots ignore chat (an offer to one
+# is never answered), and STAC's negotiator only trades through chat.
+CHAT_AGENTS = {'pomcp_ts_cr', 'stac_negotiator'}
+OFF_AGENTS = {'pomcp_ts_cr', 'jsettlers'}
 
 wilson, percentile, read_jsonl = js.wilson, js.percentile, js.read_jsonl
 write_exclusive, allocate_out, supervise = js.write_exclusive, js.allocate_out, js.supervise
@@ -103,6 +110,10 @@ def check_config(config: dict) -> dict:
         names.add(block['name'])
         if not isinstance(block.get('games'), int) or block['games'] < 1:
             raise RunRefused(f'block {block["name"]} needs a positive game count')
+        allowed = CHAT_AGENTS if mode == 'chat' else OFF_AGENTS
+        if block['opponent'] not in allowed:
+            raise RunRefused(f'block {block["name"]}: opponent {block["opponent"]} cannot play with player_trading '
+                             f'{mode} (allowed: {sorted(allowed)})')
     if not names:
         raise RunRefused('config has no blocks')
     mcts = agents.get('pomcp_ts_cr')

@@ -250,15 +250,18 @@ def test_build_reproduces_pin_plus_patch_and_detects_tampering(tmp_path):
         sb.verify_stac(tmp_path / 'build', SMOKE['stac']['patch'])
 
 
-def _chat_config():
+def _chat_config(jsettlers_block=True):
     config = copy.deepcopy(SMOKE)
     config['stac'].update(player_trading='chat', chat_negotiation=True, no_player_trades=False)
     config['agents']['pomcp_ts_cr']['flags'].remove('NO_TRADES')
+    config['agents']['stac_negotiator'] = {'source': 'STAC StacRobotBrain'}
+    if not jsettlers_block:
+        config['blocks'] = [config['blocks'][0], {'name': 'Neg', 'opponent': 'stac_negotiator', 'games': 1}]
     return config
 
 
 def test_chat_trading_mode_settings():
-    config = _chat_config()
+    config = _chat_config(jsettlers_block=False)
     stac = sm.check_config(config)
     assert sm.trading_mode(stac) == 'chat' and sm.trading_mode(SMOKE['stac']) == 'off'
     lines = sm.simulation_config(config['blocks'][0], config['agents'], 'chat').splitlines()
@@ -271,6 +274,16 @@ def test_chat_trading_mode_settings():
     assert sm.observability_ok({'observability': logged}, 'chat')
     assert not sm.observability_ok({'observability': logged}, 'off')
     assert not sm.observability_ok({'observability': {**logged, 'fully_observable': 'true'}}, 'chat')
+    neg = sm.simulation_config(config['blocks'][1], config['agents'], 'chat').splitlines()
+    assert 'Agent=3,StacNeg,stac' in neg
+
+
+def test_negotiator_needs_chat_mode():
+    config = copy.deepcopy(SMOKE)
+    config['agents']['stac_negotiator'] = {'source': 'x'}
+    config['blocks'].append({'name': 'Neg', 'opponent': 'stac_negotiator', 'games': 1})
+    with pytest.raises(sm.RunRefused, match='stac_negotiator cannot play with player_trading off'):
+        sm.check_config(config)
 
 
 @pytest.mark.parametrize('mutate, message', [
@@ -279,10 +292,15 @@ def test_chat_trading_mode_settings():
     (lambda c: c['stac'].update(no_player_trades=True), 'no_player_trades'),
     (lambda c: c['agents']['pomcp_ts_cr']['flags'].append('NO_TRADES'), 'NO_TRADES'),
     (lambda c: c['stac'].update(observable_vp=True), 'observable_vp'),
+    (lambda c: None, 'opponent jsettlers cannot play with player_trading chat'),
 ])
 def test_chat_trading_refusals(mutate, message):
     config = _chat_config()
-    mutate(config)
+    if message.startswith('opponent'):
+        mutate(config)
+    else:
+        config['blocks'] = config['blocks'][:1]
+        mutate(config)
     with pytest.raises(sm.RunRefused, match=message):
         sm.check_config(config)
 
