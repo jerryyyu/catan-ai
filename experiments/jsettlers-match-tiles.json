@@ -1,0 +1,29 @@
+{
+  "name": "jsettlers-match-tiles",
+  "purpose": "Measured external benchmark: planner_pv2_tiles (PV search scored by the tile transformer) alone vs three built-in JSettlers2 robots, classic 4-player base game (Jerry 2026-11-08).",
+  "policy": "planner_pv2_tiles",
+  "seed": 20261109,
+  "games": 512,
+  "jsettlers": {
+    "tag": "release-2.6.10",
+    "commit": "c5141056d8e3fff548817b3a1712eb66085e897b"
+  },
+  "server": {
+    "port": 8880,
+    "max_connections": 50,
+    "builtin_robots": 6,
+    "percent3p": 25,
+    "botgames_parallel": 1,
+    "botgames_wait_sec": 5,
+    "fast_pause_percent": 1,
+    "timeout_turn_sec": 120
+  },
+  "timeout_sec_per_game": 900,
+  "pass_bar": {
+    "completed_games": 512,
+    "bridge_errors": 0
+  },
+  "analysis": "Win share of our bot (fair share .25) with a Wilson 95% interval over games; reported by our seat and by our position after the first player (both chosen by the server, not controllable). Validity: 0 bridge errors and every game completed; fallbacks (our move rejected or impossible, JSettlers' own brain substitutes) are reported by type, and the win share is also reported on games with no fallback. Retirement rule as for Catanatron: retire JSettlers' robot as a benchmark if our win share >= .50 with the 95% lower bound > .40; otherwise keep it.",
+  "limitations": "JSettlers' server RNG (dice, board, dev deck, first player) is unseeded (SOCGame uses new Random()); seeding it would need a JSettlers source patch, which we do not make. Each game's board id, our seat and position are recorded instead; our policy is seeded. The JSettlers server is authoritative for these games; our engine only chooses moves (see tools/jsettlers/README.md for the rules differences the bridge handles). Opponents are JSettlers' default built-in robot (fast pause); a single opponent type, not a ladder.",
+  "note": "Predeclared 2026-11-08 before any game. Same server settings, games, analysis and retirement rule as jsettlers-match-v1 (served planner_offer_accept: .373 [.332,.416]); only the policy changes. Unseeded JSettlers server (the seed patch is in progress and not used here), so the comparison with the served bot is unpaired and descriptive. Runs from main's merged bridge on the Mac mini with numpy available to the bridge process (the tiles scorer is numpy); weights npz sha 27dd7818 local artifact."
+}

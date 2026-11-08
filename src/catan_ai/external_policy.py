@@ -11,8 +11,9 @@ from .external_worker import read_message, send_message
 class ExternalSearchBot:
     needs_history = True
 
-    def __init__(self, seed, *, seconds=2.0, python=None):
+    def __init__(self, seed, *, seconds=2.0, turn_seconds=10.0, variant='ab2', python=None):
         self.seed, self.seconds = seed, seconds
+        self.turn_limit, self.variant = turn_seconds, variant
         self.python = python or os.environ.get('CATAN_EXTERNAL_PYTHON', str(
             Path(__file__).resolve().parents[2] / 'runs/external/catanatron-env/bin/python'))
         self.process = self.connection = None
@@ -38,7 +39,7 @@ class ExternalSearchBot:
                'PYTHONHASHSEED': '0'}
         try:
             self.process = subprocess.Popen(
-                [self.python, '-m', 'catan_ai.external_worker', str(child.fileno()), str(self.seed)],
+                [self.python, '-m', 'catan_ai.external_worker', str(child.fileno()), str(self.seed), self.variant],
                 pass_fds=(child.fileno(),), env=env, stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
@@ -54,7 +55,7 @@ class ExternalSearchBot:
             raise ValueError('external decision needs the acting seat and legal actions')
         if self.turn != view.turn:
             self.turn, self.turn_seconds = view.turn, 0.0
-        budget = min(self.seconds, 10.0 - self.turn_seconds)
+        budget = min(self.seconds, self.turn_limit - self.turn_seconds)
         error = None
         belief = None
         action = next((a for a in view.actions if a['type'] == 'end_turn'), view.actions[0])
@@ -91,7 +92,7 @@ class ExternalSearchBot:
         self.diagnostics.append({'seconds': elapsed, 'phase': view.phase, 'turn': view.turn,
                                  'fallback': error is not None, 'error': error,
                                  'budget_failure': elapsed > budget or budget <= 0,
-                                 'backend': 'catanatron-adapted-depth2-guided-solver-v13',
+                                 'backend': 'catanatron-adapted-' + ('depth2' if self.variant == 'ab2' else self.variant) + '-guided-solver-v13',
                                  'belief': belief})
         return action
 
