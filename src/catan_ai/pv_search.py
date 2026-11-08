@@ -375,3 +375,18 @@ class PVSearchS1M1Planner(PVSearchS1Planner):
     """``planner_pv2_s1`` with the fine-tuned value net ``value-v2-m1`` (local weights)."""
 
     NET = Path(__file__).resolve().parents[2] / 'checkpoints' / 'value_v2_m1_v1'
+
+
+class PVSearchTilesPlanner(PVSearchV2BFixPlanner):
+    """``planner_pv2_b_fix`` with its value scorer replaced by the arch-bakeoff ``tiles``
+    transformer (``runs/arch-bakeoff-v1``; test AUC .7859 vs .7721 base; within-decision
+    cross-eval +.0062), served in NumPy (``tiles_value.TilesValueNet``). Same candidates,
+    afterstate features and integration; only ``_logits`` changes. Needs numpy, not torch."""
+
+    def __init__(self, rng=None):
+        from .tiles_value import TILES_V1, TilesValueNet
+        AcceptanceOfferPlanner.__init__(self, rng)
+        self.net = TilesValueNet(TILES_V1)
+
+    def _logits(self, rows):
+        return [float(v) for v in self.net.logits(rows)] if rows else []
