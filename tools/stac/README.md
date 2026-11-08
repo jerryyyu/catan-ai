@@ -211,3 +211,23 @@ game logged hidden (FullyObservable/ObservableVP/chat off), every logged seed eq
 STAC's results agree with the server's end line on every winner. Determinism (same seed, two runs, 4
 games per opponent): setup identical 8/8, dice identical for every shared roll index 8/8, end-to-end
 identical 4/4 JSettlers games and 0/4 POMCP games (POMCP play is not reproducible), same winner 6/8.
+
+## Chat-trading smokes (2026-11-08, patch v2)
+
+Receipts (local, not committed): `runs/stac-trades-smoke-v1/receipt.json` (sha256 prefix in the PR),
+`runs/stac-trades-smoke-v2/receipt.json`. Bridge health only; 4-game blocks are not strength claims.
+
+| Smoke | Block | Games | Our wins | Executed player trades (table) | Our offers: sent / accepted / rejected / timed out | Their offers we accepted / rejected | Bridge errors | Fallbacks | Forced turn ends | Pass |
+|---|---|---|---|---|---|---|---|---|---|---|
+| v1 (seed 20261112, 3bfcf78) | vs 3 POMCP-TS-CR | 4 | 1 | 74 | 25 / 6 / 19 / 0 | 27 / 231 | 0 | 0 | 0 | |
+| v1 | vs 3 plain JSettlers | 2 of 4 (block timed out) | 1 | 15 | 47 / 0 / 0 / 46 | n/a (they offer through the protocol; 122 left to STAC) | 0 | 122 | 1 | **FAIL** |
+| v2 (seed 20261113, 4d879c4) | vs 3 POMCP-TS-CR | 4 | 2 | 119 | 30 / 11 / 19 / 0 | 39 / 202 | 0 | 0 | 0 | |
+| v2 | vs 3 STAC negotiators | 4 | 0 | 89 | 40 / 9 / 28 / 0 (3 countered) | 171 / 426 | 0 | 0 | 0 | **PASS** |
+
+v1 failed on its declared bar because plain JSettlers robots ignore chat (each of our offers waited
+out the robot loop's ~100 s response timeout); chat mode now refuses that opponent. v2: every game
+completed, 0 legal-set mismatches, all games logged hidden with chat negotiation on and no server
+trade block, every logged seed equal to the derived one, STAC's results agree with the server on
+every winner, our decision latency p50 / p95 / max 4.4 / 20.4 / 80 ms. STAC's negotiator makes many
+offers per turn; whether our accept rule is exploitable at that rate is an open question for a
+measured run, not something 4 games can show.
