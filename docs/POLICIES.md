@@ -9,7 +9,8 @@ self tables with a predeclared, powered +5 pp bar (`docs/PLAN.md`).
 
 This file is the list of served bots and what each one measured, plus the ideas that were screened and not taken.
 It is not a run log: receipts live under `runs/` and are indexed in [results/LADDER.md](results/LADDER.md); the
-current claims are in [CONTRACT.md](CONTRACT.md). Add a row here in the same PR that changes `SERVED_POLICY`.
+current claims are in [CONTRACT.md](CONTRACT.md). Every AI we play with or against (our policy families, external bots) and their
+benchmarks are mapped in [AI_POLICIES.md](AI_POLICIES.md). Add a row here in the same PR that changes `SERVED_POLICY`.
 
 ## How to read a row
 
