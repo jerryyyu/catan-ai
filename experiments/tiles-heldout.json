@@ -1,0 +1,13 @@
+{
+  "name": "tiles-heldout",
+  "stage": "heldout (confirmatory, owner promotion)",
+  "decision": "Jerry 2026-11-08: promote planner_pv2_tiles; then 'Yea do the held out run' and 'we should evaluate based on screens vs our best policies and best external policies'.",
+  "tables": {
+    "internal": "experiments/pv2-tiles-heldout.json (evaluator, ultra): tactical / mixed / self vs served planner_offer_accept, 512 fresh seeds each",
+    "jsettlers": "experiments/jsettlers-heldout-tiles.json and experiments/jsettlers-heldout-served.json (Mac mini): same seeded all-SMART JSettlers games, 512 each"
+  },
+  "gate": "PASS iff (1) the internal evaluator receipt passes (paired-normal seed-cluster LCB > 0 at alpha .05/3 and point lift >= 0 on every table, 0 truncations, latency gates), AND (2) the JSettlers paired table: per-game difference won(tiles) - won(served) over the 512 games paired by game name, after scripts/jsettlers_paired.py confirms compatible receipts (same base seed, patch, all_smart, game set) and identical setup per game; mean difference >= 0 and one-sided paired-normal LCB > 0 at alpha .05/4; both runs 0 bridge errors and all games completed. Games where either run lacks complete setup evidence are excluded and counted; if more than 5% are excluded the table FAILS.",
+  "consequence": "PASS: the owner promotion is confirmed by held-out evidence; FAIL: the served default rolls back to planner_offer_accept (the serving PR is held until this result).",
+  "owner_exception": "The DEV prerequisite is met by pv2-tiles-precise-v1 (passed its own zero-lift gate), not by a +.05 screen (pv2-tiles-screen-v1 FAILED, not retuned). Recorded as an owner exception.",
+  "note": "Predeclared 2026-11-08 before any held-out game. Fresh reserved seeds: internal 2960000/2961000/2962000 (+512 each); JSettlers base seed 20261110 (new)."
+}
