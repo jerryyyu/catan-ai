@@ -51,9 +51,22 @@ def _main(module, monkeypatch, cfg_path, root):
     module.main()
 
 
+@pytest.fixture
+def synthetic_policies(monkeypatch):
+    """Root binding hashes each policy's model identity; use stand-ins so these unit tests do not
+    need the (untracked) value-net weights or the fitted checkpoint (Codex HOLD @d743dbc)."""
+    import catan_ai.bots as bots
+
+    class _Policy:
+        def __init__(self, name):
+            self.model_hash = f'synthetic-{name}'
+            self.net = None
+
+    monkeypatch.setattr(bots, 'make_policy', lambda name, seed: _Policy(name))
+
+
 @pytest.mark.parametrize('module', [search_diagnostic, phase_diagnostic])
-def test_main_refuses_changed_declaration_before_touching_root(tmp_path, monkeypatch, module):
-    pytest.importorskip('numpy')  # the root binding hashes the value net (numpy)
+def test_main_refuses_changed_declaration_before_touching_root(tmp_path, monkeypatch, module, synthetic_policies):
     cfg = dict(CFG, seeds={'tac': [123, 0]})  # no games: only the root binding runs
     cfg_path = tmp_path / 'cfg.json'
     cfg_path.write_text(json.dumps(cfg))
@@ -70,8 +83,7 @@ def test_main_refuses_changed_declaration_before_touching_root(tmp_path, monkeyp
 
 
 @pytest.mark.parametrize('module', [search_diagnostic, phase_diagnostic])
-def test_main_refuses_unbound_legacy_root_without_rewriting_config(tmp_path, monkeypatch, module):
-    pytest.importorskip('numpy')  # the root binding hashes the value net (numpy)
+def test_main_refuses_unbound_legacy_root_without_rewriting_config(tmp_path, monkeypatch, module, synthetic_policies):
     cfg_path = tmp_path / 'cfg.json'
     cfg_path.write_text(json.dumps(dict(CFG, seeds={'tac': [123, 0]})))
     root = tmp_path / 'root'
