@@ -1,0 +1,22 @@
+{
+  "name": "puct-search",
+  "stage": "dev screen (predeclared before any code runs a game)",
+  "idea": "AlphaGo/AlphaZero-style tree search with selective depth on top of the tile-transformer value (Jerry 2026-11-08: 'try it but 2 turns deep might not be enough, we should selectively make tree deeper; see how alphago does it').",
+  "algorithm": {
+    "tree": "open-loop MCTS keyed by our own decisions only; no fixed depth: each simulation descends by PUCT until it reaches an unexpanded node, expands exactly one node, evaluates it, and backs up (AlphaGo Zero). Depth is limited only by the budget and by game end.",
+    "selection": "PUCT: argmax_a Q(a) + c_puct * P(a) * sqrt(N_parent) / (1 + N(a)), with c_puct 1.5; Q initialised for unvisited children to the parent's mean (first-play urgency = parent value); actions not legal in the current sampled pass are skipped (availability-aware, as in information-set MCTS).",
+    "our_turn_actions": "whole-turn plans: 'end now' plus the served bot's top-4 sequences (as planner_pv2_b_fix / planner_pv2_tiles); priors P = softmax over the served bot's own sequence scores, temperature 1 on the served score scale (an untrained stand-in for a policy head).",
+    "setup_actions": "at our setup settlements: the served bot's top-8 vertices by its own placement value, priors = softmax over those values; the road follows the served bot.",
+    "environment_between_our_decisions": "each simulation samples opponents' hidden hands from the card-counting belief (consistent totals) and the development deck from the remaining-card prior, rolls dice from the game RNG copy seeded per simulation, and plays every opponent decision with the served planner_offer_accept; our own non-plan decisions (robber, discards, trade answers) are the served bot's.",
+    "leaf_value": "planner_pv2_tiles' value network P(I win) on the encoder-v2 afterstate from our view (end-of-our-turn positions, the distribution it was trained on); terminal positions score 1/0.",
+    "move_choice": "most-visited root child; ties broken by Q then served order.",
+    "budget": "time-limited: 1.2 s per turn-plan decision and 1.5 s per setup decision, at least 16 simulations (if fewer complete, fall back to planner_pv2_tiles' choice and count it); reported: simulations per decision, max depth reached (our turns), mean depth of the most-visited line."
+  },
+  "candidate": "planner_pv2_puct",
+  "control": "planner_pv2_tiles",
+  "screen_config": "experiments/puct-screen.json (evaluator format; binding)",
+  "gate": "+.02 paired lift over planner_pv2_tiles on each of tactical / mixed / self, 0 truncations, p95 decision <= 2 s, step max <= 2 s, turn max <= 10 s",
+  "power": "alternative +.04, planning sigma .22, power .8 (as tiles-margin); check_design must admit it before any game",
+  "fresh_seeds": [2950000, 2951000, 2952000],
+  "note": "Predeclared 2026-11-08 before any code or game. Phase 2 (only if this passes): retrain the value on positions the search visits (expert iteration), predeclared separately. Diagnostic expectation stated in advance: our value nets over-rank 'build a city' vs 'end turn' (.92 vs .56 in playouts), and deeper search can amplify such errors; the screen is the arbiter."
+}
