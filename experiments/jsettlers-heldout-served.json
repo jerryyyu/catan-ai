@@ -1,0 +1,35 @@
+{
+  "name": "jsettlers-heldout-served",
+  "purpose": "Held-out JSettlers table for the planner_pv2_tiles promotion: planner_offer_accept alone vs three all-SMART JSettlers 2.6.10 robots on seeded games (base seed 20261110, 512 games), paired by game name with the other policy's run (experiments/tiles-heldout.json).",
+  "policy": "planner_offer_accept",
+  "seed": 20261110,
+  "games": 512,
+  "jsettlers": {
+    "tag": "release-2.6.10",
+    "commit": "c5141056d8e3fff548817b3a1712eb66085e897b",
+    "patch": {
+      "file": "runs/external/jsettlers-seed-v2.patch",
+      "sha256": "d18f25934bc0d8a429f5d237e33d653ef06186c3e3e2304e69c6cf0166b3014c"
+    },
+    "seed": 20261110,
+    "all_smart": true
+  },
+  "server": {
+    "port": 8893,
+    "max_connections": 50,
+    "builtin_robots": 6,
+    "percent3p": 25,
+    "botgames_parallel": 1,
+    "botgames_wait_sec": 5,
+    "fast_pause_percent": 1,
+    "timeout_turn_sec": 120
+  },
+  "timeout_sec_per_game": 900,
+  "pass_bar": {
+    "completed_games": 512,
+    "bridge_errors": 0
+  },
+  "analysis": "Paired with the other policy's receipt by scripts/jsettlers_paired.py (see experiments/tiles-heldout.json).",
+  "limitations": "The patch file is GPLv3-derived and lives only in runs/external (never in this repo); its sha256 is pinned here. all_smart makes every locally started robot use JSettlers' SMART strategy params, including our extrabot's inherited fallback brain.",
+  "note": "Predeclared 2026-11-08 before any game. Same server settings, patch v2 (paired luck: board, deck, first player, seats, dice-by-roll), all-SMART robots, game count and base seed as its pair; only the policy differs."
+}
