@@ -8,6 +8,7 @@ from .engine import Resource
 from .tactical import public_projection
 
 
+_RESOURCES = tuple(Resource)
 WEIGHTS = {Resource.BRICK: 1.0, Resource.LUMBER: 1.0, Resource.WOOL: .8,
            Resource.GRAIN: 1.3, Resource.ORE: 1.5}
 
@@ -16,15 +17,48 @@ class EconomicPlanner(HeuristicBot):
     purchase_value = 5.5
     buy_after_root = False
     def _income(self, game, seat):
+        # Performance only: a pure function of the board and this seat's buildings,
+        # memoized per planner (bounded, board identity checked); callers get a copy.
         player = game.players[seat]
-        income = {r: 0.0 for r in Resource}
+        key = (id(game.board), frozenset(player.settlements), frozenset(player.cities))
+        memo = self.__dict__.setdefault('_income_memo', {})
+        hit = memo.get(key)
+        if hit is not None and hit[0] is game.board:
+            return dict(hit[1])
+        income = {r: 0.0 for r in _RESOURCES}
         for tile in game.board.tiles:
             if tile.number is not None:
                 count = sum((v in player.settlements) + 2 * (v in player.cities) for v in tile.vertices)
                 income[tile.resource] += count * (6 - abs(7 - tile.number))
-        return income
+        if len(memo) > 20000:
+            memo.clear()
+        memo[key] = (game.board, income)
+        return dict(income)
+
+    def __getstate__(self):
+        # The geometry memo is a derived cache: copies and pickles start without it.
+        state = dict(self.__dict__)
+        state.pop('_geometry_memo', None)
+        state.pop('_income_memo', None)
+        return state
 
     def _geometry(self, game, seat):
+        # Performance only: a pure function of the board and every player's buildings
+        # and roads, memoized per planner (bounded); search nodes that differ only in
+        # cards reuse it.
+        key = (id(game.board), seat, tuple((frozenset(p.settlements), frozenset(p.cities), frozenset(p.roads))
+                                          for p in game.players))
+        memo = self.__dict__.setdefault('_geometry_memo', {})
+        hit = memo.get(key)
+        if hit is not None and hit[0] is game.board:  # guard against a reused id
+            return hit[1]
+        if len(memo) > 20000:
+            memo.clear()
+        value = self._geometry_uncached(game, seat)
+        memo[key] = (game.board, value)
+        return value
+
+    def _geometry_uncached(self, game, seat):
         player = game.players[seat]
         occupied = game.occupied()
         enemy_edges = {edge for s, p in enumerate(game.players) if s != seat for edge in p.roads}

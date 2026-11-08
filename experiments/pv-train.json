@@ -1,0 +1,24 @@
+{
+  "name": "pv-train",
+  "stage": "offline-gate",
+  "data_config": "experiments/pv-data.json",
+  "architecture": "shared trunk obs(40) -> 64 -> 64 (ReLU); per-candidate q_head and p_head on [trunk, act(16), after(40), after-obs(40)] -> 64 -> 1; v_head on trunk -> 1",
+  "hidden": 64,
+  "loss_weights": {"q": 1.0, "p": 0.5, "v": 0.5},
+  "policy_temperature": 0.1,
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+  "epochs": 40,
+  "batch_decisions": 128,
+  "batch_value_rows": 512,
+  "validation_games": 80,
+  "seed": 0,
+  "gate": {
+    "primary": "q-head pick minus served pick, mean playout win rate over test decisions; PASS iff game-clustered bootstrap 95% lower bound > 0 and zero truncated test playouts",
+    "reported": "p-head pick minus served, oracle best minus served, share of decisions where the served pick is playout-best, v-head AUC vs served leaf AUC on test value rows",
+    "bootstrap_resamples": 1000,
+    "bootstrap_seed": 13
+  },
+  "integration_if_pass": "planner_pv: served planner_offer_accept; at the first action decision of each own turn it builds the same candidates (served choice + best 3 others by the served one-step leaf) and plays the q-head argmax; the rest of the turn and all other decisions stay served (mirrors the data). Standard +.05 screen on tactical/mixed/self, 128 seeds, fresh seeds 2630000/2631000/2632000.",
+  "note": "Predeclared 2026-11-04 while pv-data was generating and before any test-split game is read (Jerry: shengji PolicyValueNet / AlphaGo style). Shengji lessons applied: value head decides in play, soft search-value targets, offline loss does not order play so the gate scores picks by playout win rate, test in the real consumer next. Model selection uses only the last 80 train games; fixed epochs, no other tuning."
+}

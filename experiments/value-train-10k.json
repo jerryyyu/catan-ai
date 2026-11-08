@@ -1,0 +1,24 @@
+{
+  "name": "value-train-10k",
+  "stage": "offline-gate",
+  "data_config": "experiments/value-data-10k.json",
+  "points": ["roll", "end_turn"],
+  "architecture": "MLP 40 -> 128 -> 128 -> 1 (ReLU), sigmoid output, BCE to the game outcome; one model per sampling point",
+  "hidden": 128,
+  "layers": 2,
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+  "epochs": 20,
+  "batch": 2048,
+  "validation_games": 500,
+  "seed": 0,
+  "threads": 8,
+  "gate": {
+    "metric": "test AUC (seat's eventual win) of the network minus the better of the served leaf AUC and the served shared-score AUC, per point",
+    "minimum_gain_lcb": 0.0,
+    "bootstrap_resamples": 1000,
+    "bootstrap_seed": 17,
+    "pass": "game-clustered bootstrap 95% lower bound of the gain > 0 at every point"
+  },
+  "note": "Predeclared 2026-11-04 before the 10k test split (seeds 2649000-2649999) is read (Jerry: retrain on the 10k value data). Prediction only, not a strength claim. Reference, not a bar: the pv-v1 v head reached AUC .728 on its own test games (turn-start rows, 1,000-game data). Epoch chosen by loss on the last 500 train games; no other tuning. A pass makes the end_turn model the candidate leaf for a predeclared short-lookahead search screen."
+}
