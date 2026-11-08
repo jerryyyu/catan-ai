@@ -142,14 +142,20 @@ new comparator work or external screen is planned.
   value only.
 - Bar: powered DEV screen, +5 pp both panels.
 
-### 8. Judges   RETIRED for Catanatron 2026-11-01
+### 8. Judges   RETIRED as a gate 2026-11-01; reopened as information 2026-11-07
 
-- The owner retired external benchmarking: the standard comparison is the
-  served default (above). The two external held-out runs both failed the
+- The owner retired external benchmarking as a gate: the standard comparison is
+  the served default (above). The two external held-out runs both failed the
   zero-fault rule (legality mismatches, then solver timeouts in long games),
   and the second run's descriptive read showed the fitted planner ahead by
-  +6 and +15 pp. No further Catanatron or Settlers-RL work is planned unless
-  the owner reopens it.
+  +6 and +15 pp.
+- Reopened 2026-11-07 as a descriptive ladder with a predeclared retirement
+  rule (win share >= .50 with LCB > .40, alone vs three copies): Catanatron
+  depth 2 .488, depth 3 .455, JSettlers2 robots .373 (512 games each; see
+  `docs/CONTRACT.md`, "External benchmarks"). None retired. JSettlers plays
+  through `tools/jsettlers` on its own server; Colonist.io is excluded by its
+  terms. Settlers-RL remains unbenchmarked (its simulator would need a rules
+  audit before checkpoint reuse).
 - The self table is the red-team lane: candidates play against the served bot.
 - Human transfer stays gated on an authorized platform route; local pilots
   continue.
