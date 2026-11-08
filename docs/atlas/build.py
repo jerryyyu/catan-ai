@@ -172,7 +172,7 @@ def policy_matrix(reg: dict) -> str:
             lift = ''.join(_lift_cell(vp.get(t)) for t in TABLES) + f'<td class="n dim">{vp["seeds"]}</td>'
         shares = ''.join(_share_cell((pol.get('external') or {}).get(c['key'])) for c in ext)
         status = pol['status']
-        chip = 'pass' if status == 'served' else ('fail' if status == 'FAIL' else 'run')
+        chip = 'pass' if status == 'served' else ('fail' if 'FAIL' in status else 'run')
         body.append(f'<tr><td class="pol"><code>{esc(pol["name"])}</code><span class="chip {chip}">{esc(status)}</span></td>'
                     f'<td class="txt">{esc(pol["search"])}</td><td class="txt">{esc(pol["model"])}</td>{lift}{shares}</tr>')
     return f'<div class="scroll matrix"><table>{head1}{head2}{"".join(body)}</table></div>'

@@ -5,7 +5,7 @@
   "served_since": "2026-11-03",
   "rollback": "planner_offer_guard",
   "candidate": "planner_pv2_tiles",
-  "candidate_status": "held-out running",
+  "candidate_status": "held-out FAIL: internal pass, JSettlers paired +.053 (LCB −.005)",
   "served_trace_sha256": "9fd2805e9678f4f225a76fa7e2e522c55e3c981cdcba60d1e6e28c774921b4c1",
   "candidate_trace_sha256": "c7d07a76c9f3249f170ade344e3564df62b3a127c4b311b05eeea586334cb815"
  },
@@ -285,6 +285,30 @@
    },
    "verdict": "FAIL",
    "note": "Opponent styles inferred from observed placements."
+  },
+  {
+   "id": "pv2-tiles-heldout-v2",
+   "bot": "planner_pv2_tiles",
+   "seeds": 512,
+   "tables": {
+    "tactical": [
+     0.0464,
+     null,
+     null
+    ],
+    "mixed": [
+     0.0396,
+     null,
+     null
+    ],
+    "self": [
+     0.0957,
+     null,
+     null
+    ]
+   },
+   "verdict": "FAIL",
+   "note": "Confirmatory held-out. Internal seed LCBs +.023/+.016/+.072 (pass); paired seeded JSettlers 222 vs 195 of 512, +.053, LCB −.005 at α .05/4 (fail)."
   }
  ],
  "external": [
@@ -470,24 +494,19 @@
  ],
  "in_flight": [
   {
-   "name": "pv2_tiles held-out",
-   "where": "ultra + Mac",
-   "status": "running"
-  },
-  {
    "name": "Margin-head transformer",
    "where": "ultra",
-   "status": "replaying"
+   "status": "training queued"
   },
   {
    "name": "PUCT screen",
    "where": "#46",
-   "status": "review"
+   "status": "merge pending"
   },
   {
-   "name": "STAC trading",
-   "where": "bridge",
-   "status": "scoping"
+   "name": "STAC chat trading",
+   "where": "claude/stac-trades",
+   "status": "smoke running"
   }
  ],
  "policies": [
@@ -528,7 +547,7 @@
   {
    "group": "Candidates",
    "name": "planner_pv2_tiles",
-   "status": "held-out running",
+   "status": "held-out FAIL",
    "search": "PV: prod top-4 turn plans",
    "model": "Tile transformer",
    "vs_prod": {
