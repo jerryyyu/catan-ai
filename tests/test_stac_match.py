@@ -143,7 +143,8 @@ def test_block_summary_counts_errors_fallbacks_caps_and_agreement(tmp_path):
     g, missing = games
     assert g['finished'] and g['seat'] == 3 and g['won'] and g['our_vp'] == 10 and g['our_position'] == 1
     assert g['bridge_errors'] == 1 and g['fallbacks_by_type'] == {'actions': 1}
-    assert g['mcts'] == {'searches': 2, 'cap_hits': 1, 'ms_p50': 900, 'ms_p95': 10120, 'ms_max': 10120}
+    assert g['mcts'] == {'searches': 2, 'cap_hits': 1, 'cap_overruns_1s': 0, 'ms_p50': 900, 'ms_p95': 10120,
+                         'ms_max': 10120}
     assert g['stac_results_agree'] and g['player_trades_executed'] == 0
     assert g['seed_logged_matches'] is False  # logged 42 is not the derived seed
     assert not missing['finished']

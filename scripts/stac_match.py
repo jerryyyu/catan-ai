@@ -241,6 +241,8 @@ def summarize_block(block: dict, block_dir: Path, base_seed, bridge_seed: int) -
         searches = s['mcts']
         ms = [x['ms'] for x in searches]
         g['mcts'] = {'searches': len(searches), 'cap_hits': sum(x['cap_hit'] for x in searches),
+                     # The cap is checked between iterations, so one long iteration can overrun it.
+                     'cap_overruns_1s': sum(x['cap_ms'] > 0 and x['ms'] > x['cap_ms'] + 1000 for x in searches),
                      'ms_p50': percentile(ms, .5), 'ms_p95': percentile(ms, .95), 'ms_max': max(ms) if ms else None}
         if base_seed is not None:
             g['game_seed'] = derive_seed(base_seed, name, 'game')
@@ -287,6 +289,7 @@ def aggregate(games: list[dict], expected: int) -> dict:
         'trade_blocked': sum(g['trade_blocked'] for g in games),
         'player_trades_executed': sum(g.get('player_trades_executed', 0) for g in done),
         'mcts_searches': searches, 'mcts_cap_hits': sum(g['mcts']['cap_hits'] for g in games),
+        'mcts_cap_overruns_1s': sum(g['mcts']['cap_overruns_1s'] for g in games),
         'observability_violations': [g['game'] for g in done if not observability_ok(g)],
         'seed_mismatches': [g['game'] for g in games if g.get('seed_logged_matches') is False],
         'stac_results_disagree': [g['game'] for g in done if not g.get('stac_results_agree')],
@@ -427,7 +430,8 @@ def main(argv=None) -> int:
     write_exclusive(out / 'receipt.json', receipt)
     print(json.dumps({'pass': receipt['pass'], 'elapsed_sec': elapsed,
                       **{n: {k: v[k] for k in ('games_completed', 'our_wins', 'win_rate_wilson95', 'bridge_errors',
-                                                'fallbacks_by_type', 'mcts_cap_hits', 'force_ends')}
+                                                'fallbacks_by_type', 'mcts_cap_hits', 'mcts_cap_overruns_1s',
+                                                'force_ends')}
                          for n, v in per_block.items()}}))
     print(f'receipt: {out / "receipt.json"}')
     return 0 if receipt['pass'] else 1

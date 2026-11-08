@@ -148,7 +148,10 @@ the server ignores. The bridge skips such a call without asking the policy and l
   are `PythonBridge`'s, unchanged from the JSettlers bridge.
 - STAC MCTS agents: a declared per-search cap (`time_cap_ms`, passed as `MCTS_TIME_LIMIT_MS`; the
   search stops at 10k iterations or the cap). The cap is checked at the end of each iteration, so a
-  search can overrun it by one iteration. Every search is logged with its iterations; a capped search
+  search can overrun it by one iteration, and a pathological iteration can be long (smoke: 1 of 1694
+  searches ran 645 s, 4 of 712 in a determinism run ran 17-21 s). Searches more than 1 s over the cap
+  are counted as `mcts_cap_overruns_1s`. STAC flags an MCTS agent as human while it plans, so the
+  server's forced turn end does not cut such a search. Every search is logged with its iterations; a capped search
   counts as a cap hit.
 - All robots: STAC's server ends a robot turn after `force_end_turn_sec` (30 s) without an action;
   every forced end is logged and counted (ours separately).
@@ -161,3 +164,20 @@ the server ignores. The bridge skips such a call without asking the policy and l
 - Seats come from the seeded shuffle, not a rotation; the receipt records seat and position counts.
 - STAC's results files and the server's `catanai-end` line must agree on every winner, or the receipt
   fails.
+
+## Smoke and determinism (2026-11-08, patch v2, source d0ee81c)
+
+Receipts: `runs/stac-smoke-20261108-v2/receipt.json`, `runs/stac-det-20261108-v2-{a,b}/receipt.json`,
+compare `runs/stac-det-20261108-v2-compare.json` (local, not committed). Bridge-health only; 8-game
+blocks are not strength claims.
+
+| Block | Games | Our wins | Bridge errors | Fallbacks | Our decision p50 / p95 / max | STAC MCTS searches / cap hits / >1 s overruns |
+|---|---|---|---|---|---|---|
+| vs 3 POMCP-TS-CR | 8 | 0 (Wilson 95% 0-0.32) | 0 | 0 | 2.7 / 16.8 / 64 ms (both blocks) | 1694 / 37 / 1 (645 s) |
+| vs 3 STAC JSettlers | 8 | 3 (0.14-0.69) | 0 | 0 | (as above) | n/a |
+
+Both blocks: 0 legal-set mismatches, 0 forced turn ends, 0 player trades attempted or executed, every
+game logged hidden (FullyObservable/ObservableVP/chat off), every logged seed equal to the derived one,
+STAC's results agree with the server's end line on every winner. Determinism (same seed, two runs, 4
+games per opponent): setup identical 8/8, dice identical for every shared roll index 8/8, end-to-end
+identical 4/4 JSettlers games and 0/4 POMCP games (POMCP play is not reproducible), same winner 6/8.
