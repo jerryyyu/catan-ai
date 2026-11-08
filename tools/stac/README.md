@@ -56,7 +56,7 @@ jars, Gson jar and the action-type file are checked against pinned SHA-256s; our
 against the staged STAC classes. `manifest.json` / `receipt.json` record the commit, patch SHA-256,
 per-file hashes and digests; `verify_loaded` re-hashes all of it right before launch.
 
-## The match patch (`runs/external/stac-catanai-v1.patch`)
+## The match patch (`runs/external/stac-catanai-v2.patch`)
 
 Applied to the pinned commit; every change is opt-in or behaviour-neutral:
 
@@ -80,6 +80,12 @@ Applied to the pinned commit; every change is opt-in or behaviour-neutral:
   iterations, cap, whether the cap cut it), forced turn ends, blocked trades and the game end
   (winner, VP, turns).
 - Two private brain fields used by initial placement are made protected for third-party brains.
+- **MCTS time listener fix:** overrides `mcts.listeners.TimeListener` from `MCTS-1.0.jar` (MIT). Upstream,
+  agents still running from an earlier time-capped search keep calling that search's listener, which
+  then shuts down and notifies the *current* search, cutting it to a handful of iterations (seen in a
+  first smoke as capped searches followed by searches of 17-800 iterations). The fixed listener fires
+  once and waits for its own signal; the stopping rule (iterations or time) is unchanged. v1 of the
+  patch (without this fix) was retired before any reported run.
 
 ## Rules audit: STAC (JSettlers 1.1.16) vs the engine
 

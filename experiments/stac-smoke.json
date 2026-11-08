@@ -7,8 +7,8 @@
     "repo": "https://github.com/ruflab/StacSettlers",
     "commit": "c9e3b66f69e796b1cdd56a508ec32a6ceed1141d",
     "patch": {
-      "file": "runs/external/stac-catanai-v1.patch",
-      "sha256": "7e9ffd241b454e69bcbc8f2a5e683f56048b1c4d2c53263b3429df8297544832"
+      "file": "runs/external/stac-catanai-v2.patch",
+      "sha256": "ebadcfcb42c1dc272d9b2e6f25225e68c25ee877b45f6f72e7c69c91c52aa052"
     },
     "seed": 20261108,
     "no_player_trades": true,
