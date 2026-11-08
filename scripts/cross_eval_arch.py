@@ -3,6 +3,13 @@ experiments/arch-bakeoff.json): identical metric, decision filter and bootstrap 
 ``cross_eval_pv2.py`` (picked candidate's playout win rate minus the served
 candidate's on the pv2 test decisions; immediate wins first; city-vs-end report),
 with the model loaded through ``arch_bakeoff.make_net`` / ``score``.
+
+Truncation (Codex HOLD @b48f61d, P2): the report carries the rollout-truncation status
+of the test games' candidates from the shared ``train_pv2.truncation`` check (as
+``cross_eval_pv2`` and ``train_pv2.gate``). A censored rollout in pre-fix pv2 data is
+indistinguishable from a loss, so ``eligible_for_next_gate`` is true only when the
+lift's 95% LCB is > 0 *and* truncation is recorded and zero; otherwise it is false with
+the reason in ``ineligible_reason``.
 """
 import argparse
 import hashlib
@@ -15,7 +22,15 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from arch_bakeoff import make_net, score  # noqa: E402
-from train_pv2 import decisions, load  # noqa: E402
+from train_pv2 import decisions, load, truncation  # noqa: E402
+
+
+def ineligible_reason(lcb, censored):
+    """Why the lift does not qualify for the next gate (None: it qualifies). Truncation that is
+    unrecorded or present disqualifies whatever the CI says."""
+    if censored['violation'] is not None:
+        return f"rollout truncation: {censored['violation']}"
+    return None if lcb > 0 else 'pick_minus_served_lcb95 <= 0'
 
 
 def main():
@@ -69,12 +84,16 @@ def main():
     draws = sorted(sum(r[1] for r in s) / len(s) for s in
                    ([r for gid in (rng.choice(ids) for _ in ids) for r in by_game[gid]]
                     for _ in range(tcfg['gate']['bootstrap_resamples'])))
+    lcb = draws[int(.025 * len(draws))]
+    censored = truncation(games)
+    reason = ineligible_reason(lcb, censored)
     result = {'arm': arm, 'model_sha256': hashlib.sha256(args.model.read_bytes()).hexdigest(),
               'test_decisions': len(rows), 'pick_minus_served': sum(r[1] for r in rows) / len(rows),
-              'pick_minus_served_lcb95': draws[int(.025 * len(draws))],
+              'pick_minus_served_lcb95': lcb,
               'pick_minus_served_ucb95': draws[int(.975 * len(draws)) - 1],
               'city_ranked_above_end_by_model': cm / cn if cn else None, 'city_above_end_in_playouts': cp / cn if cn else None,
               'city_vs_end_decisions': cn, 'test_corpus_sha256': corpus,
+              'truncation': censored, 'eligible_for_next_gate': reason is None, 'ineligible_reason': reason,
               'script_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     with args.output.open('x') as stream:
         json.dump(result, stream, indent=1)

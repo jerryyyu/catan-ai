@@ -287,3 +287,18 @@ def test_gate_refuses_tampered_train_arrays(tmp_path):
         ab.main(['gate', *common])
     assert not (out / 'gate.json').exists()
 
+
+def test_cross_eval_eligibility_requires_recorded_zero_truncation():
+    """Codex HOLD @b48f61d P2: a positive CI does not qualify while truncation is unknown/present."""
+    import cross_eval_arch
+    from train_pv2 import truncation
+
+    def games(*cands):
+        return [{'decisions': [{'candidates': list(cands)}]}]
+    clean = truncation(games({'truncated': 0}, {'truncated': 0}))
+    unknown = truncation(games({'truncated': 0}, {}))
+    present = truncation(games({'truncated': 2}, {'truncated': 0}))
+    assert cross_eval_arch.ineligible_reason(.01, clean) is None
+    assert cross_eval_arch.ineligible_reason(0., clean) == 'pick_minus_served_lcb95 <= 0'
+    assert 'do not record rollout truncation' in cross_eval_arch.ineligible_reason(.05, unknown)
+    assert 'truncated rollouts' in cross_eval_arch.ineligible_reason(.05, present)
