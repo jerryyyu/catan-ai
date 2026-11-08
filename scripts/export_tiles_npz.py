@@ -7,6 +7,13 @@ the NumPy-vs-torch parity on the probe). The npz is written with fixed zip times
 so the same .pt always exports to the same bytes. Weights stay local (gitignored);
 only the meta file is committed.
 
+No clobber (Codex HOLD @1d18b83, P1): both destinations must be absent before any
+work starts (``artifact_guard.refuse_existing``); the pair is written and validated
+(``TilesValueNet``: SHA-256, tokenizer index and NumPy-vs-torch parity) in a private
+staging directory next to the destination, and only a validated pair is published
+with ``artifact_guard.publish`` (hard link, never replacing an existing file). A
+refusal or a failed validation leaves any existing files untouched.
+
     uv run --with numpy --with torch python scripts/export_tiles_npz.py \
         --pt checkpoints/value_tiles_v1.pt --npz checkpoints/value_tiles_v1.npz \
         --meta checkpoints/value_tiles_v1.meta.json
@@ -16,7 +23,9 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import shutil
 import sys
+import tempfile
 import zipfile
 
 import numpy as np
@@ -24,6 +33,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 sys.path.insert(0, str(ROOT / 'src'))
+
+from artifact_guard import publish, refuse_existing  # noqa: E402
 
 SOURCE_RUN = 'runs/arch-bakeoff-v1 (ultra)'
 PROBE_SEED, PROBE_RANDOM, PROBE_GAME_SEED = 20261108, 64, 2690000
@@ -91,6 +102,7 @@ def main(argv=None):
     stem = str(args.npz)[:-len('.npz')]
     if not str(args.npz).endswith('.npz') or Path(f'{stem}.meta.json') != args.meta:
         parser.error('--meta must be <stem>.meta.json for --npz <stem>.npz (the loader reads both by stem)')
+    refuse_existing(args.npz, args.meta)
     net, ckpt = load_torch_net(torch, args.pt)
     mean, sd = ckpt['mean'].numpy().astype(np.float32), ckpt['sd'].numpy().astype(np.float32)
     arrays = {'mean': mean, 'sd': sd}
@@ -103,9 +115,30 @@ def main(argv=None):
     arrays['parity_x'] = probe
     arrays['parity_logit'] = torch_logits(torch, net, ckpt, probe)
     args.npz.parent.mkdir(parents=True, exist_ok=True)
-    write_npz(args.npz, arrays)
-    meta = {'schema': 'catan-value-tiles-v1', 'arm': 'tiles', 'pt_sha256': sha256(args.pt),
-            'npz_sha256': sha256(args.npz), 'source_run': SOURCE_RUN,
+    staging = Path(tempfile.mkdtemp(prefix='.export-tiles-', dir=args.npz.parent))
+    try:
+        staged_npz, staged_meta = staging / args.npz.name, staging / args.meta.name
+        meta, diff = stage(torch, ckpt, arrays, probe, args.pt, staged_npz, staged_meta)
+        refuse_existing(args.npz, args.meta)
+        publish(args.npz, lambda tmp: shutil.copyfile(staged_npz, tmp))
+        publish(args.meta, lambda tmp: shutil.copyfile(staged_meta, tmp))
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+    print(json.dumps({'npz': str(args.npz), 'npz_sha256': meta['npz_sha256'], 'pt_sha256': meta['pt_sha256'],
+                      'probe_rows': len(probe), 'parity_max_abs_diff': diff}))
+
+
+def validate(stem):
+    """The serving loader's checks (SHA-256, tokenizer index, parity); returns the parity."""
+    from catan_ai.tiles_value import TilesValueNet
+    return TilesValueNet(stem).parity_max_abs_diff
+
+
+def stage(torch, ckpt, arrays, probe, pt, npz, meta_path):
+    """Write the pair at the staging paths and validate it there."""
+    write_npz(npz, arrays)
+    meta = {'schema': 'catan-value-tiles-v1', 'arm': 'tiles', 'pt_sha256': sha256(pt),
+            'npz_sha256': sha256(npz), 'source_run': SOURCE_RUN,
             'arrays': {k: list(v.shape) for k, v in sorted(arrays.items())},
             'params': ckpt['params'], 'epoch': ckpt['epoch'], 'val_bce': ckpt['val_bce'],
             'epochs': ckpt['epochs'], 'train_identity': ckpt['train_identity'],
@@ -113,13 +146,11 @@ def main(argv=None):
             'torch_version': torch.__version__,
             'probe': {'seed': PROBE_SEED, 'random_rows': PROBE_RANDOM, 'game_seed': PROBE_GAME_SEED,
                       'rows': len(probe)}}
-    args.meta.write_text(json.dumps(meta, indent=1) + '\n')
-    from catan_ai.tiles_value import TilesValueNet  # verifies sha, tokenizer index and parity
-    served = TilesValueNet(stem)
-    meta['parity_max_abs_diff'] = served.parity_max_abs_diff
-    args.meta.write_text(json.dumps(meta, indent=1) + '\n')
-    print(json.dumps({'npz': str(args.npz), 'npz_sha256': meta['npz_sha256'], 'pt_sha256': meta['pt_sha256'],
-                      'probe_rows': len(probe), 'parity_max_abs_diff': served.parity_max_abs_diff}))
+    meta_path.write_text(json.dumps(meta, indent=1) + '\n')
+    diff = validate(str(npz)[:-len('.npz')])
+    meta['parity_max_abs_diff'] = diff
+    meta_path.write_text(json.dumps(meta, indent=1) + '\n')
+    return meta, diff
 
 
 if __name__ == '__main__':
