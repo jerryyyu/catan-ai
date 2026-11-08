@@ -1,0 +1,14 @@
+{
+  "name": "search-diagnostic",
+  "stage": "diagnostic (evaluation compute; not training data)",
+  "max_turns": 1000,
+  "decision_rate": 0.15,
+  "max_decisions_per_game": 3,
+  "candidates": 4,
+  "playouts": 64,
+  "lineups": {"tactical": ["tactical", "tactical", "tactical"],
+              "self": ["planner_offer_accept", "planner_offer_accept", "planner_offer_accept"]},
+  "seeds": {"tactical": [2860000, 70], "self": [2861000, 70]},
+  "analysis": "Per decision, split each option's 64 playouts into halves (even/odd index). Report, per lineup and by decision type: (1) label reliability = correlation between halves of option-minus-served differences; (2) unbiased headroom = choose the best option on one half and score it on the other (both directions averaged), relative to the served pick and to the PV pick, separately for the served candidate set ('seq') and for all legal first moves ('first'); (3) how often the best option lies outside the served top-4 candidates; (4) which move types the best options are (build, bank trade, dev purchase, end turn).",
+  "note": "Predeclared 2026-11-06 before any game (Jerry: 'do the audit' / 'figure out more on our search and planning'). Diagnoses whether the bottleneck is candidate generation, evaluation, or planning horizon. The served bot finishes our seat's game in every playout, so values are one-step improvements over the served policy; that limitation is part of what this measures. Seeds fresh: 2860000-2860069 (Tactical lineup), 2861000-2861069 (served self-play lineup)."
+}

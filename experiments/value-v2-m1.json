@@ -1,0 +1,12 @@
+{
+  "name": "value-v2-m1",
+  "stage": "fine-tune on existing data",
+  "base": "value-v2-100k-aug-b (runs/value-v2-100k-aug-b.pt)",
+  "validation_games": 150,
+  "finetune": {"epochs": 12, "batch_decisions": 64, "batch_shards": 2048, "batch_visited": 512,
+               "relative_weight": 4.0, "decision_bce_weight": 0.5, "shard_weight": 1.0, "visited_weight": 1.0,
+               "optimizer": "adamw", "learning_rate": 0.0002, "weight_decay": 0.05, "schedule": "cosine",
+               "warmup_fraction": 0.05, "seed": 0, "threads": 16},
+  "selection": "epoch with the lowest within-decision relative loss on pv2b validation decisions (last 150 pv2b train games, excluded from training); pv2b test games not read",
+  "note": "Predeclared 2026-11-05 before training (Jerry: make the model and search better with current data, no new data generation). Fine-tunes arm B on: 100k end-of-turn rows (BCE), pv2b visited end-of-turn rows incl. explored turns (BCE; off-policy support), and pv2b counterfactual train decisions (within-decision relative loss + soft BCE to playout rates), with 12-symmetry augmentation and arm B's symmetric standardization. Weights stay local artifacts (not committed)."
+}

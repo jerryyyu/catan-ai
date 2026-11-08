@@ -1,0 +1,26 @@
+{
+  "name": "pv2-train",
+  "stage": "offline-gate",
+  "data_config": "experiments/pv2-data.json",
+  "architecture": "afterstate value MLP: encoder v2 (1,324) -> 256 -> 256 -> 1 (ReLU), sigmoid = win chance after this turn",
+  "hidden": 256,
+  "layers": 2,
+  "learning_rate": 0.0005,
+  "weight_decay": 0.0001,
+  "epochs": 30,
+  "batch_decisions": 64,
+  "relative_weight": 1.0,
+  "validation_games": 150,
+  "seed": 0,
+  "threads": 8,
+  "gate": {
+    "metric": "within-decision: playout win rate of the model's picked candidate minus the served candidate's, over test decisions (24 playouts per candidate)",
+    "minimum_gain_lcb": 0.0,
+    "bootstrap_resamples": 1000,
+    "bootstrap_seed": 19,
+    "pass": "game-clustered bootstrap 95% lower bound of the gain > 0",
+    "reported": "oracle-best minus served; share of decisions where the served pick is playout-best; on decisions with both end-now and a city-building candidate, how often the model and the playouts rank the city above ending"
+  },
+  "integration_if_pass": "planner_pv2 (catan_ai.pv_search.PVSearchPlanner) with the exported model: at own-turn build/trade decisions it plays the first move of the candidate whose afterstate the model rates highest; all else served. Standard +.05 screen on tactical/mixed/self, 128 seeds, fresh seeds 2770000/2771000/2772000.",
+  "note": "Predeclared 2026-11-04 with the data config and before any test-split game is read. Model audit fixes: encoder v2 (fix 3/4), counterfactual afterstate targets at the search's own candidates with exploration (fix 1), within-decision gate (fix 2), no separate noisy policy head: the served search proposes and the value decides (fix 5). Epoch chosen by validation loss on the last 150 train games; no other tuning."
+}

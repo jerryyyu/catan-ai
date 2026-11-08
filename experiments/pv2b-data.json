@@ -1,0 +1,23 @@
+{
+  "name": "pv2b-data",
+  "stage": "data-generation",
+  "schema": "pv2",
+  "policy": "planner_offer_accept",
+  "max_turns": 1000,
+  "decision_rate": 0.1,
+  "candidates": 4,
+  "playouts": 8,
+  "playouts_test": 24,
+  "explore": 0.25,
+  "split": {
+    "train": [
+      2760000,
+      1200
+    ],
+    "test": [
+      2762000,
+      250
+    ]
+  },
+  "note": "Supersedes pv2-data (runs/pv2-data-v1 paused at 69 games, preserved and unused) with the same candidates, playouts, exploration, seeds and split, plus full position logging (Jerry 2026-11-05: 'pv2 should log all the features too'): every visited turn-start and end-of-turn position with encoder-v2 features, the 40 legacy features, served leaf/shared score and the outcome, and each sampled decision's pre-move encoder-v2 observation. Predeclared before any pv2b data; test seeds 2762000-2762249 unread. Predeclared 2026-11-04 before any data (Jerry: apply the model-audit fixes; board #1 comment 6649817156). Counterfactual afterstate data at exactly the states PV search scores: at ~10% of own-turn first-action decisions of self-play games of the served planner_offer_accept, the candidates are 'end the turn now' plus the 4 best served sequences by first move (catan_ai.pv_search.candidate_sequences); each candidate's afterstate is encoded with encoder v2 (1,324 features, chooser's information only; purchases averaged over the deck prior) and labelled by its win rate over full playouts from the TRUE game after applying the sequence and ending the turn (common random numbers across candidates). Train games use 8 playouts per candidate, test games 24. Exploration: 25% of sampled decisions then follow a uniformly chosen candidate in the real game. Seeds fresh: train 2760000-2761199, test 2762000-2762249; test files not read until the training config is committed. Runs on ultra from a frozen snapshot (optimized producer, Cython engine, cython-bound checkpoint)."
+}

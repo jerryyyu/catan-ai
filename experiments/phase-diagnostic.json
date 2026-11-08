@@ -1,0 +1,14 @@
+{
+  "name": "phase-diagnostic",
+  "stage": "diagnostic (evaluation compute; not training data)",
+  "max_turns": 1000,
+  "phases": ["setup_settlement", "robber", "trade_response"],
+  "playouts": {"setup_settlement": 32, "robber": 64, "trade_response": 64},
+  "max_per_game": {"robber": 2, "trade_response": 2},
+  "lineups": {"tactical": ["tactical", "tactical", "tactical"],
+              "self": ["planner_offer_accept", "planner_offer_accept", "planner_offer_accept"]},
+  "seeds": {"tactical": [2862000, 30], "self": [2863000, 30]},
+  "analysis": "scripts/phase_diagnostic.py --analyze: per lineup and phase, analyze_search_diagnostic.analyze over all legal options (split-half reliability; unbiased headroom of perfect choice vs the served move, game-clustered bootstrap 95% CI; best-option types).",
+  "decision_rule": "A phase shows 'real headroom' if its 'first' headroom is >= +0.02 per decision with the CI lower bound > 0 in at least one lineup. Real headroom => aim the next search/planning work at that phase; otherwise record that the remaining strength is spread thinly. Bar fixed before any game.",
+  "note": "Predeclared 2026-11-06 (Jerry: 'Yes' to running the oracle diagnostic on opening placement and robber, after search-diagnostic-v1 showed <1pp per build/trade decision). Seat 0 = planner_pv2_b_fix (delegates these phases to the served bot). Setup uses 32 playouts (about 50 options) and one of seat 0's two placements per game (alternating by seed parity) to fit ~2.5 h on ultra. Seeds fresh: 2862000-2862029 (Tactical), 2863000-2863029 (served self-play)."
+}
