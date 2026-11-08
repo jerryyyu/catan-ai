@@ -1,0 +1,16 @@
+{
+  "name": "external-ladder",
+  "stage": "descriptive (external benchmark; not a promotion gate)",
+  "candidate": "planner_offer_accept",
+  "max_turns": 1000,
+  "variants": {
+    "ab2": {"seed": 2880000, "seeds": 128, "budget": {"decision": 2.0, "turn": 10.0},
+            "note": "Catanatron AlphaBeta depth 2, 1.5 s cap: the comparator of every earlier external receipt (smoke: p95 decision 0.2 s, so the cap rarely binds; a 20 s-cap depth-2 variant would be the same player and is not run)."},
+    "ab3": {"seed": 2881000, "seeds": 128, "budget": {"decision": 25.0, "turn": 120.0},
+            "note": "Catanatron AlphaBeta depth 3, Catanatron's own 20 s cap (smoke: about 5 min per game, p95 decision 3-11 s, 0 fallbacks in 4 games)."}
+  },
+  "table": "the candidate in one seat, three copies of the variant in the others; each seed played with the candidate in all four seats. Hidden state for Catanatron comes from the existing belief-sampled adapter (v13), no cheating.",
+  "analysis": "Per variant: candidate win share (fair share .25) with a seed-clustered normal 95% CI; truncations; external fallbacks and budget failures (reported, and games with any fallback also reported excluded).",
+  "retirement_rule": "Retire a variant as a benchmark if the candidate's win share is >= .50 (twice the fair share) with 95% CI lower bound > .40. Otherwise keep it as a benchmark. Fixed before any game (Jerry 2026-11-07: 'retire when we beat them too easily').",
+  "note": "Predeclared 2026-11-07 before any game (Jerry: 'Yes try play vs stronger'). Catanatron's own author reports AlphaBeta depth 2 as its best bot and MCTS as weak and slow, so depth 3 is the stronger setting tried. Seeds fresh: 2880000 (ab2), 2881000 (ab3). Runs on ultra."
+}

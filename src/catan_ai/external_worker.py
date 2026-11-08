@@ -33,7 +33,7 @@ def send_message(connection, message):
     connection.sendall(struct.pack('!I', len(data)) + data)
 
 
-def verify_install():
+def verify_install(variant='ab2'):
     import hashlib
     import importlib.metadata
     import json
@@ -64,7 +64,7 @@ def verify_install():
         if importlib.metadata.version(name) != expected:
             raise RuntimeError(f'external dependency version mismatch: {name}')
     return {'commit': pin, 'versions': versions, 'python_hash_seed': os.environ.get('PYTHONHASHSEED'),
-            'adaptation': 'depth2-guided-solver-v13',
+            'adaptation': 'depth2-guided-solver-v13' if variant == 'ab2' else f'{variant}-guided-solver-v13',
             'package_sha256': hashlib.sha256(json.dumps(hashes, sort_keys=True).encode()).hexdigest()}
 
 
@@ -74,14 +74,21 @@ def main():
     from catanatron.players.minimax import AlphaBetaPlayer
     import catanatron.players.minimax as minimax
     from catanatron.models.player import Color
-    minimax.MAX_SEARCH_TIME_SECS = 1.5
+    # Variants (the default 'ab2' is the comparator of every earlier receipt):
+    #   ab2      AlphaBeta depth 2, 1.5 s search cap
+    #   ab2_20s  AlphaBeta depth 2, Catanatron's own 20 s cap
+    #   ab3      AlphaBeta depth 3, 20 s cap
+    variant = sys.argv[3] if len(sys.argv) > 3 else 'ab2'
+    depth, cap = {'ab2': (2, 1.5), 'ab2_20s': (2, 20.0), 'ab3': (3, 20.0)}[variant]
+    minimax.MAX_SEARCH_TIME_SECS = cap
+    params = AlphaBetaPlayer.Params(depth=depth)
     connection = socket.socket(fileno=int(sys.argv[1]))
     tracker = RecoveryBeliefTracker(int(sys.argv[2]), particles=512)
     identity = None
     while True:
         try:
             if identity is None:
-                identity = verify_install()
+                identity = verify_install(variant)
             view, seed = read_message(connection)
         except EOFError:
             return
@@ -90,7 +97,7 @@ def main():
             if view.phase == 'trade_response':
                 action = choose_trade_response(external, view)
             else:
-                chosen = AlphaBetaPlayer(list(Color)[view.seat]).decide(external, external.playable_actions)
+                chosen = AlphaBetaPlayer(list(Color)[view.seat], params).decide(external, external.playable_actions)
                 action = decision_to_local(chosen, view, mapping)
             send_message(connection, {'action': action, 'identity': identity,
                                       'belief': {'solver_attempts': tracker.solver_attempts,
