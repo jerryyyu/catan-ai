@@ -189,13 +189,13 @@ FAKE_BRIDGE = textwrap.dedent('''
 
 @needs_jdk
 def test_stalled_bridge_request_times_out_and_retires_the_transport(tmp_path):
-    jb.build()
+    classes = jb.build(tmp_path / 'classes')  # never the shared class dir a live run may be using
     script = tmp_path / 'fake_bridge.py'
     script.write_text(FAKE_BRIDGE)
     pid_file = tmp_path / 'child.pid'
     started = time.monotonic()
     result = subprocess.run(
-        [jb.java(), '-cp', jb.classpath(), f'-Dcatanai.bridge.cmd={sys.executable} {script} {pid_file}',
+        [jb.java(), '-cp', f'{jb.classpath(False)}:{classes}', f'-Dcatanai.bridge.cmd={sys.executable} {script} {pid_file}',
          f'-Dcatanai.decision.log={tmp_path / "decisions.jsonl"}',
          'catanai.jsettlers.BridgeTimeoutCheck', '1500'],
         capture_output=True, text=True, timeout=60)

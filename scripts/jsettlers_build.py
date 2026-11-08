@@ -68,20 +68,20 @@ def java(tool: str = 'java', java_home: Path = JAVA_HOME) -> str:
     return str(java_home / 'bin' / tool)
 
 
-def build() -> Path:
-    if OUT.exists():
-        shutil.rmtree(OUT)  # no stale classes from deleted or renamed sources
-    OUT.mkdir(parents=True)
+def build(out: Path = OUT) -> Path:
+    if out.exists():
+        shutil.rmtree(out)  # no stale classes from deleted or renamed sources
+    out.mkdir(parents=True)
     files = sorted(str(p) for p in SOURCES.rglob('*.java'))
     if not files:
         raise SystemExit('no Java sources under ' + str(SOURCES))
     cmd = [java('javac'), '-nowarn', '-encoding', 'UTF-8', '--release', '17',
-           '-cp', classpath(False), '-d', str(OUT), *files]
+           '-cp', classpath(False), '-d', str(out), *files]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         sys.stderr.write(result.stdout + result.stderr)
         raise SystemExit(result.returncode)
-    return OUT
+    return out
 
 
 def check_checkout(checkout: Path = CHECKOUT, pin: str = JSETTLERS_COMMIT) -> str:
