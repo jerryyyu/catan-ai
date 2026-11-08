@@ -9,6 +9,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
+sys.path.insert(0, str(ROOT / 'tools' / 'jsettlers'))  # same import root as the other bridge tests (CI)
 
 import jsettlers_build as jb  # noqa: E402
 import jsettlers_smoke as smoke  # noqa: E402
@@ -40,7 +41,7 @@ def test_seed_streams_are_separated_by_role_game_and_base():
 
 
 def test_policy_seed_is_the_bridge_per_game_seed(monkeypatch):
-    from tools.jsettlers.jsbridge import decide
+    from jsbridge import decide
     seen = {}
     monkeypatch.setattr(decide, 'make_policy', lambda name, seed: seen.setdefault('seed', seed))
     decide.Bridge('planner_offer_accept', 20261108).policy_for('~botsOnly~3')
