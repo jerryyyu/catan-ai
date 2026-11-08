@@ -463,5 +463,309 @@
    "where": "PR #41",
    "status": "review"
   }
+ ],
+ "policies": [
+  {
+   "group": "Production",
+   "name": "planner_offer_accept",
+   "status": "served",
+   "search": "One-turn build search over builds, bank trades and cards, plus one priced trade offer per turn",
+   "model": "Fitted economic score (hand-built features, fitted weights)",
+   "vs_prod": null,
+   "external": {
+    "catanatron_d2": [
+     0.488,
+     0.444,
+     0.533,
+     512
+    ],
+    "catanatron_d3": [
+     0.455,
+     0.41,
+     0.501,
+     512
+    ],
+    "jsettlers": [
+     0.373,
+     0.332,
+     0.416,
+     512
+    ],
+    "stac_pomcp": [
+     0.0,
+     0.0,
+     0.32,
+     8
+    ]
+   },
+   "note": "Production since 2026-11-03. STAC is an 8-game smoke, not a benchmark."
+  },
+  {
+   "group": "Candidates",
+   "name": "planner_pv2_tiles",
+   "status": "promotion pending held-out",
+   "search": "PV search: the production bot proposes 'end now' + its top-4 turn plans; the value net picks one",
+   "model": "Tile transformer (win probability; 555k params)",
+   "vs_prod": {
+    "tactical": [
+     0.0454,
+     0.0238,
+     0.067
+    ],
+    "mixed": [
+     0.0439,
+     0.026,
+     0.0619
+    ],
+    "self": [
+     0.106,
+     0.0872,
+     0.1247
+    ],
+    "seeds": 512,
+    "receipt": "pv2-tiles-precise-v1"
+   },
+   "external": {
+    "catanatron_d2": [
+     0.613,
+     0.568,
+     0.659,
+     512
+    ],
+    "catanatron_d3": [
+     0.545,
+     0.501,
+     0.589,
+     512
+    ],
+    "jsettlers": [
+     0.447,
+     0.405,
+     0.491,
+     512
+    ]
+   },
+   "note": "Owner promotion; confirmatory held-out running. Catanatron retired for this bot."
+  },
+  {
+   "group": "Candidates",
+   "name": "planner_pv2_puct",
+   "status": "screen queued",
+   "search": "PUCT tree search (AlphaGo-Zero style): selective depth over our future turns, sampled hidden cards and dice",
+   "model": "Tile transformer (same as above)",
+   "vs_prod": null,
+   "external": {},
+   "note": "Screen is vs planner_pv2_tiles (+2 pp every table). Pre-screen: 100 simulations/decision, principal lines ~4.5 turns deep."
+  },
+  {
+   "group": "Candidates",
+   "name": "planner_pv2_b_fix",
+   "status": "previous research baseline",
+   "search": "PV search (as planner_pv2_tiles)",
+   "model": "Residual MLP (win probability)",
+   "vs_prod": {
+    "tactical": [
+     0.0254,
+     0.0026,
+     0.0482
+    ],
+    "mixed": [
+     0.0146,
+     -0.0039,
+     0.0332
+    ],
+    "self": [
+     0.019,
+     0.002,
+     0.0361
+    ],
+    "seeds": 512,
+    "receipt": "pv2-b-fix-precise-v1"
+   },
+   "external": {},
+   "note": "Superseded by the transformer."
+  },
+  {
+   "group": "Offline experts (too slow to serve)",
+   "name": "planner_placement_mix",
+   "status": "FAIL",
+   "search": "Production bot, except opening placements: top-12 spots x 24 full-game playouts each",
+   "model": "None (playouts)",
+   "vs_prod": {
+    "tactical": [
+     0.1,
+     0.038,
+     0.162
+    ],
+    "mixed": [
+     0.0437,
+     -0.0171,
+     0.1046
+    ],
+    "self": [
+     0.0437,
+     -0.0119,
+     0.0994
+    ],
+    "seeds": 80,
+    "receipt": "placement-mix-screen-v1"
+   },
+   "external": {},
+   "note": "Playout opponents drawn from a mix of styles. ~30 s per placement."
+  },
+  {
+   "group": "Offline experts (too slow to serve)",
+   "name": "planner_placement_search",
+   "status": "FAIL",
+   "search": "As above, playouts assume production-bot opponents",
+   "model": "None (playouts)",
+   "vs_prod": {
+    "tactical": [
+     0.0195,
+     -0.059,
+     0.098
+    ],
+    "mixed": null,
+    "self": [
+     0.1172,
+     0.066,
+     0.168
+    ],
+    "seeds": 64,
+    "receipt": "placement-search-screen-v1"
+   },
+   "external": {},
+   "note": ""
+  },
+  {
+   "group": "Offline experts (too slow to serve)",
+   "name": "planner_placement_infer",
+   "status": "FAIL",
+   "search": "As above, opponent styles inferred from their observed placements",
+   "model": "None (playouts)",
+   "vs_prod": {
+    "tactical": [
+     0.1031,
+     0.0411,
+     0.1652
+    ],
+    "mixed": [
+     0.025,
+     -0.0277,
+     0.0777
+    ],
+    "self": [
+     0.0312,
+     -0.0176,
+     0.0801
+    ],
+    "seeds": 80,
+    "receipt": "placement-infer-screen-v1"
+   },
+   "external": {},
+   "note": ""
+  },
+  {
+   "group": "Screened, not taken",
+   "name": "planner_pv2_b",
+   "status": "FAIL",
+   "search": "PV search (offers suppressed by a bug)",
+   "model": "Residual MLP",
+   "vs_prod": {
+    "tactical": [
+     -0.076,
+     null,
+     null
+    ],
+    "mixed": [
+     -0.025,
+     null,
+     null
+    ],
+    "self": [
+     0.008,
+     null,
+     null
+    ],
+    "seeds": 128,
+    "receipt": "pv2-b-screen-v1"
+   },
+   "external": {},
+   "note": ""
+  },
+  {
+   "group": "Screened, not taken",
+   "name": "planner_pv2_s1",
+   "status": "FAIL",
+   "search": "PV search, committing to the picked turn plan",
+   "model": "Residual MLP",
+   "vs_prod": {
+    "tactical": [
+     0.023,
+     null,
+     null
+    ],
+    "mixed": [
+     -0.012,
+     null,
+     null
+    ],
+    "self": [
+     -0.008,
+     null,
+     null
+    ],
+    "seeds": 128,
+    "receipt": "pv2-s1-screen-v1"
+   },
+   "external": {},
+   "note": ""
+  },
+  {
+   "group": "Screened, not taken",
+   "name": "planner_pv2_s1_m1",
+   "status": "FAIL",
+   "search": "As planner_pv2_s1",
+   "model": "Residual MLP fine-tuned on search data",
+   "vs_prod": {
+    "tactical": [
+     -0.025,
+     null,
+     null
+    ],
+    "mixed": [
+     -0.004,
+     null,
+     null
+    ],
+    "self": [
+     0.0,
+     null,
+     null
+    ],
+    "seeds": 128,
+    "receipt": "pv2-s1-m1-screen-v1"
+   },
+   "external": {},
+   "note": ""
+  }
+ ],
+ "external_columns": [
+  {
+   "key": "catanatron_d2",
+   "label": "Catanatron depth 2"
+  },
+  {
+   "key": "catanatron_d3",
+   "label": "Catanatron depth 3"
+  },
+  {
+   "key": "jsettlers",
+   "label": "JSettlers robots"
+  },
+  {
+   "key": "stac_pomcp",
+   "label": "STAC POMCP"
+  }
  ]
 }

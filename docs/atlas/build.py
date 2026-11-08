@@ -36,6 +36,23 @@ def check_registry(reg: dict) -> list[str]:
                 problems.append(f"{s['id']}/{t}: half an interval")
             if lo is not None and not (lo <= point <= hi):
                 problems.append(f"{s['id']}/{t}: point {point} outside [{lo}, {hi}]")
+    for pol in reg.get('policies', []):
+        vp = pol.get('vs_prod') or {}
+        for t in TABLES:
+            v = vp.get(t)
+            if v is None:
+                continue
+            point, lo, hi = v
+            if (lo is None) != (hi is None) or (lo is not None and not (lo <= point <= hi)):
+                problems.append(f"policy {pol['name']}/{t}: bad interval {v}")
+        for k, v in (pol.get('external') or {}).items():
+            if k not in {c['key'] for c in reg.get('external_columns', [])}:
+                problems.append(f"policy {pol['name']}: unknown external column {k}")
+            w, lo, hi, n = v
+            if not (0 <= lo <= w <= hi <= 1) or n <= 0:
+                problems.append(f"policy {pol['name']}/{k}: bad win share {v}")
+        if not pol.get('search') or not pol.get('model'):
+            problems.append(f"policy {pol['name']}: search and model must be stated")
     for e in reg['external']:
         lo, hi = e['ci']
         if not (0 <= lo <= e['win'] <= hi <= 1):
@@ -114,6 +131,54 @@ def ladder(reg: dict) -> str:
     return f'<figure class="plot">{"".join(parts)}</figure>'
 
 
+def _lift_cell(v) -> str:
+    if v is None:
+        return '<td class="n cell none">—</td>'
+    p, lo, hi = v
+    kind = 'good' if (lo is not None and lo > 0) else ('bad' if (hi is not None and hi < 0) or (lo is None and p < 0) else 'mid')
+    ci = f'<span class="ci-t">{lo * 100:+.1f} to {hi * 100:+.1f}</span>' if lo is not None else '<span class="ci-t">no interval</span>'
+    return f'<td class="n cell {kind}"><b>{p * 100:+.1f}</b>{ci}</td>'
+
+
+def _share_cell(v) -> str:
+    if v is None:
+        return '<td class="n cell none">—</td>'
+    w, lo, hi, n = v
+    retired = w >= 0.5 and lo > 0.4
+    kind = 'good' if retired else ('ok' if lo > 0.25 else ('bad' if hi < 0.25 else 'mid'))
+    tag = ' · retired' if retired else ''
+    return (f'<td class="n cell {kind}"><b>{w * 100:.1f}%</b>'
+            f'<span class="ci-t">{lo * 100:.0f}–{hi * 100:.0f}% · {n} games{tag}</span></td>')
+
+
+def policy_matrix(reg: dict) -> str:
+    ext = reg.get('external_columns', [])
+    head1 = ('<tr class="grp"><th colspan="3"></th><th colspan="4" class="g">vs production '
+             f'(<code>{esc(reg["production"]["served"])}</code>): paired lift, win-rate points</th>'
+             f'<th colspan="{len(ext)}" class="g">vs external AIs: our win share (fair share 25%)</th></tr>')
+    head2 = ('<tr><th>Policy</th><th>How it searches</th><th>Value model</th>'
+             '<th class="n">Tactical</th><th class="n">Mixed</th><th class="n">Prod copies</th><th class="n">Seeds</th>'
+             + ''.join(f'<th class="n">{esc(c["label"])}</th>' for c in ext) + '</tr>')
+    body, group = [], None
+    for pol in reg['policies']:
+        if pol['group'] != group:
+            group = pol['group']
+            body.append(f'<tr class="section"><td colspan="{7 + len(ext)}">{esc(group)}</td></tr>')
+        vp = pol.get('vs_prod')
+        if vp is None:
+            lift = ('<td class="n cell none" colspan="4">baseline</td>' if pol['status'] == 'served'
+                    else '<td class="n cell none" colspan="4">not yet measured</td>')
+        else:
+            lift = ''.join(_lift_cell(vp.get(t)) for t in TABLES) + f'<td class="n dim">{vp["seeds"]}</td>'
+        shares = ''.join(_share_cell((pol.get('external') or {}).get(c['key'])) for c in ext)
+        status = pol['status']
+        chip = 'pass' if status == 'served' else ('fail' if status == 'FAIL' else 'run')
+        note = f'<div class="note">{esc(pol["note"])}</div>' if pol.get('note') else ''
+        body.append(f'<tr><td class="pol"><code>{esc(pol["name"])}</code><span class="chip {chip}">{esc(status)}</span>{note}</td>'
+                    f'<td class="txt">{esc(pol["search"])}</td><td class="txt">{esc(pol["model"])}</td>{lift}{shares}</tr>')
+    return f'<div class="scroll matrix"><table>{head1}{head2}{"".join(body)}</table></div>'
+
+
 def screen_table(reg: dict) -> str:
     head = '<tr><th>Screen</th><th>Bot</th><th class="n">Seeds</th>' + ''.join(
         f'<th class="n">{t}</th>' for t in TABLES) + '<th>Verdict</th></tr>'
@@ -169,6 +234,12 @@ def render(reg: dict) -> str:
 </header>
 
 <section>
+  <h2>Every policy at a glance</h2>
+  <p class="lead">One row per policy. The first columns say how it decides; the next group is its paired gain over the production bot on our three standard tables; the last group is its win share alone against three copies of each external AI. Green: interval above zero (or an external AI retired). Red: interval below zero (or below fair share).</p>
+  {policy_matrix(reg)}
+</section>
+
+<section>
   <h2>Evaluation strategy <span class="chip run">{esc(ev['status'])}</span></h2>
   <p class="lead">{esc(ev['owner_direction'])}</p>
   <div class="cols">
@@ -178,16 +249,8 @@ def render(reg: dict) -> str:
 </section>
 
 <section>
-  <h2>Screens against the served bot</h2>
-  <p class="lead">Paired lift in win rate (percentage points) vs <code>{esc(prod['served'])}</code>, 95% interval where recorded. Green: interval above zero. The dashed line is the +5 pp DEV bar.</p>
-  <div class="plots">{forest(reg)}</div>
-  {screen_table(reg)}
-</section>
-
-<section>
-  <h2>External AIs</h2>
-  <p class="lead">One bot alone against three copies of an outside AI, rotated through every seat. Fair share is .25; an AI is retired as a benchmark for a bot once that bot wins at least .50 with the lower bound above .40.</p>
-  {ladder(reg)}
+  <h2>The external AIs</h2>
+  <p class="lead">Who the external columns above refer to. An AI is retired as a benchmark for a bot once that bot wins at least 50% with the lower bound above 40%.</p>
   <div class="ais">{ais}</div>
 </section>
 

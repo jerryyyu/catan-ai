@@ -25,9 +25,17 @@ def test_verdict_and_duplicate_ids_are_checked():
     assert any('verdict' in p for p in problems) and any('duplicate' in p for p in problems)
 
 
-def test_every_screen_and_external_row_is_drawn():
+def test_every_policy_row_is_in_the_matrix():
     page = build.render(REG)
-    marks = sum(len(s['tables']) for s in REG['screens'] if s['vs'] == REG['production']['served'])
-    assert page.count('<circle') == marks + len(REG['external'])
-    for s in REG['screens']:
-        assert s['id'] in page
+    for pol in REG['policies']:
+        assert pol['name'] in page
+    assert 'Every policy at a glance' in page
+    assert page.index('Every policy at a glance') < page.index('Evaluation strategy')
+
+
+def test_policy_intervals_are_checked():
+    reg = copy.deepcopy(REG)
+    reg['policies'][1]['vs_prod']['tactical'] = [0.5, 0.0, 0.1]
+    reg['policies'][0]['external']['jsettlers'] = [0.9, 0.1, 0.2, 512]
+    problems = build.check_registry(reg)
+    assert any('bad interval' in p for p in problems) and any('bad win share' in p for p in problems)
