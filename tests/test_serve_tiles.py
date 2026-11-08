@@ -107,7 +107,7 @@ def test_missing_weights_fall_back_to_offer_accept(tmp_path, monkeypatch):
     assert info['default'] == 'planner_offer_accept' and info['served'] == 'planner_pv2_tiles'
     assert info['served_available'] is False and info['checkpoint_available'] is True
     assert info['fallback_reason'] == 'Tiles value weights missing or unverified'
-    assert info['fallback_detail'].startswith('FileNotFoundError')
+    assert info['fallback_detail'] == "FileNotFoundError: [Errno 2] No such file or directory: 'absent.npz'"
     created = client.post('/api/games', json={'seed': 4}).json()
     assert created['opponent'] == 'planner_offer_accept'
     assert all(type(bot) is AcceptanceOfferPlanner for bot in sessions[created['game_id']].bots.values())
@@ -159,7 +159,8 @@ def test_unbound_checkpoint_falls_back_to_tactical(synthetic, tmp_path, monkeypa
         'default': 'tactical', 'served': 'planner_pv2_tiles', 'served_available': False,
         'fallback_reason': 'Trained planner checkpoint is not bound to this server version',
         'checkpoint_available': False}
-    assert info['fallback_detail'].startswith('FileNotFoundError')
+    assert info['fallback_detail'] == "FileNotFoundError: [Errno 2] No such file or directory: 'missing.json'"
+    assert str(tmp_path) not in json.dumps(info)
     created = client.post('/api/games', json={'seed': 4}).json()
     assert created['opponent'] == 'tactical'
     assert all(isinstance(bot, TacticalBot) for bot in sessions[created['game_id']].bots.values())
@@ -192,3 +193,11 @@ def test_real_local_weights_are_served():
     created = client.post('/api/games', json={'seed': 4}).json()
     assert created['opponent'] == 'planner_pv2_tiles'
     assert sessions[created['game_id']].metadata['value_sha256'] == meta['npz_sha256']
+
+
+def test_fallback_detail_hides_server_paths():
+    assert api.public_detail("OSError: cannot read '/srv/catan/checkpoints/value_tiles_v1.npz' now") == \
+        "OSError: cannot read 'value_tiles_v1.npz' now"
+    assert api.public_detail('ValueError: tiles value weights do not match their metadata') == \
+        'ValueError: tiles value weights do not match their metadata'
+    assert api.public_detail(None) is None

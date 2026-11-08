@@ -18,6 +18,8 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   +.067]** tactical, **+.044 [+.026, +.062]** mixed and **+.106 [+.087, +.125]**
   self. The predeclared 80-seed screen (`runs/ultra/pv2-tiles-screen-v1`) FAILED
   its +.05-on-all-three-tables rule (tactical +.019, mixed +.050, self +.097).
+  No held-out run has completed. **Confirmatory held-out: pending
+  (experiments/tiles-heldout.json).**
   Descriptive external benchmarks (below): Catanatron AlphaBeta depth 2 .613,
   depth 3 .545 (`runs/ultra/external-ladder-tiles-v1`); JSettlers robots .447
   vs .373 for `planner_offer_accept` (`runs/jsettlers-match-tiles-v1`).
@@ -33,7 +35,8 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   a game whose weights changed.
 - **Fallback chain:** without NumPy or verified tiles weights, new games use
   `planner_offer_accept` (`/api/bots`: `fallback_reason` "Tiles value weights
-  missing or unverified", with the loader's error in `fallback_detail`); without
+  missing or unverified", with the loader's error in `fallback_detail`, paths cut to
+  basenames; the full error goes to the server log); without
   a bound parameter checkpoint, Tactical. The weights are verified once per file
   version, not per request.
 - **Rollback / previous default, `planner_offer_accept`:** served 2026-11-03 until
@@ -142,19 +145,22 @@ boards changes neither by more than .002. The owner decided to promote on
 The owner reopened external benchmarking on 2026-11-07 as information, with a
 predeclared retirement rule: an external bot is retired as a benchmark when the
 served bot's win share, alone against three copies, is at least .50 with the 95%
-lower bound above .40 (fair share .25). Neither has been retired. The first three
-rows measured `planner_offer_accept` (served until 2026-11-08); the last three
-measured `planner_pv2_tiles` before its promotion. Against Catanatron its shares
-meet the retirement rule's numbers at both depths; retiring a benchmark is the
-owner's call and has not been recorded.
+lower bound above .40 (fair share .25). The first three rows measured
+`planner_offer_accept` (served until 2026-11-08); the last three measured
+`planner_pv2_tiles` before its promotion, on the same design and budgets with
+fresh seeds (`experiments/external-ladder-tiles.json`). Under that predeclared
+rule **Catanatron AlphaBeta is retired as a benchmark at both depths** (depth 2
+.613, lower bound .570; depth 3 .545, lower bound .502); the retirement follows
+the rule and is recorded on board issue #1. JSettlers' robots stay a benchmark
+(.447, lower bound .405, below .50).
 
 | served bot | opponent | games | win share | 95% interval | receipt |
 |---|---|---|---|---|---|
 | `planner_offer_accept` | Catanatron AlphaBeta depth 2 (1.5 s cap) | 512 | .488 | [.444, .533] | `runs/ultra/external-ladder-v1` |
 | `planner_offer_accept` | Catanatron AlphaBeta depth 3 (20 s cap) | 512 | .455 | [.410, .501] | `runs/ultra/external-ladder-v1` |
 | `planner_offer_accept` | JSettlers2 2.6.10 built-in robots | 512 | .373 | [.332, .416] | `runs/jsettlers-match-v1` |
-| `planner_pv2_tiles` | Catanatron AlphaBeta depth 2 (2 s cap) | 512 | .613 | [.570, .654] | `runs/ultra/external-ladder-tiles-v1` |
-| `planner_pv2_tiles` | Catanatron AlphaBeta depth 3 (25 s cap) | 512 | .545 | [.502, .588] | `runs/ultra/external-ladder-tiles-v1` |
+| `planner_pv2_tiles` | Catanatron AlphaBeta depth 2 (1.5 s cap) | 512 | .613 | [.570, .654] | `runs/ultra/external-ladder-tiles-v1` |
+| `planner_pv2_tiles` | Catanatron AlphaBeta depth 3 (20 s cap) | 512 | .545 | [.502, .588] | `runs/ultra/external-ladder-tiles-v1` |
 | `planner_pv2_tiles` | JSettlers2 2.6.10 built-in robots | 512 | .447 | [.405, .491] | `runs/jsettlers-match-tiles-v1` |
 
 Catanatron games ran on our engine with the belief-sampled adapter (zero
@@ -172,7 +178,7 @@ collecting derived statistics without written consent.
   use.
 - Beating Catanatron (either depth) or JSettlers' robots by the margins above
   is not beating a strong player; both are open-source baselines, and the
-  JSettlers win share is well below the retirement bar. Catanatron's belief
+  JSettlers win share is below the retirement bar. Catanatron's belief
   recovery still faults rarely: on 3 of 3,200 held-out clusters in the v13
   rerun, all through solver timeouts in long games (none in the 2026-11-07
   ladder).
@@ -180,10 +186,10 @@ collecting derived statistics without written consent.
   analysis supports a promotion.
 - The served `planner_pv2_tiles` is the exception, and no held-out claim is
   made for it: its predeclared screen FAILED (tactical +.019 against a +.05
-  bar on every table), it has no reserved held-out run, and it was promoted by
+  bar on every table), no held-out run has completed, and it was promoted by
   the owner on the precise 512-seed measurement and the descriptive external
   benchmarks. Its lift over `planner_offer_accept` is a measurement, not a
-  passed gate.
+  passed gate. Confirmatory held-out: pending (experiments/tiles-heldout.json).
 - Correctness, latency, calibration and strength are separate claims. A
   passing test suite or a fast benchmark says nothing about play strength.
 

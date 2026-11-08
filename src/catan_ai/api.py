@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
+import re
 import secrets
 import time
 from copy import deepcopy
@@ -165,6 +167,23 @@ def value_weights_status() -> tuple[bool, str | None]:
     return _value_weights_cache[key]
 
 
+_ABSOLUTE_PATH = re.compile(r"(?:[A-Za-z]:)?[/\\][^\s'\"]*")
+_logged_details: set[str] = set()
+
+
+def public_detail(detail: str | None) -> str | None:
+    """A fallback detail safe for /api/bots: absolute paths cut to their basename.
+
+    The full detail goes to the server log, once per distinct message.
+    """
+    if detail is None:
+        return None
+    if detail not in _logged_details:
+        _logged_details.add(detail)
+        logging.getLogger(__name__).warning('served bot fallback: %s', detail)
+    return _ABSOLUTE_PATH.sub(lambda m: m.group().replace('\\', '/').rstrip('/').rsplit('/', 1)[-1], detail)
+
+
 def serving_status() -> tuple[str, str | None, str | None]:
     """The policy a new game gets when none is named, and why if it fell back.
 
@@ -217,7 +236,7 @@ def health() -> dict:
 def bots_info() -> dict:
     policy, reason, detail = serving_status()
     return {"default": policy, "served": SERVED_POLICY, "served_available": reason is None,
-            "fallback_reason": reason, "fallback_detail": detail,
+            "fallback_reason": reason, "fallback_detail": public_detail(detail),
             "checkpoint_available": policy != FALLBACK_POLICY}
 
 

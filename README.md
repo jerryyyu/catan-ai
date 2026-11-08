@@ -143,7 +143,8 @@ the file once per file version (SHA256 against the committed metadata, tokenizer
 layout, and a parity probe against the exported torch logits). If NumPy or the
 weights are missing or fail a check, new games use `planner_offer_accept` and
 `GET /api/bots` gives `fallback_reason` "Tiles value weights missing or
-unverified" with the loader's error in `fallback_detail`. A game records the
+unverified" with the loader's error in `fallback_detail` (paths cut to their
+basename; the full error is in the server log). A game records the
 weights' SHA256 and a restart refuses the game if they changed.
 
 The fallback and previous default is the **Trained planner** (`planner_offer_accept`: the fitted
