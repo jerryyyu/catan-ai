@@ -19,3 +19,6 @@ src/catan_ai/_native_manifest.json
 checkpoints/*.npz
 checkpoints/*.pt
 *.pt
+
+# built atlas page (published as an artifact; source is docs/atlas/registry.json)
+docs/atlas/atlas.html
