@@ -23,7 +23,7 @@ import com.google.gson.JsonParser;
  * One long-lived Python bridge process ({@code scripts/jsettlers_bridge.py}) per JVM.
  * Requests and replies are single JSON lines; calls are serialized.
  *<P>
- * Every request has a deadline ({@code catanai.bridge.timeout_ms}, default 30000). A request that
+ * Every request (writing it, flushing it and reading the reply) has a deadline ({@code catanai.bridge.timeout_ms}, default 30000). A request that
  * gets no reply in time, or any transport failure, <b>retires</b> the transport: the process and
  * its descendants are destroyed and every later call fails at once with an {@link IOException}
  * (the brain counts each as a bridge error and falls back). The bridge is never silently restarted,
@@ -40,7 +40,7 @@ public final class PythonBridge
     private Process process;
     private BufferedWriter toPython;
     private BufferedReader fromPython;
-    private ExecutorService reader;
+    private ExecutorService io;
     private long nextId = 1;
     private String retiredReason;
     private final long timeoutMs;
@@ -75,8 +75,8 @@ public final class PythonBridge
         process = pb.start();
         toPython = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8));
         fromPython = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
-        reader = Executors.newSingleThreadExecutor(r -> {
-            final Thread t = new Thread(r, "catanai-bridge-reader");
+        io = Executors.newSingleThreadExecutor(r -> {
+            final Thread t = new Thread(r, "catanai-bridge-io");
             t.setDaemon(true);
             return t;
         });
@@ -102,8 +102,8 @@ public final class PythonBridge
             process.descendants().forEach(ProcessHandle::destroyForcibly);
             process.destroyForcibly();
         }
-        if (reader != null)
-            reader.shutdownNow();
+        if (io != null)
+            io.shutdownNow();
         final JsonObject rec = new JsonObject();
         rec.addProperty("type", "bridge_retired");
         rec.addProperty("reason", reason);
@@ -124,21 +124,27 @@ public final class PythonBridge
             if (! process.isAlive())
                 throw new IOException("bridge process exited with " + process.exitValue());
             request.addProperty("id", id);
-            toPython.write(request.toString());
-            toPython.write('\n');
-            toPython.flush();
-            final Future<String> reply = reader.submit(fromPython::readLine);
+            final String payload = request.toString();
+            // The whole exchange runs on the I/O thread under one deadline: a child that stops
+            // reading can fill the stdin pipe and block write/flush just as a silent child blocks
+            // readLine. On timeout retire() destroys the process, which unblocks the I/O thread.
+            final Future<String> reply = io.submit(() -> {
+                toPython.write(payload);
+                toPython.write('\n');
+                toPython.flush();
+                return fromPython.readLine();
+            });
             try
             {
                 line = reply.get(timeoutMs, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
                 reply.cancel(true);
-                throw new IOException("no bridge reply within " + timeoutMs + " ms");
+                throw new IOException("no bridge reply within " + timeoutMs + " ms (request write + reply read)");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new IOException("interrupted waiting for the bridge");
             } catch (java.util.concurrent.ExecutionException e) {
-                throw new IOException("bridge read failed: " + e.getCause());
+                throw new IOException("bridge exchange failed: " + e.getCause());
             }
             if (line == null)
                 throw new IOException("bridge process closed its output");

@@ -187,32 +187,55 @@ FAKE_BRIDGE = textwrap.dedent('''
 ''')
 
 
-@needs_jdk
-def test_stalled_bridge_request_times_out_and_retires_the_transport(tmp_path):
+NEVER_READS = textwrap.dedent('''
+    import subprocess, sys, time
+    child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(300)'])
+    open(sys.argv[1], 'w').write(str(child.pid))
+    time.sleep(300)  # never reads stdin: a large request fills the pipe and blocks the writer
+''')
+
+
+def _run_timeout_check(tmp_path, script_text, timeout_ms, pad_bytes=None):
     classes = jb.build(tmp_path / 'classes')  # never the shared class dir a live run may be using
     script = tmp_path / 'fake_bridge.py'
-    script.write_text(FAKE_BRIDGE)
+    script.write_text(script_text)
     pid_file = tmp_path / 'child.pid'
+    args = [str(timeout_ms)] + ([str(pad_bytes)] if pad_bytes else [])
     started = time.monotonic()
     result = subprocess.run(
         [jb.java(), '-cp', f'{jb.classpath(False)}:{classes}', f'-Dcatanai.bridge.cmd={sys.executable} {script} {pid_file}',
          f'-Dcatanai.decision.log={tmp_path / "decisions.jsonl"}',
-         'catanai.jsettlers.BridgeTimeoutCheck', '1500'],
+         'catanai.jsettlers.BridgeTimeoutCheck', *args],
         capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stderr
+    assert time.monotonic() - started < 40
     out = json.loads(result.stdout.strip().splitlines()[-1])
-    assert 'no bridge reply within 1500 ms' in out['first_error']
-    assert 1400 <= out['first_ms'] < 10000
+    assert f'no bridge reply within {timeout_ms} ms' in out['first_error']
     assert out['retired'] and not out['process_alive'] and out['descendants_alive'] == 0
     assert 'bridge retired' in out['second_error'] and out['second_ms'] < 200
-    assert time.monotonic() - started < 40
-    child = int(pid_file.read_text())
     deadline = time.monotonic() + 5
+    while not pid_file.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    child = int(pid_file.read_text())
     while _alive(child) and time.monotonic() < deadline:
         time.sleep(0.1)
     assert not _alive(child), 'the stalled bridge left a descendant running'
     log = [json.loads(line) for line in (tmp_path / 'decisions.jsonl').read_text().splitlines()]
     assert [r['type'] for r in log] == ['bridge_retired']
+    return out
+
+
+@needs_jdk
+def test_stalled_bridge_request_times_out_and_retires_the_transport(tmp_path):
+    out = _run_timeout_check(tmp_path, FAKE_BRIDGE, 1500)
+    assert 1400 <= out['first_ms'] < 10000
+
+
+@needs_jdk
+def test_child_that_never_reads_cannot_block_the_request_write(tmp_path):
+    """An 8 MiB request to a child that never reads stdin fills the pipe; the write is under the deadline."""
+    out = _run_timeout_check(tmp_path, NEVER_READS, 500, pad_bytes=8 * 1024 * 1024)
+    assert 450 <= out['first_ms'] < 1000  # within ~2x the deadline
 
 
 GROUP = textwrap.dedent('''

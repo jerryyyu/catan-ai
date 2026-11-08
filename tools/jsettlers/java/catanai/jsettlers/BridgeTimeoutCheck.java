@@ -9,7 +9,8 @@ import com.google.gson.JsonObject;
  * bridge command that reads requests but never replies. Prints one JSON line:
  * the first call's elapsed time and error, whether the process tree is gone, and the second
  * call's error (which must be immediate, without touching the retired transport).
- * Usage: {@code java -Dcatanai.bridge.cmd=... catanai.jsettlers.BridgeTimeoutCheck TIMEOUT_MS}.
+ * Usage: {@code java -Dcatanai.bridge.cmd=... catanai.jsettlers.BridgeTimeoutCheck TIMEOUT_MS [PAD_BYTES]};
+ * {@code PAD_BYTES} adds an oversized field to the first request (to fill a pipe the child never reads).
  */
 public final class BridgeTimeoutCheck
 {
@@ -22,6 +23,12 @@ public final class BridgeTimeoutCheck
         {
             final JsonObject ping = new JsonObject();
             ping.addProperty("kind", "ping");
+            if (args.length > 1)
+            {
+                final char[] pad = new char[Integer.parseInt(args[1])];
+                java.util.Arrays.fill(pad, 'x');
+                ping.addProperty("pad", new String(pad));
+            }
             bridge.call(ping);
             out.addProperty("first_error", (String) null);
         } catch (IOException e) {
