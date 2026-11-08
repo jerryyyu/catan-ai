@@ -50,6 +50,7 @@ def _main(module, monkeypatch, cfg_path, root):
 
 @pytest.mark.parametrize('module', [search_diagnostic, phase_diagnostic])
 def test_main_refuses_changed_declaration_before_touching_root(tmp_path, monkeypatch, module):
+    pytest.importorskip('numpy')  # the root binding hashes the value net (numpy)
     cfg = dict(CFG, seeds={'tac': [123, 0]})  # no games: only the root binding runs
     cfg_path = tmp_path / 'cfg.json'
     cfg_path.write_text(json.dumps(cfg))
@@ -67,6 +68,7 @@ def test_main_refuses_changed_declaration_before_touching_root(tmp_path, monkeyp
 
 @pytest.mark.parametrize('module', [search_diagnostic, phase_diagnostic])
 def test_main_refuses_unbound_legacy_root_without_rewriting_config(tmp_path, monkeypatch, module):
+    pytest.importorskip('numpy')  # the root binding hashes the value net (numpy)
     cfg_path = tmp_path / 'cfg.json'
     cfg_path.write_text(json.dumps(dict(CFG, seeds={'tac': [123, 0]})))
     root = tmp_path / 'root'
