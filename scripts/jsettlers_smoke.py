@@ -255,7 +255,8 @@ def server_games(server_log: Path) -> dict[str, dict]:
                     m = re.search(rf' {key}=(\[[^\]]*\]|null)', line)
                     row[key] = m.group(1) if m else None
             elif tag == 'catanai-dice':
-                g(kv['game'])['dice'].append(f"{kv['turn']}:{kv['pn']}:{kv['dice']}")
+                prefix = f"{kv['roll']}:" if 'roll' in kv else ''  # roll index (patch v2 and later)
+                g(kv['game'])['dice'].append(f"{prefix}{kv['turn']}:{kv['pn']}:{kv['dice']}")
         else:
             m = re.match(r'\*\*\* (.+) joined the game (\S+) at ', line)
             if m:
@@ -429,11 +430,16 @@ def compare_receipts(path_a: Path, path_b: Path) -> dict:
             continue
         setup_same = {k: a.get(k) == b.get(k) for k in SETUP_KEYS}
         dice_prefix = _common_prefix(a.get('dice', []), b.get('dice', []))
+        # Paired luck: the k-th roll's values, for every k both runs reached (turn/roller may differ).
+        va, vb = ([d.rsplit(':', 1)[-1] for d in g.get('dice', [])] for g in (a, b))
+        dice_k_same = va[:min(len(va), len(vb))] == vb[:min(len(va), len(vb))]
         sa, sb = seqs[0].get(a['game'], []), seqs[1].get(a['game'], [])
         dec_prefix = _common_prefix(sa, sb)
         row = {'game': a['game'], 'setup_identical': all(setup_same.values()),
                'setup_diff': [k for k, v in setup_same.items() if not v],
                'dice': [len(a.get('dice', [])), len(b.get('dice', []))], 'dice_common_prefix': dice_prefix,
+               'dice_values_identical_for_every_k': dice_k_same,
+               'dice_values_common_prefix': _common_prefix(va, vb),
                'decisions': [len(sa), len(sb)], 'decision_common_prefix': dec_prefix,
                'winner': [a.get('winner'), b.get('winner')], 'turns': [a.get('turns'), b.get('turns')],
                'seat': a.get('seat'), 'first_player': a.get('server_first_player', a.get('first_player'))}
@@ -457,6 +463,8 @@ def compare_receipts(path_a: Path, path_b: Path) -> dict:
             'setup_identical': sum(bool(r.get('setup_identical')) for r in rows),
             'setup_and_full_dice_identical': sum(bool(r.get('setup_identical')) and r['dice'][0] == r['dice'][1]
                                                  == r['dice_common_prefix'] for r in rows if 'dice' in r),
+            'setup_and_dice_k_identical': sum(bool(r.get('setup_identical'))
+                                              and bool(r.get('dice_values_identical_for_every_k')) for r in rows),
             'same_winner': sum(r.get('winner', [0, 1])[0] == r.get('winner', [0, 1])[1] for r in rows),
             'rows': rows}
 

@@ -84,11 +84,12 @@ def test_server_log_facts_are_parsed(tmp_path):
         'catanai-start game=~botsOnly~1 first=1 seats=robot 1|extrabot 1|| hexes=[1, 2] numbers=[3] '
         'ports=null deck=[9, 8]',
         'catanai-dice game=~botsOnly~1 turn=1 pn=1 dice=3,4',
+        'catanai-dice game=~botsOnly~1 roll=1 turn=2 pn=2 dice=6,6',
     ]))
     g = smoke.server_games(log)['~botsOnly~1']
     assert g['game_seed_logged'] == -42 and g['first_player'] == 1
     assert g['seats'] == ['robot 1', 'extrabot 1', '', ''] and g['hexes'] == '[1, 2]' and g['ports'] == 'null'
-    assert g['dice'] == ['1:1:3,4'] and g['joined'] == ['robot 1', 'extrabot 1']
+    assert g['dice'] == ['1:1:3,4', '1:2:2:6,6'] and g['joined'] == ['robot 1', 'extrabot 1']
     assert g['robot_strategies'] == {'robot 1': 'SMART', 'extrabot 1': 'SMART'}
     assert smoke.bot_strategy('droid 1', False) == 'FAST' and smoke.bot_strategy('droid 1', True) == 'SMART'
 
@@ -145,3 +146,23 @@ def test_patched_build_verifies_and_stale_or_unpatched_classes_fail_closed(tmp_p
         jb.verify_jsettlers(build, patch=PATCH)
     # ...while the same pure release still verifies with no patch declared.
     assert jb.verify_jsettlers(build)['patch_sha256'] is None
+
+
+def test_compare_counts_paired_dice_by_roll_index_even_when_play_diverges(tmp_path):
+    def receipt(name, dice, decisions, winner):
+        d = tmp_path / name
+        d.mkdir()
+        (d / 'decisions.jsonl').write_text('\n'.join(json.dumps(
+            {'type': 'decision', 'game': 'g', 'decision': x, 'turn_count': i}) for i, x in enumerate(decisions)))
+        game = {'game': 'g', 'server_board_sha': 'b', 'board_id': 'b', 'server_first_player': 1, 'seat': 0,
+                'players': ['x', 'y'], 'dice': dice, 'dice_sha': smoke.seq_sha(dice), 'winner': winner, 'turns': 9,
+                'decision_seq_sha': smoke.seq_sha(decisions)}
+        (d / 'receipt.json').write_text(json.dumps({'games': [game], 'artifacts': {'decisions': str(d / 'decisions.jsonl')}}))
+        return d / 'receipt.json'
+    a = receipt('a', ['0:1:0:3,4', '1:2:1:6,6', '2:3:2:1,1'], ['roll', 'actions'], 0)
+    b = receipt('b', ['0:1:0:3,4', '1:3:2:6,6'], ['roll', 'trade_response'], 1)  # different turn/roller, same values
+    c = smoke.compare_receipts(a, b)
+    assert c['setup_identical'] == 1 and c['setup_and_dice_k_identical'] == 1 and c['end_to_end_identical'] == 0
+    assert c['rows'][0]['dice_values_common_prefix'] == 2 and c['rows'][0]['decision_common_prefix'] == 1
+    d = receipt('d', ['0:1:0:3,4', '1:2:1:5,6'], ['roll', 'actions'], 0)
+    assert smoke.compare_receipts(a, d)['setup_and_dice_k_identical'] == 0

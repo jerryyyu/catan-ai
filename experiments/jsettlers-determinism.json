@@ -8,8 +8,8 @@
     "tag": "release-2.6.10",
     "commit": "c5141056d8e3fff548817b3a1712eb66085e897b",
     "patch": {
-      "file": "runs/external/jsettlers-seed.patch",
-      "sha256": "64f2a955959df2ba3d6ab5e361bd5bd3d2fcc91e6a09f564eb863c0d98a6ace0"
+      "file": "runs/external/jsettlers-seed-v2.patch",
+      "sha256": "d18f25934bc0d8a429f5d237e33d653ef06186c3e3e2304e69c6cf0166b3014c"
     },
     "seed": 20261108,
     "all_smart": true

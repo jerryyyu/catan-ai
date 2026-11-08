@@ -169,17 +169,22 @@ Upstream JSettlers draws boards, dice, the development deck, the first player, r
 for seats and robot tie-breaks from unseeded `new Random()`s, so two runs never replay the same
 games. For paired comparisons (a candidate and the default bot on the same games) a small
 **opt-in patch** seeds them. The patch is a GPLv3 derivative of JSettlers source, so it is never
-committed here: it lives at `runs/external/jsettlers-seed.patch` (outside git) and a config pins
-its SHA-256. Current patch: `64f2a955959df2ba3d6ab5e361bd5bd3d2fcc91e6a09f564eb863c0d98a6ace0`
-(base `release-2.6.10` / `c5141056`, 16 hunks in `SOCGame`, `SOCServer`, `SOCRobotBrain`,
-`SOCRobotDM` plus one new class `soc.game.CatanAiSeed`). It is applied only to a separate worktree
+committed here: it lives at `runs/external/jsettlers-seed-v2.patch` (outside git) and a config pins
+its SHA-256. Current patch: `d18f25934bc0d8a429f5d237e33d653ef06186c3e3e2304e69c6cf0166b3014c`
+(v2; base `release-2.6.10` / `c5141056`, 22 hunks in `SOCGame`, `SOCServer`, `SOCRobotBrain`,
+`SOCRobotDM` plus one new class `soc.game.CatanAiSeed`). v1 (`64f2a955...`, one shared game stream
+for dice, steals and discards) is superseded; its receipts name it. It is applied only to a separate worktree
 or a `git archive` export; the pinned checkout is never modified.
 
 What it does, only when its server properties are given (program arguments, like other
 `jsettlers.*` properties); without them every `Random` keeps its upstream construction:
 
-- `jsettlers.catanai.seed=<long>`: when the server creates a game it reseeds that game's own
-  stream (dice, dev-card shuffle, first player, random discards/steals), its board's layout stream
+- `jsettlers.catanai.seed=<long>`: **paired luck, not full replay.** Every roll, steal and
+  random discard/gold pick gets its own source keyed by (base seed, game name, role + event index),
+  so roll k (and steal k, discard k) is the same in a candidate run and a control run however their
+  play diverged; the dev-card deck is shuffled once at game start from its own keyed source
+  (`deck0`), so its order is fixed per seed. When the server creates a game it also reseeds the
+  game's stream (now only the first player; pirates in sea scenarios), its board's layout stream
   and a new seat-selection stream from (base seed, game name); robot selection and the
   third-party-bot seat swap draw from the seat stream with candidates in robot-name order (so
   connection order cannot change who sits where); each robot brain reseeds its tie-break stream
@@ -194,7 +199,7 @@ Config (see `experiments/jsettlers-determinism.json`):
 
 ```json
 "jsettlers": {"tag": "release-2.6.10", "commit": "c5141056...",
-              "patch": {"file": "runs/external/jsettlers-seed.patch", "sha256": "64f2a955..."},
+              "patch": {"file": "runs/external/jsettlers-seed-v2.patch", "sha256": "d18f2593..."},
               "seed": 20261108, "all_smart": true}
 ```
 
