@@ -191,3 +191,16 @@ def test_server_loop_reports_errors_and_keeps_serving():
     assert [r['id'] for r in replies] == [1, 2, 3]
     assert replies[0]['cmd'] == 'error' and replies[1]['cmd'] in CMDS[snap['decision']]
     assert replies[2]['cmd'] == 'ok'
+
+
+def test_player_trades_mode_keeps_offers(monkeypatch):
+    snap = copy.deepcopy(next(r['request'] for r in RECORDS if r['request']['decision'] == 'actions'))
+    import jsbridge.decide as jd
+    offer = {'cmd': 'offer', 'to': 1, 'give': {'1': 1}, 'get': {'4': 1}, 'action': {'type': 'offer_trade'},
+             'think_ms': 1.0}
+    monkeypatch.setattr(jd.Bridge, 'decide', lambda self, s: dict(offer))
+    bridge = StacBridge(seed=1, player_trades=True)
+    assert bridge.decide(snap) == offer and bridge.offers_suppressed == 0
+    monkeypatch.undo()
+    policy = StacBridge(seed=1, player_trades=True).policy_for('G_0')
+    assert getattr(policy, 'offers', True) is not False

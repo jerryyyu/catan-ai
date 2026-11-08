@@ -12,11 +12,19 @@ STAC agent:
   (``MCTS_TIME_LIMIT_MS``; every search is logged with its iterations and whether the cap cut it);
 * ``jsettlers``: STAC's bundled JSettlers 1.1.16 robot (default FAST parameters).
 
-Match settings are fixed and checked: FullyObservable, ObservableVP and chat negotiation off (the
-patched server logs all three per game and the receipt fails closed if any is on), player trading
-off (``Trades=false`` for the JSettlers brains, ``NO_TRADES`` for MCTS, the bridge disables our
-offers, and the patched server refuses any player-to-player exchange and logs the attempt), bank
-and port trades on. ``stac.seed`` seeds board, deck, first player, seats, dice by roll index,
+Match settings are fixed and checked: FullyObservable and ObservableVP off (the patched server logs
+both per game and the receipt fails closed if either is on), bank and port trades on. Player trading
+is one of two declared modes (``stac.player_trading``):
+
+* ``off`` (default): chat negotiation off, ``Trades=false`` for the JSettlers brains, ``NO_TRADES``
+  for MCTS, the bridge disables our offers, and the patched server refuses any player-to-player
+  exchange and logs the attempt; the receipt fails if any player trade executed.
+* ``chat``: STAC's chat negotiation on (``ChatNegotiation=true``, ``Trades=true``, no ``NO_TRADES``,
+  no server block). STAC's agents negotiate in their chat trade format, and our brain speaks it
+  (``catanai.stac.CatanAiStacBrain``): it answers offers with the policy's accept/reject and sends the
+  policy's offers. Every chat trade event is logged and counted in the receipt.
+
+ ``stac.seed`` seeds board, deck, first player, seats, dice by roll index,
 steals, forced discards and robot tie-breaks (see ``soc.game.CatanAiSeed`` in the patch).
 
 Outputs are sealed like the JSettlers runner: ``--out`` must not exist; ``manifest.json`` (config
@@ -68,11 +76,20 @@ def check_config(config: dict) -> dict:
                          f'{stac_build.STAC_REPO} {stac_build.STAC_COMMIT}')
     if not stac.get('patch'):
         raise RunRefused('stac.patch (file + sha256) is required')
-    for key in ('fully_observable', 'observable_vp', 'chat_negotiation'):
+    for key in ('fully_observable', 'observable_vp'):
         if stac.get(key) is not False:
             raise RunRefused(f'stac.{key} must be false for a bridge match')
-    if stac.get('no_player_trades') is not True:
-        raise RunRefused('stac.no_player_trades must be true (player trading is off for the match)')
+    mode = trading_mode(stac)
+    if mode == 'off':
+        if stac.get('chat_negotiation') is not False:
+            raise RunRefused('stac.chat_negotiation must be false when player_trading is off')
+        if stac.get('no_player_trades') is not True:
+            raise RunRefused('stac.no_player_trades must be true (player trading is off for the match)')
+    else:
+        if stac.get('chat_negotiation') is not True:
+            raise RunRefused('stac.chat_negotiation must be true when player_trading is chat')
+        if stac.get('no_player_trades') is not False:
+            raise RunRefused('stac.no_player_trades must be false when player_trading is chat')
     seed = stac.get('seed')
     if seed is not None and (not isinstance(seed, int) or isinstance(seed, bool)):
         raise RunRefused(f'stac.seed must be an integer, got {seed!r}')
@@ -91,13 +108,22 @@ def check_config(config: dict) -> dict:
     mcts = agents.get('pomcp_ts_cr')
     if mcts is not None:
         flags = mcts.get('flags') or []
-        if 'NO_TRADES' not in flags:
+        if mode == 'off' and 'NO_TRADES' not in flags:
             raise RunRefused('pomcp_ts_cr must carry NO_TRADES (player trading is off for the match)')
+        if mode == 'chat' and 'NO_TRADES' in flags:
+            raise RunRefused('pomcp_ts_cr must not carry NO_TRADES when player_trading is chat')
         if not isinstance(mcts.get('time_cap_ms'), int) or mcts['time_cap_ms'] <= 0:
             raise RunRefused('pomcp_ts_cr needs a declared per-decision time_cap_ms')
         if any(f.startswith('MCTS_TIME_LIMIT_MS') for f in flags):
             raise RunRefused('declare the cap in time_cap_ms, not in flags')
     return stac
+
+
+def trading_mode(stac: dict) -> str:
+    mode = stac.get('player_trading', 'off')
+    if mode not in ('off', 'chat'):
+        raise RunRefused(f'stac.player_trading must be "off" or "chat", got {mode!r}')
+    return mode
 
 
 def agent_line(kind: str, agents: dict) -> str:
@@ -109,17 +135,18 @@ def agent_line(kind: str, agents: dict) -> str:
     return line + (',' + '|'.join(flags) if flags else '')
 
 
-def simulation_config(block: dict, agents: dict) -> str:
+def simulation_config(block: dict, agents: dict, mode: str = 'off') -> str:
     """STAC Simulation config text for one block (one JVM)."""
+    chat = 'true' if mode == 'chat' else 'false'
     return '\n'.join([
-        f'Games={block["games"]}', 'Log=false', 'ChatNegotiation=false', 'FullyObservable=false',
-        'ObservableVP=false', '~', block['name'], 'Trades=false',
+        f'Games={block["games"]}', 'Log=false', f'ChatNegotiation={chat}', 'FullyObservable=false',
+        'ObservableVP=false', '~', block['name'], f'Trades={chat}',
         f'Agent=1,{OUR_NAME},{OUR_FACTORY}', agent_line(block['opponent'], agents), '']) + '\n'
 
 
 def jvm_props(stac: dict) -> list[str]:
-    props = ['-Dstac.catanai.noPlayerTrades=Y',
-             f'-Dstac.catanai.forceEndTurnSec={int(stac.get("force_end_turn_sec", 30))}']
+    props = ['-Dstac.catanai.noPlayerTrades=Y'] if trading_mode(stac) == 'off' else []
+    props.append(f'-Dstac.catanai.forceEndTurnSec={int(stac.get("force_end_turn_sec", 30))}')
     if stac.get('seed') is not None:
         props.append(f'-Dstac.catanai.seed={stac["seed"]}')
     return props
@@ -210,6 +237,7 @@ def summarize_block(block: dict, block_dir: Path, base_seed, bridge_seed: int) -
         start = next((r for r in mine if r.get('type') == 'game_start'), {})
         decisions = [r for r in mine if r.get('type') == 'decision']
         fallbacks = [r for r in mine if r.get('type') == 'fallback']
+        chat = Counter(r.get('event') for r in mine if r.get('type') == 'chat_trade')
         errors = [r for r in decisions if r.get('cmd') == 'error']
         lat = [r['latency_ms'] for r in decisions]
         think = [r['think_ms'] for r in decisions if 'think_ms' in r]
@@ -237,6 +265,7 @@ def summarize_block(block: dict, block_dir: Path, base_seed, bridge_seed: int) -
              'deck': s.get('deck'),
              'board_sha': seq_sha([s.get('hexes'), s.get('numbers'), s.get('ports')]) if s.get('hexes') else None,
              'force_ends': s['force_ends'], 'trade_blocked': s['trade_blocked'],
+             'chat_trades': dict(chat),
              'decision_seq_sha': seq_sha(seqs.get(name, [])), 'decision_seq_len': len(seqs.get(name, []))}
         searches = s['mcts']
         ms = [x['ms'] for x in searches]
@@ -264,7 +293,7 @@ def summarize_block(block: dict, block_dir: Path, base_seed, bridge_seed: int) -
     return games
 
 
-def aggregate(games: list[dict], expected: int) -> dict:
+def aggregate(games: list[dict], expected: int, mode: str = 'off') -> dict:
     done = [g for g in games if g['finished']]
     wins = sum(bool(g.get('won')) for g in done)
     fallbacks = [dict(f, game=g['game']) for g in games for f in g['fallbacks']]
@@ -288,18 +317,22 @@ def aggregate(games: list[dict], expected: int) -> dict:
         'force_ends_ours': sum(1 for g in games for f in g['force_ends'] if f['pn'] == g['seat']),
         'trade_blocked': sum(g['trade_blocked'] for g in games),
         'player_trades_executed': sum(g.get('player_trades_executed', 0) for g in done),
+        'chat_trades': dict(sum((Counter(g.get('chat_trades') or {}) for g in games), Counter())),
         'mcts_searches': searches, 'mcts_cap_hits': sum(g['mcts']['cap_hits'] for g in games),
         'mcts_cap_overruns_1s': sum(g['mcts']['cap_overruns_1s'] for g in games),
-        'observability_violations': [g['game'] for g in done if not observability_ok(g)],
+        'observability_violations': [g['game'] for g in done if not observability_ok(g, mode)],
         'seed_mismatches': [g['game'] for g in games if g.get('seed_logged_matches') is False],
         'stac_results_disagree': [g['game'] for g in done if not g.get('stac_results_agree')],
     }
 
 
-def observability_ok(g: dict) -> bool:
+def observability_ok(g: dict, mode: str = 'off') -> bool:
+    """Hidden-information flags as logged by the server, and the declared trading mode."""
     o = g.get('observability') or {}
+    chat = mode == 'chat'
     return (o.get('fully_observable') == 'false' and o.get('observable_vp') == 'false'
-            and o.get('chat_negotiations') == 'false' and o.get('no_player_trades') == 'true')
+            and o.get('chat_negotiations') == ('true' if chat else 'false')
+            and o.get('no_player_trades') == ('false' if chat else 'true'))
 
 
 def latency(block_dirs: list[Path]) -> dict:
@@ -342,10 +375,11 @@ def run_block(block: dict, out: Path, build: dict, config: dict, stac: dict) -> 
     block_dir = out / block['name']
     block_dir.mkdir()
     sim = block_dir / 'simulation.txt'
-    sim.write_text(simulation_config(block, config['agents']))
+    sim.write_text(simulation_config(block, config['agents'], trading_mode(stac)))
     shutil.copy2(build['pdf_file'], block_dir / stac_build.PDF_FILE)
     bridge_cmd = ' '.join([sys.executable, str(ROOT / 'scripts' / 'stac_bridge.py'), '--policy', config['policy'],
-                           '--seed', str(config['seed']), '--log', str(block_dir / 'bridge.jsonl')])
+                           '--seed', str(config['seed']), '--log', str(block_dir / 'bridge.jsonl'),
+                           *(['--player-trades'] if trading_mode(stac) == 'chat' else [])])
     cmd = [stac_build.java(), f'-Xmx{block.get("jvm_heap", stac.get("jvm_heap", "4g"))}', '-cp', build['classpath'],
            *jvm_props(stac),
            f'-Dcatanai.bridge.cmd={bridge_cmd}', f'-Dcatanai.bridge.cwd={ROOT}',
@@ -378,6 +412,7 @@ def main(argv=None) -> int:
     config_bytes = config_path.read_bytes()
     config = json.loads(config_bytes)
     stac = check_config(config)
+    mode = trading_mode(stac)
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     out = allocate_out(Path(args.out) if args.out else ROOT / 'runs' / 'stac-match' / stamp)
     build = stac_build.build_manifest(out / 'build', stac['patch'])
@@ -396,7 +431,7 @@ def main(argv=None) -> int:
                   'bridge_java_classes_digest': build['bridge_java']['classes_digest']},
         'bridge': bridge_identity(config['policy']),
         'stac': {'seed': stac.get('seed'), 'patch_sha256': build['stac']['patch_sha256'],
-                 'jvm_props': jvm_props(stac), 'build_dir': build['build_dir']},
+                 'jvm_props': jvm_props(stac), 'build_dir': build['build_dir'], 'player_trading': mode},
     }
     write_exclusive(out / 'manifest.json', manifest)
     stac_build.verify_loaded(build)  # nothing on the class path changed since verification
@@ -407,11 +442,11 @@ def main(argv=None) -> int:
     per_block, all_games = {}, []
     for b in blocks:
         games = summarize_block(b, out / b['name'], stac.get('seed'), config['seed'])
-        per_block[b['name']] = {'opponent': b['opponent'], **aggregate(games, b['games'])}
+        per_block[b['name']] = {'opponent': b['opponent'], **aggregate(games, b['games'], mode)}
         all_games.extend(games)
     retired = [r for b in blocks for r in read_jsonl(out / b['name'] / 'decisions.jsonl')
                if r.get('type') == 'bridge_retired']
-    total = aggregate(all_games, manifest['games_requested'])
+    total = aggregate(all_games, manifest['games_requested'], mode)
     bar = config.get('pass_bar', {})
     receipt = {
         **{k: manifest[k] for k in ('name', 'created_utc', 'config_path', 'config_sha256', 'config',
@@ -426,12 +461,16 @@ def main(argv=None) -> int:
                        and total['bridge_errors'] <= bar.get('bridge_errors', 0)
                        and not retired and not any(r['timed_out'] for r in runs)
                        and not total['observability_violations'] and not total['seed_mismatches']
-                       and total['player_trades_executed'] == 0 and not total['stac_results_disagree'])
+                       and (mode == 'chat' or total['player_trades_executed'] == 0)
+                       and total['player_trades_executed'] >= bar.get('min_player_trades_executed', 0)
+                       and total['chat_trades'].get('offer_timeout', 0) <= bar.get('max_offer_timeouts', 10**9)
+                       and total['force_ends'] <= bar.get('max_force_ends', 10**9)
+                       and not total['stac_results_disagree'])
     write_exclusive(out / 'receipt.json', receipt)
     print(json.dumps({'pass': receipt['pass'], 'elapsed_sec': elapsed,
                       **{n: {k: v[k] for k in ('games_completed', 'our_wins', 'win_rate_wilson95', 'bridge_errors',
                                                 'fallbacks_by_type', 'mcts_cap_hits', 'mcts_cap_overruns_1s',
-                                                'force_ends')}
+                                                'force_ends', 'player_trades_executed', 'chat_trades')}
                          for n, v in per_block.items()}}))
     print(f'receipt: {out / "receipt.json"}')
     return 0 if receipt['pass'] else 1
