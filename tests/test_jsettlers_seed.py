@@ -148,21 +148,116 @@ def test_patched_build_verifies_and_stale_or_unpatched_classes_fail_closed(tmp_p
     assert jb.verify_jsettlers(build)['patch_sha256'] is None
 
 
+# ------------------------------------------------------------------ comparator: evidence must be present
+
+def _receipt(tmp_path, name, games, decisions, seed=20261108, patch='p' * 64):
+    d = tmp_path / name
+    d.mkdir()
+    (d / 'decisions.jsonl').write_text('\n'.join(json.dumps(r) for r in decisions))
+    receipt = {'games': games, 'artifacts': {'decisions': str(d / 'decisions.jsonl')},
+               'jsettlers': {'seed': seed, 'patch_sha256': patch, 'all_smart': True},
+               'config': {'policy': 'planner_offer_accept', 'seed': 20261108}, 'games_requested': len(games)}
+    (d / 'receipt.json').write_text(json.dumps(receipt))
+    return d / 'receipt.json'
+
+
+def _game(name, dice, decisions, winner=0):
+    rows = [{'type': 'decision', 'game': name, 'decision': x, 'turn_count': i} for i, x in enumerate(decisions)]
+    seq = smoke.decision_sequences(rows).get(name, [])
+    return ({'game': name, 'finished': True, 'server_board_sha': 'b', 'board_id': 'b', 'server_first_player': 1,
+             'seat': 0, 'players': ['x', 'y', 'z', 'w'], 'dice': dice, 'dice_sha': smoke.seq_sha(dice),
+             'winner': winner, 'turns': 9, 'decision_seq_sha': smoke.seq_sha(seq)}, rows)
+
+
 def test_compare_counts_paired_dice_by_roll_index_even_when_play_diverges(tmp_path):
-    def receipt(name, dice, decisions, winner):
-        d = tmp_path / name
-        d.mkdir()
-        (d / 'decisions.jsonl').write_text('\n'.join(json.dumps(
-            {'type': 'decision', 'game': 'g', 'decision': x, 'turn_count': i}) for i, x in enumerate(decisions)))
-        game = {'game': 'g', 'server_board_sha': 'b', 'board_id': 'b', 'server_first_player': 1, 'seat': 0,
-                'players': ['x', 'y'], 'dice': dice, 'dice_sha': smoke.seq_sha(dice), 'winner': winner, 'turns': 9,
-                'decision_seq_sha': smoke.seq_sha(decisions)}
-        (d / 'receipt.json').write_text(json.dumps({'games': [game], 'artifacts': {'decisions': str(d / 'decisions.jsonl')}}))
-        return d / 'receipt.json'
-    a = receipt('a', ['0:1:0:3,4', '1:2:1:6,6', '2:3:2:1,1'], ['roll', 'actions'], 0)
-    b = receipt('b', ['0:1:0:3,4', '1:3:2:6,6'], ['roll', 'trade_response'], 1)  # different turn/roller, same values
-    c = smoke.compare_receipts(a, b)
+    ga, ra = _game('g', ['0:1:0:3,4', '1:2:1:6,6', '2:3:2:1,1'], ['roll', 'actions'])
+    gb, rb = _game('g', ['0:1:0:3,4', '1:3:2:6,6'], ['roll', 'trade_response'], winner=1)  # same values by k
+    c = smoke.compare_receipts(_receipt(tmp_path, 'a', [ga], ra), _receipt(tmp_path, 'b', [gb], rb))
+    assert c['compatible'] and c['complete_games'] == 1
     assert c['setup_identical'] == 1 and c['setup_and_dice_k_identical'] == 1 and c['end_to_end_identical'] == 0
     assert c['rows'][0]['dice_values_common_prefix'] == 2 and c['rows'][0]['decision_common_prefix'] == 1
-    d = receipt('d', ['0:1:0:3,4', '1:2:1:5,6'], ['roll', 'actions'], 0)
-    assert smoke.compare_receipts(a, d)['setup_and_dice_k_identical'] == 0
+    gd, rd = _game('g', ['0:1:0:3,4', '1:2:1:5,6'], ['roll', 'actions'])
+    assert smoke.compare_receipts(_receipt(tmp_path, 'a2', [ga], ra),
+                                  _receipt(tmp_path, 'd', [gd], rd))['setup_and_dice_k_identical'] == 0
+
+
+def test_compare_fails_closed_on_absent_evidence(tmp_path):
+    """Codex repro: games:[{game:'g'}] and empty decision logs must establish nothing."""
+    bare = [_receipt(tmp_path, n, [{'game': 'g'}], []) for n in ('a', 'b')]
+    c = smoke.compare_receipts(*bare)
+    assert c['incomplete_games'] == 1 and c['complete_games'] == 0
+    for key in ('setup_identical', 'setup_and_full_dice_identical', 'setup_and_dice_k_identical',
+                'end_to_end_identical', 'same_winner'):
+        assert c[key] == 0, key
+    assert smoke.main(['--compare', *map(str, bare)]) == 1
+    # Facts present but no rolls and no decisions logged: still incomplete, never identical.
+    g, _ = _game('g', [], [])
+    c = smoke.compare_receipts(_receipt(tmp_path, 'c', [g], []), _receipt(tmp_path, 'd', [g], []))
+    assert c['incomplete_games'] == 1 and c['setup_identical'] == 0
+    # A decision log that does not match the receipt's hash is not evidence either.
+    g, rows = _game('g', ['0:1:0:3,4'], ['roll'])
+    tampered = [dict(rows[0], decision='actions')]
+    c = smoke.compare_receipts(_receipt(tmp_path, 'e', [g], rows), _receipt(tmp_path, 'f', [g], tampered))
+    assert c['incomplete_games'] == 1 and c['end_to_end_identical'] == 0
+
+
+def test_compare_refuses_incompatible_receipts(tmp_path):
+    g, rows = _game('g', ['0:1:0:3,4'], ['roll'])
+    h, hrows = _game('h', ['0:1:0:3,4'], ['roll'])
+    base = _receipt(tmp_path, 'a', [g], rows)
+    cases = {'seed differs': (base, _receipt(tmp_path, 'b', [g], rows, seed=1)),
+             'patch_sha256': (base, _receipt(tmp_path, 'c', [g], rows, patch='q' * 64)),
+             'game sets': (base, _receipt(tmp_path, 'd', [h], hrows)),
+             'duplicate': (_receipt(tmp_path, 'e0', [g, g], rows), _receipt(tmp_path, 'e', [g, g], rows)),
+             'not a seeded': (_receipt(tmp_path, 'f0', [g], rows, seed=None),
+                              _receipt(tmp_path, 'f', [g], rows, seed=None))}
+    for needle, (left, right) in cases.items():
+        c = smoke.compare_receipts(left, right)
+        assert not c['compatible'] and any(needle in p for p in c['problems']), (needle, c['problems'])
+        assert c['complete_games'] == 0 and c['setup_identical'] == 0 and c['end_to_end_identical'] == 0
+        assert smoke.main(['--compare', str(left), str(right)]) == 1
+    assert smoke.compare_receipts(base, _receipt(tmp_path, 'ok', [g], rows))['compatible']
+
+
+# ------------------------------------------------------------------ private build directories
+
+def test_existing_build_directories_are_never_reused_or_deleted(tmp_path, monkeypatch):
+    live = tmp_path / 'live'
+    (live / 'catanai-classes').mkdir(parents=True)
+    (live / 'catanai-classes' / 'X.class').write_bytes(b'in use')
+    monkeypatch.setattr(subprocess, 'run', lambda *a, **k: pytest.fail('git/javac reached'))
+    with pytest.raises(jb.BuildIdentityError, match='existing'):
+        jb.build(live / 'catanai-classes', live)
+    with pytest.raises(jb.BuildIdentityError, match='existing'):
+        jb.stage_jsettlers(live)
+    assert (live / 'catanai-classes' / 'X.class').read_bytes() == b'in use'
+
+
+def _tree(root: Path) -> dict:
+    return {str(p.relative_to(root)): p.read_bytes() for p in sorted(root.rglob('*')) if p.is_file()}
+
+
+def _shared_state() -> dict:
+    subs = [s for s in ('classes', 'catanai-classes') if (jb.BUILD / s).is_dir()]
+    return {s: jb.tree_hashes(jb.BUILD / s) for s in subs} | {'gson': jb.sha256(jb.BUILD / jb.GSON_JAR)}
+
+
+@pytest.mark.skipif(not HAVE_JDK, reason='needs the local JDK and JSettlers build')
+def test_two_consumers_and_a_failed_build_never_touch_a_live_classpath(tmp_path):
+    shared = _shared_state()
+    first = jb.build_manifest(tmp_path / 'run1' / 'build')
+    assert Path(first['build_dir']) == tmp_path / 'run1' / 'build'
+    assert all(part.startswith(str(tmp_path / 'run1' / 'build')) for part in first['classpath'].split(':'))
+    live = _tree(tmp_path / 'run1' / 'build')
+    second = jb.build_manifest(tmp_path / 'run2' / 'build')  # another consumer, same inputs
+    assert second['jsettlers']['classes_digest'] == first['jsettlers']['classes_digest']
+    bad = tmp_path / 'bad.patch'
+    bad.write_text('--- a/src/main/java/soc/game/SOCGame.java\n+++ b/src/main/java/soc/game/SOCGame.java\n'
+                   '@@ -1,1 +1,1 @@\n-no such line\n+x\n')
+    with pytest.raises(jb.BuildIdentityError, match='does not apply'):
+        jb.build_manifest(tmp_path / 'run3' / 'build', patch={'file': str(bad), 'sha256': jb.sha256(bad)})
+    with pytest.raises(jb.BuildIdentityError, match='existing'):
+        jb.build_manifest(tmp_path / 'run1' / 'build')  # rebuilding a live run's class path is refused
+    assert _tree(tmp_path / 'run1' / 'build') == live
+    jb.verify_loaded(first)
+    assert _shared_state() == shared

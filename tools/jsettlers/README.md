@@ -30,7 +30,7 @@ only extend and call its classes, compiled against a local build in `runs/extern
 ## Commands
 
 ```bash
-uv run python scripts/jsettlers_build.py                 # javac -> runs/external/jsettlers-build/catanai-classes
+uv run python scripts/jsettlers_build.py                 # javac -> a new runs/external/jsettlers-builds/<stamp>/build
 uv run python scripts/jsettlers_build.py --dump-boards 60 > tools/jsettlers/fixtures/boards.json
 uv run --with pytest --with numpy python -m pytest -q tests/test_jsettlers_*.py
 uv run python scripts/jsettlers_smoke.py --config experiments/jsettlers-smoke.json
@@ -57,7 +57,12 @@ settings (`catanai.bridge.cmd`, `catanai.bridge.cwd`, `catanai.bridge.stderr`,
   sources with the pinned JDK reproduces every loaded `.class` byte for byte (no missing or extra
   file), every other file on the class directory equals the checkout's `src/main/resources`
   copy, and the Gson jar has its pinned SHA-256. Our bridge classes are rebuilt into a clean
-  directory. All of it is re-hashed right before launch (`verify_loaded`), and the config's
+  directory.
+- **Private class path.** Each run stages its whole class path (JSettlers classes copied read-only
+  from `runs/external/jsettlers-build/classes`, or pin + patch compiled; Gson; our bridge classes)
+  into `<out>/build`, a directory that must not exist yet, and the server runs from there. No build
+  ever deletes or rewrites an existing directory, so a second run, a failed build or a verification
+  command cannot change classes a live JVM still loads lazily. All of it is re-hashed right before launch (`verify_loaded`), and the config's
   declared tag/commit must equal the verified pin. `uv run python scripts/jsettlers_build.py --verify`
   runs the same check by hand.
 - **Bounded bridge.** Each Java-to-Python request has a deadline (`catanai.bridge.timeout_ms`,
@@ -206,17 +211,21 @@ Config (see `experiments/jsettlers-determinism.json`):
 `seed` / `all_smart` without a declared patch, or a seed with `botgames_parallel != 1`, is refused
 (games must run one at a time so game N always has the same name `~botsOnly~N` and seed; the same
 game count is needed to pair runs, since names count down from the total). With a patch,
-`jsettlers_build.build_manifest(patch=...)` checks the patch file's SHA-256, checks the checkout
-is the clean pin, exports the pinned `src/` from the commit object, applies the patch, builds into
-`runs/external/jsettlers-build-patched-<sha12>/` and verifies that a fresh `javac` of pin + patch
-reproduces every loaded class (the unpatched build directory is never touched). The build
+`jsettlers_build.build_manifest(build_dir, patch=...)` checks the patch file's SHA-256, checks the checkout
+is the clean pin, exports the pinned `src/` from the commit object, applies the patch, builds into the
+run's private `<out>/build` and verifies that a fresh `javac` of pin + patch reproduces every
+loaded class. The build
 manifest and receipt record base commit, `patch_sha256` and per-class hashes; the receipt's
 `jsettlers` block records patch, base seed and all-smart, `seeding` records the server's
 configuration and each robot's logged strategy, and each game records its derived seeds (checked
 against the server's own log; a mismatch fails the pass bar), our policy's per-game seed, the
 server board/first player/seats/dice, the robots that sat with their strategies, and a hash of our
 decision sequence. `uv run python scripts/jsettlers_smoke.py --compare A/receipt.json B/receipt.json`
-diffs two seeded runs game by game. Our policy is seeded per game from (config `seed`, game name)
+diffs two seeded runs game by game and fails closed: the receipts must agree on seed, patch,
+all-smart, policy and game count and have the same unique game names, and a game missing any
+required fact (setup facts, outcome hashes, a nonempty dice log, a nonempty decision log matching
+its recorded hash) is reported as incomplete and never counted as identical; the command exits 1
+unless every game is complete. Our policy is seeded per game from (config `seed`, game name)
 in both modes. Residual nondeterminism can come from robot thread timing (e.g. which robot answers
 a trade offer first, timeouts); it is measured by the determinism check, not removed.
 

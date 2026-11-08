@@ -13,13 +13,17 @@ checkout's ``src/main/resources`` copy, and the Gson jar has its pinned SHA-256.
 (per-file hashes plus aggregate digests, JDK version, our Java sources and classes). It is written
 to ``runs/external/jsettlers-build/catanai-build-manifest.json`` and sealed into each run.
 
+Builds are **private**: ``build_manifest(build_dir)`` stages everything a run loads (JSettlers
+classes, the Gson jar, our bridge classes) into a new directory that must not exist yet, normally
+inside the run's own output directory. Nothing shared is ever deleted or rewritten, so a second run,
+a failed build or a verification command cannot change a class path a live JVM is reading. The
+unpatched release classes are copied (read only) from ``runs/external/jsettlers-build/classes``.
+
 A run may declare a source patch (``{"file": ..., "sha256": ...}``, e.g. the opt-in seeding patch
 ``runs/external/jsettlers-seed.patch``). Then the patch file must have exactly the declared
 SHA-256, the checkout must still be the clean pinned commit, the pinned ``src/`` tree is exported
 from the commit object (``git archive``) into a clean directory and the patch is applied there,
-and the patched classes are built into their own directory
-``runs/external/jsettlers-build-patched-<sha12>/`` (the unpatched build is never touched). The
-same verification then applies against the patched sources: a fresh ``javac`` of pin + patch
+and the patched classes are built into the run's private build directory. The same verification then applies against the patched sources: a fresh ``javac`` of pin + patch
 must reproduce every loaded class byte for byte. The manifest records base commit, patch SHA-256
 and per-class hashes. Never vendors JSettlers source or the patch.
 """
@@ -28,10 +32,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,7 +46,6 @@ BUILD = EXTERNAL / 'jsettlers-build'
 CHECKOUT = EXTERNAL / 'jsettlers2'
 JAVA_HOME = EXTERNAL / 'jdk' / 'jdk-17.0.21+9' / 'Contents' / 'Home'
 SOURCES = ROOT / 'tools' / 'jsettlers' / 'java'
-OUT = BUILD / 'catanai-classes'
 MANIFEST = BUILD / 'catanai-build-manifest.json'
 
 JSETTLERS_TAG = 'release-2.6.10'
@@ -77,9 +82,10 @@ def java(tool: str = 'java', java_home: Path = JAVA_HOME) -> str:
     return str(java_home / 'bin' / tool)
 
 
-def build(out: Path = OUT, build_dir: Path = BUILD) -> Path:
-    if out.exists():
-        shutil.rmtree(out)  # no stale classes from deleted or renamed sources
+def build(out: Path, build_dir: Path = BUILD) -> Path:
+    """Compile our bridge classes into ``out``, which must not exist (never reuse a live class dir)."""
+    if out.exists() or out.is_symlink():
+        raise BuildIdentityError(f'refusing to build into existing {out}; a live JVM may be loading it')
     out.mkdir(parents=True)
     files = sorted(str(p) for p in SOURCES.rglob('*.java'))
     if not files:
@@ -93,8 +99,10 @@ def build(out: Path = OUT, build_dir: Path = BUILD) -> Path:
     return out
 
 
-def patch_build_dir(patch_sha256: str) -> Path:
-    return EXTERNAL / f'jsettlers-build-patched-{patch_sha256[:12]}'
+def new_private_dir(parent: Path = EXTERNAL / 'jsettlers-builds') -> Path:
+    """A fresh, uniquely named directory for a build outside any run (CLI use)."""
+    parent.mkdir(parents=True, exist_ok=True)
+    return Path(tempfile.mkdtemp(prefix=time.strftime('%Y%m%dT%H%M%S-'), dir=parent)) / 'build'
 
 
 def check_patch(patch: dict | None) -> tuple[Path, str] | None:
@@ -139,24 +147,40 @@ def compile_jsettlers(src_root: Path, out: Path, jar: Path, java_home: Path = JA
                                  + (result.stderr + result.stdout)[-500:])
 
 
-def build_patched_jsettlers(patch: dict, checkout: Path = CHECKOUT, pin: str = JSETTLERS_COMMIT,
-                            java_home: Path = JAVA_HOME, build_dir: Path | None = None) -> Path:
-    """Build pin + declared patch into a fresh patched build directory (classes, resources, Gson)."""
-    patch_path, patch_sha = check_patch(patch)
+def stage_jsettlers(build_dir: Path, patch: dict | None = None, checkout: Path = CHECKOUT,
+                    pin: str = JSETTLERS_COMMIT, java_home: Path = JAVA_HOME, source: Path = BUILD) -> Path:
+    """Stage JSettlers classes + Gson into ``build_dir``, which must not exist yet.
+
+    Unpatched: a read-only copy of the shared release build. Patched: pin + declared patch compiled
+    here. Checks (patch hash, pinned clean checkout, Gson hash) run before anything is created; a
+    later failure leaves only this new private directory behind, never a changed existing one.
+    """
+    if build_dir.exists() or build_dir.is_symlink():
+        raise BuildIdentityError(f'refusing existing build directory {build_dir}; a live JVM may be loading it')
+    declared = check_patch(patch)
     check_checkout(checkout, pin)
-    build_dir = build_dir or patch_build_dir(patch_sha)
-    jar = BUILD / GSON_JAR
+    jar = source / GSON_JAR
     if not jar.is_file() or sha256(jar) != GSON_SHA256:
         raise BuildIdentityError(f'{jar} is missing or not the pinned Gson jar')
-    if build_dir.exists():
-        shutil.rmtree(build_dir)
-    (build_dir / 'classes').mkdir(parents=True)
+    build_dir.mkdir(parents=True, exist_ok=False)
     shutil.copy2(jar, build_dir / GSON_JAR)
+    if declared is None:
+        shutil.copytree(source / 'classes', build_dir / 'classes')
+        return build_dir
+    (build_dir / 'classes').mkdir()
     with tempfile.TemporaryDirectory(prefix='jsettlers-patched-') as tmp:
-        tree = patched_tree(Path(tmp), patch_path, checkout, pin)
+        tree = patched_tree(Path(tmp), declared[0], checkout, pin)
         compile_jsettlers(tree, build_dir / 'classes', jar, java_home)
         shutil.copytree(tree / 'src' / 'main' / 'resources', build_dir / 'classes', dirs_exist_ok=True)
     return build_dir
+
+
+def build_patched_jsettlers(patch: dict, build_dir: Path, checkout: Path = CHECKOUT, pin: str = JSETTLERS_COMMIT,
+                            java_home: Path = JAVA_HOME) -> Path:
+    """Build pin + declared patch into the new private ``build_dir`` (classes, resources, Gson)."""
+    if not patch:
+        raise BuildIdentityError('no patch declared')
+    return stage_jsettlers(build_dir, patch, checkout, pin, java_home)
 
 
 def check_checkout(checkout: Path = CHECKOUT, pin: str = JSETTLERS_COMMIT) -> str:
@@ -223,16 +247,17 @@ def java_version(java_home: Path = JAVA_HOME) -> str:
     return (out.stderr or out.stdout).strip()
 
 
-def build_manifest(write: bool = True, patch: dict | None = None) -> dict:
-    """Build our classes, verify JSettlers (+ declared patch), and return the class path identity.
+def build_manifest(build_dir: Path, write: bool = True, patch: dict | None = None) -> dict:
+    """Stage a private class path in ``build_dir`` (must not exist), verify it, return its identity.
 
-    Without a patch this is the pinned release in ``BUILD``; with one, pin + patch is built and
-    verified in ``patch_build_dir(sha)`` and the manifest's ``build_dir`` names it.
+    JSettlers (pinned release, or pin + declared patch) and our bridge classes are all built or
+    copied into ``build_dir``; the manifest's ``build_dir`` and ``classpath`` name it.
     """
     version = java_version()
     if JDK_VERSION not in version:
         raise BuildIdentityError(f'JDK is not {JDK_VERSION}: {version.splitlines()[0]}')
-    build_dir = build_patched_jsettlers(patch) if patch else BUILD
+    build_dir = Path(os.path.abspath(build_dir))
+    stage_jsettlers(build_dir, patch)
     jsettlers = verify_jsettlers(build_dir, patch=patch)
     out = build(build_dir / 'catanai-classes', build_dir)
     ours_src = tree_hashes(SOURCES, '*.java')
@@ -247,7 +272,8 @@ def build_manifest(write: bool = True, patch: dict | None = None) -> dict:
         'classpath': classpath(build_dir=build_dir),
     }
     if write:
-        (build_dir / MANIFEST.name).write_text(json.dumps(manifest, indent=1, sort_keys=True) + '\n')
+        with open(build_dir / MANIFEST.name, 'x') as f:
+            f.write(json.dumps(manifest, indent=1, sort_keys=True) + '\n')
     return manifest
 
 
@@ -270,15 +296,15 @@ def main() -> int:
     parser.add_argument('--config', help="experiment config; its jsettlers.patch (if any) is built and verified")
     args = parser.parse_args()
     patch = json.loads(Path(args.config).read_text()).get('jsettlers', {}).get('patch') if args.config else None
-    build_dir = BUILD
+    build_dir = new_private_dir()  # never an existing class path some JVM may be reading
     if args.verify or patch:
-        manifest = build_manifest(patch=patch)
-        build_dir = Path(manifest['build_dir'])
+        manifest = build_manifest(build_dir, patch=patch)
         print(f'verified JSettlers {manifest["jsettlers"]["commit"]} patch {manifest["jsettlers"]["patch_sha256"]} '
               f'({manifest["jsettlers"]["class_files"]} classes); manifest {build_dir / MANIFEST.name}',
               file=sys.stderr)
     else:
-        print(f'built {build()}', file=sys.stderr)
+        stage_jsettlers(build_dir)
+        print(f'built {build(build_dir / "catanai-classes", build_dir)}', file=sys.stderr)
     if args.dump_boards:
         subprocess.run([java(), '-cp', classpath(build_dir=build_dir), 'catanai.jsettlers.BoardDump',
                         str(args.dump_boards)], check=True)

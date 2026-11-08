@@ -415,57 +415,119 @@ def _common_prefix(a: list, b: list) -> int:
 
 SETUP_KEYS = ('server_board_sha', 'board_id', 'server_first_player', 'seat', 'players')
 OUTCOME_KEYS = ('dice_sha', 'winner', 'turns', 'decision_seq_sha')
+# Settings two receipts must share before any of their games can be paired.
+COMPAT_KEYS = (('jsettlers', 'seed'), ('jsettlers', 'patch_sha256'), ('jsettlers', 'all_smart'),
+               ('config', 'policy'), ('config', 'seed'), ('games_requested',))
+
+
+def _dig(d, path):
+    for k in path:
+        d = d.get(k) if isinstance(d, dict) else None
+    return d
+
+
+def _missing_facts(g: dict, decisions: list) -> list[str]:
+    """Facts a game must carry before it can count as identical to anything (absent never matches)."""
+    missing = [k for k in SETUP_KEYS + OUTCOME_KEYS if g.get(k) in (None, '', [])]
+    if not g.get('finished'):
+        missing.append('finished')
+    if not g.get('dice'):
+        missing.append('dice (no rolls logged)')
+    if not decisions:
+        missing.append('decisions (none logged)')
+    elif g.get('decision_seq_sha') and seq_sha(decisions) != g['decision_seq_sha']:
+        missing.append('decisions (log does not match receipt decision_seq_sha)')
+    return missing
+
+
+def receipt_problems(ra: dict, rb: dict) -> list[str]:
+    """Receipt-level reasons the two runs cannot be paired at all."""
+    problems = []
+    for path in COMPAT_KEYS:
+        va, vb = _dig(ra, path), _dig(rb, path)
+        if va != vb:
+            problems.append(f'{".".join(path)} differs: {va!r} vs {vb!r}')
+    if _dig(ra, ('jsettlers', 'seed')) is None:
+        problems.append('receipt is not a seeded run (jsettlers.seed missing)')
+    for name, r in (('a', ra), ('b', rb)):
+        names = [g.get('game') for g in r.get('games') or []]
+        if not names:
+            problems.append(f'receipt {name} has no games')
+        if len(set(names)) != len(names) or None in names:
+            problems.append(f'receipt {name} has missing or duplicate game names')
+    sa = {g.get('game') for g in ra.get('games') or []}
+    sb = {g.get('game') for g in rb.get('games') or []}
+    if sa != sb:
+        problems.append(f'game sets differ: only in a {sorted(sa - sb)[:5]}, only in b {sorted(sb - sa)[:5]}')
+    return problems
 
 
 def compare_receipts(path_a: Path, path_b: Path) -> dict:
-    """Game-by-game comparison of two seeded receipts (same game names)."""
+    """Game-by-game comparison of two seeded receipts; fails closed on absent evidence.
+
+    Receipts must agree on seed, patch, all-smart, policy and game count and have the same unique
+    game names (``compatible``). A game with any required fact missing in either run (setup facts,
+    outcome hashes, a nonempty dice log, a nonempty decision log matching its hash) is reported as
+    incomplete and never counted as identical.
+    """
     ra, rb = (json.loads(Path(p).read_text()) for p in (path_a, path_b))
-    seqs = [decision_sequences(read_jsonl(Path(r['artifacts']['decisions']))) for r in (ra, rb)]
-    gb = {g['game']: g for g in rb['games']}
+    problems = receipt_problems(ra, rb)
+
+    def decisions(r):
+        path = (r.get('artifacts') or {}).get('decisions')
+        return decision_sequences(read_jsonl(Path(path))) if path else {}
+
+    seqs = [decisions(ra), decisions(rb)]
+    gb = {g.get('game'): g for g in rb.get('games') or []}
     rows = []
-    for a in ra['games']:
-        b = gb.get(a['game'])
+    for a in ra.get('games') or []:
+        name = a.get('game')
+        b = gb.get(name)
         if b is None:
-            rows.append({'game': a['game'], 'missing_in_b': True})
+            rows.append({'game': name, 'incomplete': ['missing in b']})
             continue
-        setup_same = {k: a.get(k) == b.get(k) for k in SETUP_KEYS}
-        dice_prefix = _common_prefix(a.get('dice', []), b.get('dice', []))
+        sa, sb = seqs[0].get(name, []), seqs[1].get(name, [])
+        missing = [f'a: {m}' for m in _missing_facts(a, sa)] + [f'b: {m}' for m in _missing_facts(b, sb)]
+        if missing:
+            rows.append({'game': name, 'incomplete': missing})
+            continue
+        setup_same = {k: a[k] == b[k] for k in SETUP_KEYS}
+        dice_prefix = _common_prefix(a['dice'], b['dice'])
         # Paired luck: the k-th roll's values, for every k both runs reached (turn/roller may differ).
-        va, vb = ([d.rsplit(':', 1)[-1] for d in g.get('dice', [])] for g in (a, b))
-        dice_k_same = va[:min(len(va), len(vb))] == vb[:min(len(va), len(vb))]
-        sa, sb = seqs[0].get(a['game'], []), seqs[1].get(a['game'], [])
+        va, vb = ([d.rsplit(':', 1)[-1] for d in g['dice']] for g in (a, b))
+        n = min(len(va), len(vb))
         dec_prefix = _common_prefix(sa, sb)
-        row = {'game': a['game'], 'setup_identical': all(setup_same.values()),
+        row = {'game': name, 'setup_identical': all(setup_same.values()),
                'setup_diff': [k for k, v in setup_same.items() if not v],
-               'dice': [len(a.get('dice', [])), len(b.get('dice', []))], 'dice_common_prefix': dice_prefix,
-               'dice_values_identical_for_every_k': dice_k_same,
+               'dice': [len(a['dice']), len(b['dice'])], 'dice_common_prefix': dice_prefix,
+               'dice_values_identical_for_every_k': va[:n] == vb[:n],
                'dice_values_common_prefix': _common_prefix(va, vb),
                'decisions': [len(sa), len(sb)], 'decision_common_prefix': dec_prefix,
-               'winner': [a.get('winner'), b.get('winner')], 'turns': [a.get('turns'), b.get('turns')],
-               'seat': a.get('seat'), 'first_player': a.get('server_first_player', a.get('first_player'))}
-        row['end_to_end_identical'] = row['setup_identical'] and all(a.get(k) == b.get(k) for k in OUTCOME_KEYS)
+               'winner': [a['winner'], b['winner']], 'turns': [a['turns'], b['turns']],
+               'seat': a['seat'], 'first_player': a['server_first_player']}
+        row['end_to_end_identical'] = row['setup_identical'] and all(a[k] == b[k] for k in OUTCOME_KEYS)
         if not row['end_to_end_identical']:
-            first = None
-            if dec_prefix < max(len(sa), len(sb)):
-                first = {'decision_index': dec_prefix,
-                         'a': sa[dec_prefix] if dec_prefix < len(sa) else None,
-                         'b': sb[dec_prefix] if dec_prefix < len(sb) else None}
-            row['first_decision_divergence'] = first
-            if dice_prefix < max(len(a.get('dice', [])), len(b.get('dice', []))):
+            row['first_decision_divergence'] = None if dec_prefix == max(len(sa), len(sb)) else {
+                'decision_index': dec_prefix,
+                'a': sa[dec_prefix] if dec_prefix < len(sa) else None,
+                'b': sb[dec_prefix] if dec_prefix < len(sb) else None}
+            if dice_prefix < max(len(a['dice']), len(b['dice'])):
                 row['first_dice_divergence'] = {
                     'index': dice_prefix,
                     'a': a['dice'][dice_prefix] if dice_prefix < len(a['dice']) else None,
                     'b': b['dice'][dice_prefix] if dice_prefix < len(b['dice']) else None}
         rows.append(row)
-    n = len(rows)
-    return {'a': str(path_a), 'b': str(path_b), 'games': n,
-            'end_to_end_identical': sum(bool(r.get('end_to_end_identical')) for r in rows),
-            'setup_identical': sum(bool(r.get('setup_identical')) for r in rows),
-            'setup_and_full_dice_identical': sum(bool(r.get('setup_identical')) and r['dice'][0] == r['dice'][1]
-                                                 == r['dice_common_prefix'] for r in rows if 'dice' in r),
-            'setup_and_dice_k_identical': sum(bool(r.get('setup_identical'))
-                                              and bool(r.get('dice_values_identical_for_every_k')) for r in rows),
-            'same_winner': sum(r.get('winner', [0, 1])[0] == r.get('winner', [0, 1])[1] for r in rows),
+    complete = [r for r in rows if 'incomplete' not in r] if not problems else []
+    return {'a': str(path_a), 'b': str(path_b), 'compatible': not problems, 'problems': problems,
+            'games': len(rows), 'complete_games': len(complete),
+            'incomplete_games': len(rows) - len(complete),
+            'end_to_end_identical': sum(r['end_to_end_identical'] for r in complete),
+            'setup_identical': sum(r['setup_identical'] for r in complete),
+            'setup_and_full_dice_identical': sum(r['setup_identical'] and r['dice'][0] == r['dice'][1]
+                                                 == r['dice_common_prefix'] for r in complete),
+            'setup_and_dice_k_identical': sum(r['setup_identical'] and r['dice_values_identical_for_every_k']
+                                              for r in complete),
+            'same_winner': sum(r['winner'][0] == r['winner'][1] for r in complete),
             'rows': rows}
 
 
@@ -478,8 +540,9 @@ def main(argv=None) -> int:
     parser.add_argument('--games', type=int, help='override the configured game count (not for receipts)')
     args = parser.parse_args(argv)
     if args.compare:
-        print(json.dumps(compare_receipts(*args.compare), indent=1))
-        return 0
+        result = compare_receipts(*args.compare)
+        print(json.dumps(result, indent=1))
+        return 0 if result['compatible'] and result['incomplete_games'] == 0 else 1
     if not args.config:
         parser.error('--config is required')
     config_path = Path(args.config)
@@ -497,7 +560,8 @@ def main(argv=None) -> int:
     decision_log, bridge_log = out / 'decisions.jsonl', out / 'bridge.jsonl'
     server_log, bridge_err = out / 'server.log', out / 'bridge.stderr'
 
-    build = jsettlers_build.build_manifest(patch=jset['patch'])
+    # Private class path inside this run: no other run or build can change what this JVM loads.
+    build = jsettlers_build.build_manifest(out / 'build', patch=jset['patch'])
     build_dir = Path(build['build_dir'])
     write_exclusive(out / 'build-manifest.json', build)
     manifest = {
