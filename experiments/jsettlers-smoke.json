@@ -1,0 +1,26 @@
+{
+  "name": "jsettlers-smoke",
+  "purpose": "Bridge smoke: the served policy plays classic 4-player JSettlers2 games as a third-party robot against 3 built-in JSettlers robots. Measures bridge errors, fallbacks and decision latency; not a strength claim.",
+  "policy": "planner_offer_accept",
+  "seed": 20261107,
+  "games": 8,
+  "jsettlers": {
+    "tag": "release-2.6.10",
+    "commit": "c5141056d8e3fff548817b3a1712eb66085e897b"
+  },
+  "server": {
+    "port": 8880,
+    "max_connections": 50,
+    "builtin_robots": 6,
+    "percent3p": 25,
+    "botgames_parallel": 1,
+    "botgames_wait_sec": 5,
+    "fast_pause_percent": 1,
+    "timeout_turn_sec": 120
+  },
+  "timeout_sec_per_game": 900,
+  "pass_bar": {
+    "completed_games": 8,
+    "bridge_errors": 0
+  }
+}
