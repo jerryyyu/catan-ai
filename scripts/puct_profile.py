@@ -3,10 +3,12 @@
 Plays ``--games`` games of the candidate against three ``--opponent`` bots (the
 candidate's seat rotates with the game index) and reports, per searched decision:
 latency (p50/p95/max), simulations (p50/p95/min), the deepest simulation (our turns),
-the principal-variation depth distribution and the fallback count; per game step and
-own-turn wall clock (the screen's step/turn gates). Output: one JSON document.
+the principal-variation depth distribution, prior entropy / top-prior mass and the
+fallback count; per game step and own-turn wall clock (the screen's step/turn gates); and
+the amendment-1 pre-screen check (fallbacks <= 10% of searched decisions, simulations
+p50 >= 64, every latency gate). Output: one JSON document.
 
-    PYTHONPATH=src uv run --with numpy python scripts/puct_profile.py --games 2 --seed 2950000
+    PYTHONPATH=src CATAN_ENGINE=python uv run --with numpy python scripts/puct_profile.py --games 4
 """
 import argparse
 from collections import Counter
@@ -32,7 +34,7 @@ def summary(values):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--games', type=int, default=2)
+    parser.add_argument('--games', type=int, default=4)
     parser.add_argument('--seed', type=int, default=2950000)
     parser.add_argument('--opponent', default='tactical')
     parser.add_argument('--candidate', default='planner_pv2_puct')
@@ -40,13 +42,16 @@ def main():
     args = parser.parse_args()
     started = time.time()
     games, records, steps, turns, decisions = [], [], [], [], []
+    capped = 0
     for g in range(args.games):
         seat = g % 4
         names = [args.opponent] * 4
         names[seat] = args.candidate
         t0 = time.perf_counter()
         result = play_game(names, args.seed + g, args.max_turns)
-        own = result.search.get(str(seat), [])
+        logged = result.search.get(str(seat), [])
+        own = [d for d in logged if d['reason'] in ('puct', 'fallback')]
+        capped += sum(d['reason'] == 'turn_cap' for d in logged)
         records += own
         steps += list(result.step_seconds[seat])
         decisions += list(result.decision_seconds[seat])
@@ -80,6 +85,14 @@ def main():
         'pv_depth_distribution': dict(sorted(Counter(d['pv_depth'] for d in records).items())),
         'pv_depth_mean': sum(d['pv_depth'] for d in records) / len(records) if records else None,
         'fallbacks': sum(d['fallback'] for d in records),
+        'fallback_rate': sum(d['fallback'] for d in records) / len(records) if records else None,
+        'turn_cap_decisions': capped,
+        'pv_depth_mean_of_shard_means': (sum(d['pv_depth_mean'] for d in records) / len(records)
+                                         if records else None),
+        'root_prior_entropy': summary([d['prior_entropy'] for d in records]),
+        'root_prior_top_mass': summary([d['prior_top_mass'] for d in records]),
+        'mean_prior_entropy_all_nodes': summary([d['mean_prior_entropy'] for d in records
+                                                 if d['mean_prior_entropy'] is not None]),
         'abandoned': sum(d['abandoned'] for d in records),
         'cut_passes': sum(d['truncated'] for d in records),
         'by_phase': by_phase,
@@ -90,6 +103,12 @@ def main():
                        'step_max_le_2s': (max(steps) if steps else 0) <= 2,
                        'turn_max_le_10s': (max(turns) if turns else 0) <= 10},
     }
+    gates = report['gates_seen']
+    report['pre_screen_check'] = {
+        'fallbacks_le_10pct': report['fallback_rate'] is not None and report['fallback_rate'] <= .10,
+        'simulations_p50_ge_64': (report['simulations']['p50'] or 0) >= 64,
+        'latency_gates': all(gates.values())}
+    report['pre_screen_check']['pass'] = all(report['pre_screen_check'].values())
     print(json.dumps(report, indent=1))
 
 

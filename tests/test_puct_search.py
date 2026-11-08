@@ -27,6 +27,12 @@ def checkpoint(tmp_path, monkeypatch):
     monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
 
 
+@pytest.fixture(autouse=True)
+def in_process(monkeypatch):
+    """Shards run in-process unless a test asks for workers (the result is the same)."""
+    monkeypatch.setattr(ps.PUCTSearchPlanner, 'workers', 1)
+
+
 # ---------------------------------------------------------------- tree core
 def test_puct_arithmetic_on_a_hand_example():
     node = ps.Node()
@@ -46,6 +52,18 @@ def test_puct_arithmetic_on_a_hand_example():
     fresh = ps.Node()
     assert ps.puct_select(fresh, [('x', .2), ('y', .5), ('z', .5)]) == 1
     assert ps.softmax([0., math.log(3.)]) == pytest.approx([.25, .75])
+
+
+def test_priors_are_a_softmax_of_within_decision_z_scores():
+    # scores 10, 20, 30: mean 20, population SD sqrt(200/3); z = -1.2247, 0, 1.2247
+    z = 10 / math.sqrt(200 / 3)
+    expected = ps.softmax([-z, 0., z])
+    assert ps.standardized_priors([10., 20., 30.]) == pytest.approx(expected)
+    # invariant to the served scale and offset; equal scores -> uniform
+    assert ps.standardized_priors([1e5 + 1, 1e5 + 2, 1e5 + 3]) == pytest.approx(expected)
+    assert ps.standardized_priors([7., 7.]) == [.5, .5]
+    assert ps.standardized_priors([3.]) == [1.]
+    assert ps.entropy([.5, .5]) == pytest.approx(math.log(2))
 
 
 class ChainEnv:
@@ -140,8 +158,8 @@ def _game_at_our_turn_plan(seed, turn=30, seat=0, policy='planner_offer_accept')
 def test_sampled_worlds_keep_public_counts_and_our_hand():
     game = _game_at_our_turn_plan(2950007)
     view = Observation.from_game(game, 0)
-    env_planner = type('P', (), {'served_bots': lambda self: [None] * 4, 'search_salt': 'x'})()
-    env = ps.CatanEnv(env_planner, view, 0, [])
+    env_planner = type('P', (), {'served_bots': lambda self: [None] * 4})()
+    env = ps.CatanEnv(env_planner, ps.env_inputs(view, 0, 'x', []))
     buys = sum(e['action']['type'] == 'buy_development' for e in view.events)
     for index in range(20):
         env.bots = [type('B', (), {})() for _ in range(4)]
@@ -233,10 +251,98 @@ def test_a_first_level_leaf_is_valued_exactly_like_pv2_tiles():
     game = _game_at_our_turn_plan(2950023)
     planner = make_policy('planner_pv2_puct', 3)
     view = Observation.for_policy(game, 0, planner)
-    env = ps.CatanEnv(planner, view, 0, planner.turn_candidates(view, 0))
+    env = ps.CatanEnv(planner, ps.env_inputs(view, 0, planner.search_salt, planner.turn_candidates(view, 0)))
     state = env.sample(0)
     end_now = next(c for c in env.candidates(state) if c[0] == '[]')
     _, value = env.play(state, end_now[2], expand=True)
     x, won = afterstate_encoding(planner, view, 0, [])
     assert not won
     assert value == pytest.approx(1 / (1 + math.exp(-planner._logits([x])[0])), abs=1e-12)
+
+
+def test_offer_free_served_bot_never_offers_but_still_answers():
+    game = Game.new(list('abcd'), 2950031)
+    free = ps.OfferFreeServedPlanner(__import__('random').Random(1))
+    served = make_policy('planner_offer_accept', 1)
+    offers, answers = 0, 0
+    bots = [make_policy('planner_offer_accept', 10 + s) for s in range(4)]
+    while game.winner is None and game.turn < 120:
+        s = game.current
+        view = Observation.for_policy(game, s, bots[s])
+        if game.phase == 'trade_response':
+            answers += 1
+            assert free.choose(view, s) == served.choose(view, s)
+        elif game.phase == 'actions':
+            assert free.choose(Observation.for_policy(game, s, free), s)['type'] != 'offer_trade'
+        action = bots[s].choose(view, s)
+        offers += action['type'] == 'offer_trade'
+        game.apply(s, action)
+    assert offers > 0 and answers > 0
+
+
+@needs_weights
+def test_worker_inputs_carry_no_hidden_information():
+    import pickle
+    game = _game_at_our_turn_plan(2950011)
+    twin = deepcopy(game)
+    for s in (1, 2, 3):
+        total = sum(twin.players[s].resources.values())
+        twin.players[s].resources = {r: 0 for r in Resource}
+        twin.players[s].resources[list(Resource)[s]] = total
+    twin.deck.reverse()
+    planner = make_policy('planner_pv2_puct', 3)
+    inputs = [ps.env_inputs(Observation.from_game(g, 0), 0, 'salt', planner.turn_candidates(
+        Observation.from_game(g, 0), 0)) for g in (game, twin)]
+    assert pickle.dumps(inputs[0]) == pickle.dumps(inputs[1])
+    for s in (1, 2, 3):
+        assert sum(inputs[0]['base'].players[s].resources.values()) == 0
+        assert inputs[0]['base'].players[s].development == []
+    assert inputs[0]['base'].deck == []
+
+
+@needs_weights
+def test_one_and_four_workers_give_the_same_search(monkeypatch):
+    monkeypatch.setattr(ps.PUCTSearchPlanner, 'max_simulations', 24)
+    game = _game_at_our_turn_plan(2950013)
+    out = []
+    for workers in (1, 4):
+        monkeypatch.setattr(ps.PUCTSearchPlanner, 'workers', workers)
+        planner = make_policy('planner_pv2_puct', 5)
+        action = planner.choose(Observation.for_policy(game, 0, planner), 0)
+        record = {k: v for k, v in planner.diagnostics[-1].items() if k != 'seconds'}
+        out.append((action, record))
+    assert out[0] == out[1]
+    assert out[0][1]['shard_simulations'] == [6, 6, 6, 6]
+
+
+@needs_weights
+def test_a_fallback_hands_the_rest_of_the_turn_to_pv2_tiles(monkeypatch):
+    monkeypatch.setattr(ps.PUCTSearchPlanner, 'max_simulations', ps.MIN_SIMULATIONS - 1)
+    game = _game_at_our_turn_plan(2950017)
+    planner = make_policy('planner_pv2_puct', 9)
+    control = make_policy('planner_pv2_tiles', 9)
+    turn = game.turn
+    while game.turn == turn and game.winner is None:
+        s = game.current
+        if s == 0:
+            view = Observation.for_policy(game, 0, planner)
+            action = planner.choose(view, 0)
+            assert action == control.choose(Observation.for_policy(game, 0, control), 0)
+        else:
+            bot = make_policy('planner_offer_accept', s)
+            action = bot.choose(Observation.for_policy(game, s, bot), s)
+        game.apply(s, action)
+    assert [d['reason'] for d in planner.diagnostics] == ['fallback']
+
+
+@needs_weights
+def test_at_most_four_searched_decisions_per_turn(monkeypatch):
+    monkeypatch.setattr(ps.PUCTSearchPlanner, 'max_simulations', ps.MIN_SIMULATIONS)
+    game = _game_at_our_turn_plan(2950017)
+    planner = make_policy('planner_pv2_puct', 9)
+    view = Observation.for_policy(game, 0, planner)
+    planner._searches = (view.turn, 0, ps.MAX_SEARCHES_PER_TURN)
+    control = make_policy('planner_pv2_tiles', 9)
+    assert planner.choose(view, 0) == control.choose(Observation.for_policy(game, 0, control), 0)
+    assert [d['reason'] for d in planner.diagnostics] == ['turn_cap']
+    assert planner._tiles_turn == (view.turn, 0)

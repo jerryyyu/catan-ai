@@ -1,6 +1,15 @@
 """PUCT search: open-loop MCTS with selective depth over the tiles value (``planner_pv2_puct``).
 
-Predeclared in ``experiments/puct-search.json`` (2026-11-08) before any code ran a game.
+Predeclared in ``experiments/puct-search.json`` (2026-11-08) before any code ran a game,
+with ``amendment_1_2026_11_08`` (before any screen game): priors are a softmax over the
+served scores standardized within the decision; inside simulations every seat plays the
+served bot with player-trade offers disabled (``OfferFreeServedPlanner``; answers to
+offers and everything else as served); the search is root-parallel (``SHARDS`` = 4
+independent trees, shard ``k`` owning simulation indices ``k, k + 4, ...``, run in 4
+worker processes and merged at the root by summing visit counts and value sums, so with
+``max_simulations`` set the result does not depend on the number of workers); a decision
+that falls back hands the rest of the turn to ``planner_pv2_tiles`` with no new
+searches, and at most 4 decisions per turn are searched.
 
 The tree holds only our own decisions (open loop): a node is reached by the sequence
 of our choices, whatever the dice and the opponents did in between. Each simulation
@@ -34,10 +43,13 @@ turn plan is then played step by step while each step stays legal; when it is
 exhausted the served end-of-turn path runs (as ``planner_pv2_tiles`` does when it
 ends a turn).
 """
+from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 import hashlib
 import json
 import math
+import multiprocessing
+import os
 import random
 import time
 
@@ -58,7 +70,9 @@ MIN_SIMULATIONS = 16
 SIMULATION_CAP = 4096       # safety bound on simulations per decision (not expected to bind)
 OVERRUN_SECONDS = .25       # a simulation still running this long after the budget is abandoned
 ADVANCE_STEP_CAP = 1500     # engine steps between two of our decisions before a pass is cut (counted)
-SERVED = 'planner_offer_accept'
+SHARDS = 4                  # independent root-parallel trees (simulation index k + 4j -> shard k)
+WORKERS = 4                 # worker processes running the shards (1: in-process, same result)
+MAX_SEARCHES_PER_TURN = 4
 _RESOURCES = list(Resource)
 
 
@@ -86,6 +100,28 @@ def softmax(scores):
     exps = [math.exp(s - top) for s in scores]
     total = sum(exps)
     return [e / total for e in exps]
+
+
+def standardized_priors(scores):
+    """Softmax (temperature 1) of the scores standardized within the decision (z-scores,
+    population SD); equal scores give a uniform prior."""
+    n = len(scores)
+    mean = sum(scores) / n
+    sd = math.sqrt(sum((x - mean) ** 2 for x in scores) / n)
+    if not sd > 0:
+        return [1 / n] * n
+    return softmax([(x - mean) / sd for x in scores])
+
+
+def entropy(priors):
+    return -sum(p * math.log(p) for p in priors if p > 0)
+
+
+class OfferFreeServedPlanner(AcceptanceOfferPlanner):
+    """The served bot with player-trade offers disabled: the opponent model (and our own
+    non-plan decisions) inside simulations. It still answers offers; all else is served."""
+
+    offers = False
 
 
 def puct_select(node, candidates, c_puct=C_PUCT, fpu=None):
@@ -160,20 +196,25 @@ def simulate(env, root, index, deadline=None, clock=time.perf_counter):
     return len(path) - 1
 
 
-def run_search(env, budget=None, max_simulations=None, clock=time.perf_counter):
-    """Simulate until ``max_simulations`` (deterministic) or the wall-clock ``budget``."""
+def run_search(env, budget=None, max_simulations=None, clock=time.perf_counter, offset=0, stride=1):
+    """Simulate until ``max_simulations`` (deterministic) or the wall-clock ``budget``.
+
+    Simulation ``j`` of this tree uses index ``offset + stride * j``; with
+    ``max_simulations`` the tree runs every such index below ``max_simulations``.
+    """
     root = Node()
     started = clock()
     deadline = None if max_simulations is not None else started + budget + OVERRUN_SECONDS
     done, max_depth, abandoned = 0, 0, 0
     while True:
+        index = offset + stride * done
         if max_simulations is not None:
-            if done >= max_simulations:
+            if index >= max_simulations:
                 break
         elif clock() - started >= budget or done >= SIMULATION_CAP:
             break
         try:
-            depth = simulate(env, root, done, deadline, clock)
+            depth = simulate(env, root, index, deadline, clock)
         except Abandoned:
             abandoned += 1
             break
@@ -257,23 +298,28 @@ def replay(world, seat, seq):
     return True
 
 
-class CatanEnv:
-    """The search environment of one decision of ``seat``, from its view only."""
+def env_inputs(view, seat, salt, root_candidates):
+    """Everything a search needs, derived from ``seat``'s view only (sent to the workers)."""
+    key = (salt, view.turn, view.phase, view.setup_index, seat, len(view.events),
+           sorted((r.value, n) for r, n in view.players[seat].resources.items()),
+           list(view.players[seat].development or ()))
+    return {'seat': seat, 'base': base_world(view), 'estimates': resource_estimates(view.events),
+            'unseen': unseen_cards(view, seat), 'counts': [p.resource_count for p in view.players],
+            'dev_counts': [p.development_count for p in view.players], 'root_candidates': root_candidates,
+            'key': hashlib.sha256(json.dumps(key).encode()).hexdigest()}
 
-    def __init__(self, planner, view, seat, root_candidates):
-        self.planner, self.seat = planner, seat
+
+class CatanEnv:
+    """The search environment of one decision, built from ``env_inputs`` (view-derived)."""
+
+    def __init__(self, planner, inputs):
+        self.planner, self.seat = planner, inputs['seat']
         self.bots = planner.served_bots()
-        self.base = base_world(view)
-        self.estimates = resource_estimates(view.events)
-        self.unseen = unseen_cards(view, seat)
-        self.counts = [p.resource_count for p in view.players]
-        self.dev_counts = [p.development_count for p in view.players]
-        self.root_candidates = root_candidates
+        self.base, self.estimates, self.unseen = inputs['base'], inputs['estimates'], inputs['unseen']
+        self.counts, self.dev_counts = inputs['counts'], inputs['dev_counts']
+        self.root_candidates, self.key = inputs['root_candidates'], inputs['key']
         self.truncated = 0
-        key = (planner.search_salt, view.turn, view.phase, view.setup_index, seat, len(view.events),
-               sorted((r.value, n) for r, n in view.players[seat].resources.items()),
-               list(view.players[seat].development or ()))
-        self.key = hashlib.sha256(json.dumps(key).encode()).hexdigest()
+        self.prior_entropy_sum, self.prior_count = 0., 0
 
     # -- sampling
     def sample(self, index):
@@ -315,7 +361,9 @@ class CatanEnv:
                 available.append((key, score, (plan, after)))
         if not available:
             return []
-        priors = softmax([score for _, score, _ in available])
+        priors = standardized_priors([score for _, score, _ in available])
+        self.prior_entropy_sum += entropy(priors)
+        self.prior_count += 1
         return [(key, p, payload) for (key, _, payload), p in zip(available, priors)]
 
     def _play_plan(self, world, plan):
@@ -378,6 +426,65 @@ class CatanEnv:
 
 
 # ------------------------------------------------------------------ the bot
+# ------------------------------------------------------- root parallelism
+def run_shard(planner, inputs, shard, budget, max_simulations):
+    """Shard ``shard``'s tree; returns its root statistics (picklable)."""
+    env = CatanEnv(planner, inputs)
+    root, stats = run_search(env, budget=budget, max_simulations=max_simulations, offset=shard, stride=SHARDS)
+    children = {k: (c.N, c.W, principal_depth(c)) for k, c in root.children.items()}
+    return {'children': children, 'N': root.N, 'W': root.W, 'stats': stats, 'truncated': env.truncated,
+            'prior_entropy_sum': env.prior_entropy_sum, 'prior_count': env.prior_count}
+
+
+_WORKER_PLANNER = None
+_POOL = None
+
+
+def _worker_init():
+    global _WORKER_PLANNER
+    _WORKER_PLANNER = PUCTSearchPlanner(random.Random(0), pool=False)
+
+
+def _worker_shard(args):
+    return run_shard(_WORKER_PLANNER, *args)
+
+
+def _worker_ready(delay):
+    time.sleep(delay)
+    return os.getpid()
+
+
+def search_pool(workers):
+    """A process-wide pool of search workers (spawned once, warmed before first use)."""
+    global _POOL
+    identity = (workers, os.environ.get('CATAN_PARAMETER_MODEL'), os.environ.get('CATAN_ENGINE'))
+    if _POOL is not None and _POOL[0] != identity:
+        _POOL[1].shutdown(wait=False, cancel_futures=True)
+        _POOL = None
+    if _POOL is None:
+        pool = ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context('spawn'),
+                                   initializer=_worker_init)
+        list(pool.map(_worker_ready, [.2] * workers))  # every worker has loaded its planner
+        _POOL = (identity, pool)
+    return _POOL[1]
+
+
+def merge_shards(results):
+    """Sum the shards' root statistics in shard order (independent of the worker count)."""
+    root = Node()
+    depths = {}
+    for r in results:
+        root.N += r['N']
+        root.W += r['W']
+        for key, (n, w, depth) in r['children'].items():
+            child = root.children.setdefault(key, Node())
+            child.N += n
+            child.W += w
+            if n:
+                depths.setdefault(key, []).append(depth)
+    return root, depths
+
+
 def _key(seq):
     return json.dumps(seq, sort_keys=True)
 
@@ -388,8 +495,9 @@ class PUCTSearchPlanner(PVSearchTilesPlanner):
     turn_budget = TURN_BUDGET
     setup_budget = SETUP_BUDGET
     max_simulations = None  # tests: a fixed simulation count instead of the clock
+    workers = WORKERS
 
-    def __init__(self, rng=None):
+    def __init__(self, rng=None, pool=True):
         super().__init__(rng)
         # Seed of every search stream, read from the planner's RNG state without consuming it.
         state = self.rng.getstate() if self.rng is not None else None
@@ -398,11 +506,15 @@ class PUCTSearchPlanner(PVSearchTilesPlanner):
         self._bots = None
         self._plan = None
         self._ended = None
+        self._searches = None      # (turn, seat, searched decisions this turn)
+        self._tiles_turn = None    # (turn, seat): planner_pv2_tiles plays the rest of this turn
+        self._use_pool = pool
+        if pool and self.workers > 1:
+            search_pool(self.workers)  # spawn and warm the workers before the first timed decision
 
     def served_bots(self):
         if self._bots is None:
-            from .bots import make_policy
-            self._bots = [make_policy(SERVED, s + 1) for s in range(4)]
+            self._bots = [OfferFreeServedPlanner(random.Random(s + 1)) for s in range(4)]
         return self._bots
 
     @property
@@ -442,17 +554,32 @@ class PUCTSearchPlanner(PVSearchTilesPlanner):
     # -- search
     def search(self, view, seat, candidates, budget):
         started = time.perf_counter()
-        env = CatanEnv(self, view, seat, candidates)
-        root, stats = run_search(env, budget=budget, max_simulations=self.max_simulations)
+        inputs = env_inputs(view, seat, self.search_salt, candidates)
+        jobs = [(inputs, k, budget, self.max_simulations) for k in range(SHARDS)]
+        if self._use_pool and self.workers > 1:
+            results = list(search_pool(self.workers).map(_worker_shard, jobs))
+        else:
+            # in-process: shards run one after another, each on a quarter of the clock
+            results = [run_shard(self, inputs, k, budget / SHARDS, self.max_simulations) for k in range(SHARDS)]
+        root, depths = merge_shards(results)
         order = [key for key, _, _ in candidates]
         pick = best_child(root, order)
-        fallback = stats['simulations'] < MIN_SIMULATIONS or pick is None
+        simulations = sum(r['stats']['simulations'] for r in results)
+        fallback = simulations < MIN_SIMULATIONS or pick is None
+        priors = standardized_priors([score for _, score, _ in candidates])
+        prior_count = sum(r['prior_count'] for r in results)
+        pv = depths.get(pick, [0])
         self.diagnostics.append({
             'reason': 'fallback' if fallback else 'puct', 'phase': view.phase, 'turn': view.turn,
-            'seconds': time.perf_counter() - started, 'rollouts': stats['simulations'],
-            'truncated': env.truncated, 'simulations': stats['simulations'], 'max_depth': stats['max_depth'],
-            'pv_depth': stats['pv_depth'], 'abandoned': stats['abandoned'], 'fallback': fallback,
-            'candidates': len(candidates),
+            'seconds': time.perf_counter() - started, 'rollouts': simulations,
+            'truncated': sum(r['truncated'] for r in results), 'simulations': simulations,
+            'max_depth': max(r['stats']['max_depth'] for r in results),
+            'pv_depth': 1 + max(pv), 'pv_depth_mean': 1 + sum(pv) / len(pv),
+            'abandoned': sum(r['stats']['abandoned'] for r in results), 'fallback': fallback,
+            'candidates': len(candidates), 'prior_entropy': entropy(priors), 'prior_top_mass': max(priors),
+            'mean_prior_entropy': (sum(r['prior_entropy_sum'] for r in results) / prior_count
+                                   if prior_count else None),
+            'shard_simulations': [r['stats']['simulations'] for r in results],
             'visits': [root.children[k].N if k in root.children else 0 for k in order],
             'choice': order.index(pick) if pick is not None else None})
         return None if fallback else next(plan for key, _, plan in candidates if key == pick)
@@ -484,6 +611,8 @@ class PUCTSearchPlanner(PVSearchTilesPlanner):
                 return self._end_path(view, seat)
         elif self._plan is not None and self._plan[0] != (view.turn, seat):
             self._plan = None
+        if view.phase == 'actions' and self._tiles_turn == (view.turn, seat):
+            return PVSearchV2BFixPlanner.choose(self, view, seat)  # rest of a fallen-back turn
         before = self.last_offer_turn
         served = AcceptanceOfferPlanner.choose(self, view, seat)
         if (view.phase != 'actions' or served['type'] in ('offer_trade', 'play_development')
@@ -493,10 +622,21 @@ class PUCTSearchPlanner(PVSearchTilesPlanner):
         if self._ended == self._hand(view, seat):
             return served if served['type'] == 'end_turn' else self._end_path(view, seat)
         candidates = self.turn_candidates(view, seat)
-        plan = self.search(view, seat, candidates, self.turn_budget) if len(candidates) > 1 else []
-        if plan is None:
+        plan = []
+        if len(candidates) > 1:
+            if self._searches is None or self._searches[:2] != (view.turn, seat):
+                self._searches = (view.turn, seat, 0)
+            if self._searches[2] >= MAX_SEARCHES_PER_TURN:
+                self.diagnostics.append({'reason': 'turn_cap', 'phase': view.phase, 'turn': view.turn,
+                                         'seconds': 0., 'rollouts': 0, 'truncated': 0, 'fallback': False})
+                plan = None
+            else:
+                self._searches = (view.turn, seat, self._searches[2] + 1)
+                plan = self.search(view, seat, candidates, self.turn_budget)
+        if plan is None:  # fallback or turn cap: planner_pv2_tiles plays the rest of this turn
+            self._tiles_turn = (view.turn, seat)
             self.last_offer_turn = before
-            return PVSearchV2BFixPlanner.choose(self, view, seat)  # planner_pv2_tiles' choice
+            return PVSearchV2BFixPlanner.choose(self, view, seat)
         if not plan:
             self._ended = self._hand(view, seat)
             return served if served['type'] == 'end_turn' else self._end_path(view, seat)
