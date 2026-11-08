@@ -1,0 +1,51 @@
+{
+  "name": "pv2-tiles-precise",
+  "stage": "dev",
+  "candidate": "planner_pv2_tiles",
+  "control": "planner_offer_accept",
+  "requires_search": false,
+  "seeds_per_panel": 512,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2910000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2911000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2912000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.0,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.03,
+    "planning_sigma": 0.3,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-08 before any game (Jerry: 'Yes both sound good'). Precise three-table re-measurement of planner_pv2_tiles (unchanged code and weights: snapshot tiles-source-v1 @ 029fc07, npz sha 27dd7818) after pv2-tiles-screen-v1 (80 seeds) read +.019 [\u2212.030,+.068] / +.050 [+.004,+.096] / +.097 [+.048,+.146] vs served. Same design as pv2-b-fix-precise: 512 seeds per table, zero-lift point gate with paired-normal reporting; a measurement, not a promotion test (promotion needs +.05 on all tables then a held-out LCB > 0). Also reports, descriptively, the comparison with pv2-b-fix-precise's +.025/+.015/+.019 (different seeds; not paired). Fresh seeds 2910000/2911000/2912000. Ultra, process-cap 4; about 25 minutes at the observed screen pace."
+  }
+}
