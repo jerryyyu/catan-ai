@@ -1,0 +1,51 @@
+{
+  "name": "puct-screen",
+  "stage": "dev",
+  "candidate": "planner_pv2_puct",
+  "control": "planner_pv2_tiles",
+  "requires_search": false,
+  "seeds_per_panel": 260,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2970000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2971000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2972000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.02,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.04,
+    "planning_sigma": 0.22,
+    "power": 0.8,
+    "note": "Binding screen of the predeclaration experiments/puct-search.json (2026-11-08, written before any code or game). Candidate planner_pv2_puct (src/catan_ai/puct_search.py): open-loop MCTS over our own decisions with PUCT (c_puct 1.5, priors softmax of the served scores, FPU = parent mean, availability-aware), one expansion per simulation evaluated by the planner_pv2_tiles value on the end-of-our-turn afterstate, terminal 1/0, opponents and our non-plan decisions by the served planner_offer_accept, hidden hands and deck sampled per simulation from our card-counted view; root move = most-visited child; budgets 1.2 s (turn plan) / 1.5 s (setup settlement), fewer than 16 simulations fall back to planner_pv2_tiles' choice (counted in the receipt's search diagnostics: reason 'fallback'). Control planner_pv2_tiles (same value net and candidates, one-ply). Gate: paired lift >= +.02 on each of tactical / mixed / self, 0 truncations, p95 decision <= 2 s, step max <= 2 s, own-turn max <= 10 s. Power: alternative +.04, planning sigma .22 (as tiles-margin), power .8. check_design (hoeffding, 3 panels, threshold .0200): 259 seeds refused (family pass .800 < .8 by rounding: 'underpowered screen: 259 seeds per panel pass every panel with probability 0.800 at true lift 0.04 (threshold 0.0200, sigma 0.22); 260 required for 0.8'); 260 admitted: panel pass .9287, family pass .8009, required_clusters 260. Fresh seeds 2950000/2951000/2952000. Weights checkpoints/value_tiles_v1.npz sha256 27dd7818cdc29082dd5c712c0f1fdf708ff568cdc98fb4b898f01e3f60820697 (local artifact, metadata only in git). Amendment 1 (experiments/puct-search.json amendment_1_2026_11_08, before any screen game): standardized priors, offer-free served opponents inside simulations, 4-way root parallelism (each candidate decision uses 4 spawned search worker processes; choose the evaluator process cap so evaluator processes x 5 fit the host's cores), fallback hands the rest of the turn to planner_pv2_tiles, at most 4 searched decisions per turn. Gate, seeds and power unchanged. Run with CATAN_ENGINE=python (the served checkpoint is bound to the python backend). Seeds moved before any screen game (amendment 2): the profile had played candidate games on seeds 2950000-2950003 vs Tactical; the screen uses fresh blocks 2970000/2971000/2972000 and profiles use 2969000+."
+  }
+}

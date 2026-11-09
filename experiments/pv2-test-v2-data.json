@@ -1,0 +1,23 @@
+{
+  "name": "pv2-test-v2-data",
+  "stage": "data-generation",
+  "schema": "pv2",
+  "policy": "planner_offer_accept",
+  "max_turns": 1000,
+  "decision_rate": 0.1,
+  "candidates": 4,
+  "playouts": 8,
+  "playouts_test": 24,
+  "explore": 0.25,
+  "split": {
+    "train": [
+      2940000,
+      0
+    ],
+    "test": [
+      2941000,
+      250
+    ]
+  },
+  "note": "Fresh pv2 test decisions for the tiles-margin offline gate (Jerry 2026-11-08: '1. Yes' to regenerating instead of using pv2b-data-v1, whose producer predates rollout-truncation recording). Same policy, candidates, playouts_test 24, decision rate, exploration and max_turns as pv2b-data; producer scripts/pv2_data.py as merged on main (truncation recorded per candidate). Test split only (train size 0); fresh seeds 2941000-2941249, never used before. Data-generation pause lifted for this run only. Ultra."
+}

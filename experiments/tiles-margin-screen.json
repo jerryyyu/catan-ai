@@ -1,0 +1,51 @@
+{
+  "name": "tiles-margin-screen",
+  "stage": "dev",
+  "candidate": "planner_pv2_tiles_margin",
+  "control": "planner_pv2_tiles",
+  "requires_search": false,
+  "seeds_per_panel": 260,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2930000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2931000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2932000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.02,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 2,
+    "maximum_turn_seconds": 10
+  },
+  "power": {
+    "alternative_effect": 0.04,
+    "planning_sigma": 0.22,
+    "power": 0.8,
+    "note": "Evaluator form of the screen predeclared in experiments/tiles-margin.json (screen block, 2026-11-08, before replay, training or any game); runs only if that declaration's offline gate passes. Candidate planner_pv2_tiles_margin = planner_pv2_tiles with the tiles_margin weights (trunk + P(I win) head of the tile transformer trained with an auxiliary final-VP margin head; checkpoints/value_tiles_margin_v1); control planner_pv2_tiles. Tables tactical / mixed / self as in pv2-tiles-precise (self = three planner_offer_accept opponents); 256 seeds per table; gate +.02 paired lift on every table, 0 truncations, p95 decision <= 2 s, step max <= 2 s, turn max <= 10 s. Power as declared there: alternative +.04 over the current transformer bot, planning sigma .22 (largest cluster SD observed in pv2-tiles-precise .249 was vs the served bot; head-to-head of two close PV bots is expected lower, so .22 is declared, not measured), power .8. Fresh seeds 2930000/2931000/2932000. Admission fix before any game (2026-11-08): check_design refused 256 seeds/panel (family pass .797 at the declared alternative +.04, threshold +.02, sigma .22; 260 required for .80), so seeds_per_panel is 260. Bar, alternative, sigma and power are unchanged."
+  }
+}

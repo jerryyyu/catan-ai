@@ -17,6 +17,10 @@ refusal or a failed validation leaves any existing files untouched.
     uv run --with numpy --with torch python scripts/export_tiles_npz.py \
         --pt checkpoints/value_tiles_v1.pt --npz checkpoints/value_tiles_v1.npz \
         --meta checkpoints/value_tiles_v1.meta.json
+
+A checkpoint derived by ``scripts/tiles_margin.py win`` (trunk + win head of a tiles_margin
+model, margin head dropped) is an ordinary ``tiles`` checkpoint plus ``derived_from``;
+the meta then carries ``derived_from`` and ``--source-run`` names its run.
 """
 import argparse
 import hashlib
@@ -98,6 +102,7 @@ def main(argv=None):
     parser.add_argument('--pt', type=Path, required=True)
     parser.add_argument('--npz', type=Path, required=True)
     parser.add_argument('--meta', type=Path, required=True)
+    parser.add_argument('--source-run', default=SOURCE_RUN)
     args = parser.parse_args(argv)
     stem = str(args.npz)[:-len('.npz')]
     if not str(args.npz).endswith('.npz') or Path(f'{stem}.meta.json') != args.meta:
@@ -118,7 +123,7 @@ def main(argv=None):
     staging = Path(tempfile.mkdtemp(prefix='.export-tiles-', dir=args.npz.parent))
     try:
         staged_npz, staged_meta = staging / args.npz.name, staging / args.meta.name
-        meta, diff = stage(torch, ckpt, arrays, probe, args.pt, staged_npz, staged_meta)
+        meta, diff = stage(torch, ckpt, arrays, probe, args.pt, staged_npz, staged_meta, args.source_run)
         refuse_existing(args.npz, args.meta)
         publish(args.npz, lambda tmp: shutil.copyfile(staged_npz, tmp))
         publish(args.meta, lambda tmp: shutil.copyfile(staged_meta, tmp))
@@ -134,11 +139,11 @@ def validate(stem):
     return TilesValueNet(stem).parity_max_abs_diff
 
 
-def stage(torch, ckpt, arrays, probe, pt, npz, meta_path):
+def stage(torch, ckpt, arrays, probe, pt, npz, meta_path, source_run=SOURCE_RUN):
     """Write the pair at the staging paths and validate it there."""
     write_npz(npz, arrays)
     meta = {'schema': 'catan-value-tiles-v1', 'arm': 'tiles', 'pt_sha256': sha256(pt),
-            'npz_sha256': sha256(npz), 'source_run': SOURCE_RUN,
+            'npz_sha256': sha256(npz), 'source_run': source_run,
             'arrays': {k: list(v.shape) for k, v in sorted(arrays.items())},
             'params': ckpt['params'], 'epoch': ckpt['epoch'], 'val_bce': ckpt['val_bce'],
             'epochs': ckpt['epochs'], 'train_identity': ckpt['train_identity'],
@@ -146,6 +151,8 @@ def stage(torch, ckpt, arrays, probe, pt, npz, meta_path):
             'torch_version': torch.__version__,
             'probe': {'seed': PROBE_SEED, 'random_rows': PROBE_RANDOM, 'game_seed': PROBE_GAME_SEED,
                       'rows': len(probe)}}
+    if 'derived_from' in ckpt:
+        meta['derived_from'] = ckpt['derived_from']
     meta_path.write_text(json.dumps(meta, indent=1) + '\n')
     diff = validate(str(npz)[:-len('.npz')])
     meta['parity_max_abs_diff'] = diff
