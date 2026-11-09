@@ -127,3 +127,21 @@ def test_real_weights_smoke():
         action = bot.choose(view, seat)
         assert action['type'] == 'offer_trade' or action in view.legal_actions(seat)
         assert bot.last_search is None or bot.last_search['scored'] >= 1
+
+
+def test_first_move_must_be_legal_in_the_real_game(fake_net, monkeypatch):
+    """exact-screen-v1 aborted: the card-counted world allowed a bank trade the real bank could not fill."""
+    decisions, bot = _decisions('planner_pv2_exact', 41, 15)
+    illegal = {'type': 'bank_trade', 'give': 'lumber', 'receive': 'grain'}
+
+    def poisoned(planner, view, seat, max_nodes, max_states):
+        return [[illegal]], 1, False
+    monkeypatch.setattr(es, 'turn_sequences', poisoned)
+    monkeypatch.setattr(es, 'afterstate_encoding',
+                        lambda planner, view, seat, seq: (None, True) if seq == [illegal] else
+                        __import__('catan_ai.pv_search', fromlist=['x']).afterstate_encoding(planner, view, seat, seq))
+    for view, seat in decisions:
+        action = bot.choose(view, seat)
+        assert action['type'] == 'offer_trade' or action in view.legal_actions(seat)
+        if illegal not in view.legal_actions(seat):
+            assert action != illegal

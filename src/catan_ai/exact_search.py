@@ -82,8 +82,13 @@ class TurnExactPlanner(PVSearchTilesPlanner):
             return served
         pv = candidate_sequences(self, view, seat, self.K)
         extra, nodes, capped = turn_sequences(self, view, seat, self.MAX_NODES, self.MAX_STATES)
+        # The card-counted world estimates opponents' hands and so the bank's supply; only the real
+        # legal set may supply the move actually played (exact-screen-v1 aborted on an illegal bank
+        # trade the world allowed). Deeper steps are a plan, replanned against the real game.
+        legal = view.legal_actions(seat)
+        dropped = sum(1 for s in extra if s[0] not in legal)
         listed = {json.dumps(s, sort_keys=True) for s in pv}
-        seqs = pv + [s for s in extra if json.dumps(s, sort_keys=True) not in listed]
+        seqs = pv + [s for s in extra if s[0] in legal and json.dumps(s, sort_keys=True) not in listed]
         scored = []
         for seq in seqs:
             encoded = afterstate_encoding(self, view, seat, seq)
@@ -97,6 +102,7 @@ class TurnExactPlanner(PVSearchTilesPlanner):
                 best, pick = value, seq
         self.last_offer_turn = before
         self.last_search = {'pv_candidates': len(pv), 'scored': len(scored), 'nodes': nodes, 'capped': capped,
+                            'dropped_illegal_first': dropped,
                             'from_pv': pick is not None and json.dumps(pick, sort_keys=True) in listed}
         if pick is None:
             return served
@@ -107,4 +113,6 @@ class TurnExactPlanner(PVSearchTilesPlanner):
             action = (self._fallback(view, seat) if any(a['type'] == 'play_development' for a in legal)
                       else {'type': 'end_turn'})
             return self._end_of_turn_offer(view, seat, action)
+        if pick[0] not in legal:  # defensive: a served candidate is always legal, extras were filtered
+            return served
         return pick[0]
