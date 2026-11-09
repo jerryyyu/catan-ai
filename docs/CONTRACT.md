@@ -18,8 +18,7 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
   +.067]** tactical, **+.044 [+.026, +.062]** mixed and **+.106 [+.087, +.125]**
   self. The predeclared 80-seed screen (`runs/ultra/pv2-tiles-screen-v1`) FAILED
   its +.05-on-all-three-tables rule (tactical +.019, mixed +.050, self +.097).
-  No held-out run has completed. **Confirmatory held-out: pending
-  (experiments/tiles-heldout.json).**
+  Confirmatory held-out (experiments/tiles-heldout.json): internal tables PASS (+.046 / +.040 / +.096, seed LCBs +.023 / +.016 / +.072); paired seeded JSettlers FAIL (222 vs 195 of 512, +.053, LCB −.005 at α .0125). Owner-authorized re-test of that table (experiments/tiles-retest.json, fresh seed, 2048 paired games, same α): PASS (889 vs 764, +.061 [+.035, +.087], LCB +.032). The first JSettlers FAIL stays recorded; the promotion rests on the internal held-out PASS plus the re-test PASS.
   Descriptive external benchmarks (below): Catanatron AlphaBeta depth 2 .613,
   depth 3 .545 (`runs/ultra/external-ladder-tiles-v1`); JSettlers robots .447
   vs .373 for `planner_offer_accept` (`runs/jsettlers-match-tiles-v1`).
@@ -186,10 +185,9 @@ collecting derived statistics without written consent.
   analysis supports a promotion.
 - The served `planner_pv2_tiles` is the exception, and no held-out claim is
   made for it: its predeclared screen FAILED (tactical +.019 against a +.05
-  bar on every table), no held-out run has completed, and it was promoted by
-  the owner on the precise 512-seed measurement and the descriptive external
-  benchmarks. Its lift over `planner_offer_accept` is a measurement, not a
-  passed gate. Confirmatory held-out: pending (experiments/tiles-heldout.json).
+  bar on every table), and it was promoted by the owner on the precise
+  512-seed measurement and the descriptive external benchmarks, then
+  confirmed by held-out evidence with one failed table re-tested: Confirmatory held-out (experiments/tiles-heldout.json): internal tables PASS (+.046 / +.040 / +.096, seed LCBs +.023 / +.016 / +.072); paired seeded JSettlers FAIL (222 vs 195 of 512, +.053, LCB −.005 at α .0125). Owner-authorized re-test of that table (experiments/tiles-retest.json, fresh seed, 2048 paired games, same α): PASS (889 vs 764, +.061 [+.035, +.087], LCB +.032). The first JSettlers FAIL stays recorded; the promotion rests on the internal held-out PASS plus the re-test PASS.
 - Correctness, latency, calibration and strength are separate claims. A
   passing test suite or a fast benchmark says nothing about play strength.
 
