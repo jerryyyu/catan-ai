@@ -1,0 +1,51 @@
+{
+  "name": "exact-screen",
+  "stage": "dev",
+  "candidate": "planner_pv2_exact",
+  "control": "planner_pv2_tiles",
+  "requires_search": false,
+  "seeds_per_panel": 260,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2980000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2981000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2982000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.02,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 5,
+    "maximum_turn_seconds": 20
+  },
+  "power": {
+    "alternative_effect": 0.04,
+    "planning_sigma": 0.22,
+    "power": 0.8,
+    "note": "Turn-exact search (src/catan_ai/exact_search.py; board #1 'Turn-exact search', Jerry 2026-11-09 'try exact search similar to shengji'). Candidate planner_pv2_exact: planner_pv2_tiles' five candidates scored identically, plus every own-turn afterstate reachable with builds, bank/port trades and one purchase (breadth-first on the card-counted world, deduplicated by own position; count budgets 5000 expansions / 1200 scored afterstates, no clocks); replaces the control's pick only when strictly better by the same tiles value. Control planner_pv2_tiles (served). Headroom probe (scripts/exact_turn_probe.py, 32 self-play games, seeds 2990100-2990131, before this screen): exhaustive pick differs from PV's first move in 21% of 4,670 decisions; model-rated better in 14% (mean +.039 when better, max-over-candidates optimism not removed); 9 immediate wins the beam missed. Gate: paired lift >= +.02 on each of tactical / mixed / self, 0 truncations, p95 decision <= 2 s, step max <= 5 s, own-turn max <= 20 s (owner decision before any game, Jerry 2026-11-09: 'We can have a longer exact search like up to 5s'; a turn can hold several searched decisions). Power as puct-screen (alternative +.04, sigma .22, power .8; check_design admitted 260). Fresh seeds 2980000/2981000/2982000. Weights checkpoints/value_tiles_v1.npz sha256 27dd7818cdc29082dd5c712c0f1fdf708ff568cdc98fb4b898f01e3f60820697. Run with CATAN_ENGINE=python (the served checkpoint is bound to the python backend). Pre-screen latency check (9 games, seeds 2969500-2969508, loaded Mac mini, not screen seeds): decision p95 0.11-0.28 s, max 3.8 s; 8 of 380 searches hit a cap."
+  }
+}
