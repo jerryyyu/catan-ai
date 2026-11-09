@@ -1,6 +1,7 @@
 """Bounded public-information turn search with an economic leaf evaluation."""
 from copy import deepcopy
 import heapq
+import json
 import math
 
 from .bots import HeuristicBot
@@ -112,6 +113,7 @@ class EconomicPlanner(HeuristicBot):
         return self._value(game, seat)
 
     def choose(self, view, seat):
+        self._served_tree = None
         legal = view.legal_actions(seat)
         root = public_projection(view)
         if self.buy_after_root and sum(e['action']['type'] == 'buy_development'
@@ -129,11 +131,12 @@ class EconomicPlanner(HeuristicBot):
         base = self._leaf(root, seat)
         best_action = next((a for a in legal if a['type'] == 'end_turn'), None)
         best_score = base if best_action else -math.inf
-        frontier = [(root, None, legal)]
+        frontier = [(root, None, legal, [])]
+        best_by_first = {}  # the best sequence per first move, as pv_search.served_sequences keeps it
         nodes = 0
         for depth in range(3):
             successors = []
-            for game, first, actions in frontier:
+            for game, first, actions, path in frontier:
                 for action in actions:
                     kind = action['type']
                     build = kind in {'build_city', 'build_settlement', 'build_road'}
@@ -154,10 +157,17 @@ class EconomicPlanner(HeuristicBot):
                     first_action = first or action
                     if score > best_score:
                         best_action, best_score = first_action, score
+                    seq = path + [action]
+                    key = json.dumps(seq[0], sort_keys=True)
+                    if key not in best_by_first or score > best_by_first[key][0]:
+                        best_by_first[key] = (score, seq)
                     if not buy and child.winner is None:
-                        successors.append((score, child, first_action))
+                        successors.append((score, child, first_action, seq))
             successors.sort(key=lambda row: row[0], reverse=True)
-            frontier = [(game, first, game.legal_actions(seat)) for _, game, first in successors[:8]]
+            frontier = [(game, first, game.legal_actions(seat), seq) for _, game, first, seq in successors[:8]]
+        # The same tree pv_search.served_sequences would grow from this view (same root, cap, order and
+        # tie-breaking); it reuses it instead of searching again (perf report item 4).
+        self._served_tree = (id(view), seat, best_by_first)
         if best_action is not None and best_action['type'] != 'end_turn':
             return best_action
         # Special development effects and bilateral negotiation retain the

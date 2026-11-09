@@ -32,7 +32,14 @@ REPLACEABLE = ('build_city', 'build_settlement', 'build_road', 'bank_trade', 'bu
 
 
 def served_sequences(planner, view, seat):
-    """The served turn search, keeping the best-scoring sequence for each first move."""
+    """The served turn search, keeping the best-scoring sequence for each first move.
+
+    When the served ``choose`` has just searched this same view, its tree is reused (it records the
+    best sequence per first move with identical root, cap, order and tie-breaking)."""
+    memo = getattr(planner, '_served_tree', None)
+    if memo is not None and memo[0] == id(view) and memo[1] == seat:
+        planner._served_tree = None
+        return sorted(memo[2].values(), key=lambda t: -t[0])
     legal = view.legal_actions(seat)
     root = public_projection(view)
     if planner.buy_after_root and sum(e['action']['type'] == 'buy_development' for e in view.events) < 25:
@@ -100,7 +107,11 @@ def afterstate_encoding(planner, view, seat, seq):
     replayed = _replay(planner._world(view), seat, seq)
     if replayed is None:
         return None
-    world, bought = replayed
+    return encode_afterstate(replayed[0], replayed[1], view, seat)
+
+
+def encode_afterstate(world, bought, view, seat):
+    """``afterstate_encoding`` of an already replayed world: ``(features, won)``."""
     if world.winner == seat:
         return None, True
     if not bought:
