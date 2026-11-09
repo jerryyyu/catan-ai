@@ -22,6 +22,7 @@
     "wilson_halfwidth_at_.25_neg": 0.038,
     "note": "Sized for a benchmark table (shares to about +/-.05), not for detecting a small difference between the two policies; a paired difference under ~.07 is not expected to be resolved."
   },
-  "analysis_command": "python scripts/stac_paired.py runs/stac-ladder/tiles/receipt.json runs/stac-ladder/served/receipt.json --out runs/stac-ladder/paired.json",
-  "note": "Predeclared 2026-11-08 before any ladder game; fresh STAC seed 20261115."
+  "analysis_command": "python scripts/stac_paired.py runs/stac-ladder-v1/tiles/receipt.json runs/stac-ladder-v1/served/receipt.json --expect pomcp_ts_cr=256 --expect stac_negotiator=512 --out runs/stac-ladder-v1/paired.json",
+  "note": "Predeclared 2026-11-08 before any ladder game; fresh STAC seed 20261115.",
+  "amendment_2026_11_08": "Codex HOLD @42aad77 (before any ladder game): stac_paired.py now takes the declared coverage as input and requires typed health evidence, unique complete game records per opponent and zero truncation; only setup-evidence differences count toward the 5% exclusion allowance. Runs, sizes and seeds unchanged."
 }
