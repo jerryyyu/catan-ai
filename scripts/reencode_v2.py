@@ -29,7 +29,8 @@ from train_value_v2 import file_sha256, shard_stats  # noqa: E402
 
 
 def replay(args):
-    seed, path, identity, point, stride, max_turns = args
+    seed, path, identity, point, stride, max_turns, *rest = args
+    policy = rest[0] if rest else 'planner_offer_accept'
     from catan_ai.bots import make_policy
     from catan_ai.encoding import encode
     from catan_ai.engine import Game
@@ -41,7 +42,6 @@ def replay(args):
         raise ValueError(f'{path} does not belong to the declared root')
     stored = [r for r in record['value_rows'] if r['point'] == point]
     keep = set(range(seed % stride, len(stored), stride))
-    policy = 'planner_offer_accept'
     game = Game.new([f'{policy}-{i}' for i in range(4)], seed)
     bots = [make_policy(policy, seed * 17 + i + 1) for i in range(4)]
     seen, k, xs, ys, keys = set(), 0, [], [], []
@@ -113,7 +113,7 @@ def main():
             seed = int(path.stem)
             if seed in by_seed:
                 raise ValueError(f'seed {seed} present in two roots')
-            by_seed[seed] = (str(path), root['identity_sha256'])
+            by_seed[seed] = (str(path), root['identity_sha256'], manifest['config'].get('policy', 'planner_offer_accept'))
     started, written = time.monotonic(), {}
     for split, (lo, n) in cfg['split'].items():
         seeds = list(range(lo, lo + n))
@@ -122,7 +122,8 @@ def main():
             raise ValueError(f'{split}: {len(missing)} seeds missing, e.g. {missing[:3]}')
         for shard_start in range(0, n, cfg['shard_games']):
             chunk = seeds[shard_start:shard_start + cfg['shard_games']]
-            jobs = [(s, *by_seed[s], cfg['point'], cfg['stride'], cfg['max_turns']) for s in chunk]
+            jobs = [(s, by_seed[s][0], by_seed[s][1], cfg['point'], cfg['stride'], cfg['max_turns'],
+                     by_seed[s][2]) for s in chunk]
             with Pool(args.workers) as pool:
                 results = pool.map(replay, jobs, chunksize=4)
             name = write_shard(args.output, split, shard_start // cfg['shard_games'], chunk, results)

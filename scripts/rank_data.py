@@ -68,10 +68,14 @@ def source_revision():
 
 def run_identity(config):
     from catan_ai.bots import make_policy
+    bot = make_policy(config['policy'], 0)
     identity = {'config': config, 'config_sha256': canonical_sha(config), 'source': source_files(),
                 'source_revision': source_revision(),
-                'checkpoint_sha256': getattr(make_policy(config['policy'], 0), 'model_hash', None),
+                'checkpoint_sha256': getattr(bot, 'model_hash', None),
                 'script_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    meta = getattr(getattr(bot, 'net', None), 'meta', None)
+    if isinstance(meta, dict) and meta.get('npz_sha256'):
+        identity['value_net_sha256'] = meta['npz_sha256']  # local weights (e.g. planner_pv2_tiles) bound by hash
     identity['identity_sha256'] = canonical_sha(identity)
     return identity
 
