@@ -35,7 +35,8 @@ def test_every_policy_row_is_in_the_matrix():
 
 def test_policy_intervals_are_checked():
     reg = copy.deepcopy(REG)
-    reg['policies'][1]['vs_prod']['tactical'] = [0.5, 0.0, 0.1]
-    reg['policies'][0]['external']['jsettlers'] = [0.9, 0.1, 0.2, 512]
+    pol = {p['name']: p for p in reg['policies']}
+    pol['planner_pv2_tiles']['vs_prod']['tactical'] = [0.5, 0.0, 0.1]
+    pol['planner_offer_accept']['external']['jsettlers'] = [0.9, 0.1, 0.2, 512]
     problems = build.check_registry(reg)
     assert any('bad interval' in p for p in problems) and any('bad win share' in p for p in problems)
