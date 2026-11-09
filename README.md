@@ -126,11 +126,32 @@ not be shared during play. Human timings measure action processing, not thinking
 time; bot timings include observation, decision and application. These local
 one-human/three-bot pilots support debugging, not a human-transfer strength claim.
 
-Solo play defaults to the **Trained planner** (`planner_offer_accept`: the fitted
+Solo play defaults to **`planner_pv2_tiles`** (served since 2026-11-08 by owner
+promotion): the trained planner below with its own-turn build decisions chosen
+by PV search, each candidate afterstate scored by a tile-token value transformer
+served in NumPy. Its weights are a local file that is never committed. To serve
+it, place the file and check it:
+
+```sh
+cp /path/to/value_tiles_v1.npz checkpoints/value_tiles_v1.npz
+shasum -a 256 checkpoints/value_tiles_v1.npz   # must equal npz_sha256 in checkpoints/value_tiles_v1.meta.json
+uv run python -c "from catan_ai.api import bots_info; print(bots_info())"
+```
+
+The last line must print `'default': 'planner_pv2_tiles'`. The server verifies
+the file once per file version (SHA256 against the committed metadata, tokenizer
+layout, and a parity probe against the exported torch logits). If NumPy or the
+weights are missing or fail a check, new games use `planner_offer_accept` and
+`GET /api/bots` gives `fallback_reason` "Tiles value weights missing or
+unverified" with the loader's error in `fallback_detail` (paths cut to their
+basename; the full error is in the server log). A game records the
+weights' SHA256 and a restart refuses the game if they changed.
+
+The fallback and previous default is the **Trained planner** (`planner_offer_accept`: the fitted
 `planner_parameter` build search, with robber, steal, discard,
 development-card and trade-answer moves chosen by one shared position score,
 plus at most one player trade offer per turn, never to a seat on 8+ points and
-steered away from players who keep refusing; served since 2026-11-03). Every served bot and what it measured: [docs/POLICIES.md](docs/POLICIES.md). The server loads `checkpoints/planner_parameter.json` unless
+steered away from players who keep refusing; served 2026-11-03 to 2026-11-08). Every served bot and what it measured: [docs/POLICIES.md](docs/POLICIES.md). The server loads `checkpoints/planner_parameter.json` unless
 `CATAN_PARAMETER_MODEL` names another checkpoint. A game records the checkpoint's
 SHA256 for restart recovery, and all three opponents must load the same
 checkpoint. The checkpoint pins every source file and the engine backend. It is

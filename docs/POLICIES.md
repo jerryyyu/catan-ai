@@ -1,10 +1,12 @@
 # Bot policy ledger
 
-Last reconciled: **2026-11-03**.
+Last reconciled: **2026-11-08**.
 
-**Served default: `planner_offer_accept`** (ladder row 7), for new solo web and API games. Rollback:
-`planner_offer_guard` (row 6). Tactical is the fallback whenever the fitted checkpoint is unbound. The three-human
-pilot rooms keep Tactical. **New screens compare against the served default**, on the standard tactical / mixed /
+**Served default: `planner_pv2_tiles`** (ladder row 8, owner promotion 2026-11-08), for new solo web and API
+games. Rollback: `planner_offer_accept` (row 7), which is also the automatic fallback when the local tiles value
+weights (`checkpoints/value_tiles_v1.npz`, never committed, pinned by SHA256) or NumPy are missing or fail to
+verify. Tactical is the fallback whenever the fitted checkpoint is unbound. `/api/bots` names the policy in use and
+the reason for any fallback. The three-human pilot rooms keep Tactical. **New screens compare against the served default**, on the standard tactical / mixed /
 self tables with a predeclared, powered +5 pp bar (`docs/PLAN.md`).
 
 This file is the list of served bots and what each one measured, plus the ideas that were screened and not taken.
@@ -28,6 +30,7 @@ benchmarks are mapped in [AI_POLICIES.md](AI_POLICIES.md). Add a row here in the
 
 | row | served | policy (registry name) | change | vs | held-out lift: tactical / mixed / self [LCB] | status | PR | receipt |
 |---:|---|---|---|---|---|---|---|---|
+| 8 | 2026-11-08 | `planner_pv2_tiles` | PV search (served search proposes end-now + 4 best sequences) scored by the tile-token value transformer (arch-bakeoff-v1 `tiles`, 555k params, NumPy serving; weights local, pinned by SHA256); same candidates, features and integration as `planner_pv2_b_fix` | row 7 | precise **+.045** [+.024, +.067] / **+.044** [+.026, +.062] / **+.106** [+.087, +.125] (512 seeds per table, 95% CI) | owner promotion (Jerry 2026-11-08); predeclared 80-seed screen FAIL on the all-tables +.05 rule (tactical +.019); Confirmatory held-out (experiments/tiles-heldout.json): internal tables PASS (+.046 / +.040 / +.096, seed LCBs +.023 / +.016 / +.072); paired seeded JSettlers FAIL (222 vs 195 of 512, +.053, LCB −.005 at α .0125). Owner-authorized re-test of that table (experiments/tiles-retest.json, fresh seed, 2048 paired games, same α): PASS (889 vs 764, +.061 [+.035, +.087], LCB +.032). The first JSettlers FAIL stays recorded; the promotion rests on the internal held-out PASS plus the re-test PASS. Descriptive external: Catanatron AlphaBeta depth 2 .613, depth 3 .545 (both retired as benchmarks under the predeclared rule); JSettlers robots .447 (served row 7: .373) | #34 (bot), this PR (serving) | `pv2-tiles-screen-v1`, `pv2-tiles-precise-v1`, `external-ladder-tiles-v1`, `jsettlers-match-tiles-v1`, `pv2-tiles-heldout-v2`, `jsettlers-heldout`, `jsettlers-retest` |
 | 7 | 2026-11-03 | `planner_offer_accept` | Guarded offers weighted by each recipient's public acceptance rate (accepted + 2) / (answered + 2) over its answers to any seat; identical to the guard until a seat answers | row 6 | mixed only: **+.068** [+.052]; DEV mixed +.050 (bar +.03); point floor tactical −.001 / self −.007 / strict +.002; mixed accept rate .31 → .71 | DEV PASS, HELD-OUT PASS (mixed); table held-out non-inferiority PASS: tactical −.009 [LCB −.027], self +.002 [−.016], strict .000 [−.018] (floor −.03, α .05/3) | #20 (bot), #23 (serving) | `offer-accept-heldout-v1`, `offer-accept-mixed-dev-v1`, `offer-accept-dev-v1`, `offer-accept-diagnostics-v1`, `offer-accept-heldout-tables-v1` |
 | 6 | 2026-11-02 | `planner_offer_guard` | Red-team fixes to offers: none to seats on 8+ public points; gain net of .5 × the recipient's next-turn build gain | row 5 | DEV only: +.006 / +.006 / −.022, strict −.007; accepted trades to 8+ point seats 41.4 → 0 per 100 games (tactical) | point-floor PASS (−.03 on observed lift, not a confidence bound); no own held-out; does not inherit row 5's lift | #19 | `offer-guard-dev-v1`, `offer-diagnostics-v1` |
 | 5 | 2026-11-01 | `planner_unified_offer` | Player trade offers: when the turn search would end the turn, propose the 1-for-1 or 2-for-1 exchange that most raises the shared score, weighted by the card-counted chance the recipient holds the card; at most one per turn, margin .25 | row 4 | **+.271 / +.115 / +.059** [+.247 / +.093 / +.037]; DEV +.270 / +.096 / +.082 | DEV PASS, HELD-OUT PASS; acceptor-dependent: +.003 vs `planner_unified` at a strict-acceptor table (`offer-strict-dev-v1`, bar +.03 FAIL) | #18 | `planner-offer-heldout-v1` (receipt names the arm `planner_offer`, snapshot 14e7ab3) |
@@ -38,7 +41,8 @@ benchmarks are mapped in [AI_POLICIES.md](AI_POLICIES.md). Add a row here in the
 | 0 | 2026-10-29 | `heuristic` | Baseline heuristic; the frozen comparator | — | — | baseline | — | — |
 
 Attribution: rows 4, 5, 6 and 7 each changed one thing against their stated comparator. Row 4 was measured against
-row 2, not row 3, so no direct claim is made that it beats row 3.
+row 2, not row 3, so no direct claim is made that it beats row 3. Row 8 changes the own-turn build path as one unit
+(PV search and its tiles scorer) against row 7; the searches with other scorers are in "Tried and not taken".
 
 ## Tried and not taken
 
