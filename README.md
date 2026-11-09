@@ -18,7 +18,16 @@ React table for solo play and private rooms. Target: Colonist ranked four-player
 | [docs/ENGINE.md](docs/ENGINE.md) | Rules coverage, privacy, search methods, rules validation |
 | [docs/PLAYING.md](docs/PLAYING.md) | Pilots, replays, private rooms, audits |
 
-Served solo bot: `planner_offer_accept` (since 2026-11-03).
+Served solo bot: `planner_pv2_tiles` (owner promotion 2026-11-08; fallback `planner_offer_accept`). Its weights are a
+local file, never committed:
+
+```bash
+cp /path/to/value_tiles_v1.npz checkpoints/   # sha256 must equal npz_sha256 in checkpoints/value_tiles_v1.meta.json
+uv run python -c "from catan_ai.api import bots_info; print(bots_info())"   # expect 'default': 'planner_pv2_tiles'
+```
+
+Missing or unverified weights fall back to `planner_offer_accept` with the reason in `GET /api/bots`
+([docs/PLAYING.md](docs/PLAYING.md)).
 
 ## Run
 
