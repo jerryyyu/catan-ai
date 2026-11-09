@@ -1,0 +1,28 @@
+{
+  "name": "tiles-retest",
+  "stage": "confirmatory re-test of one failed table (owner decision)",
+  "decision": "Jerry 2026-11-08, after the tiles held-out FAIL (JSettlers paired +.053, LCB -.005 at alpha .05/4; board comment 6726762818): 'yea help do that' to re-testing on fresh seeds with more games.",
+  "first_attempt": {
+    "config": "experiments/tiles-heldout.json",
+    "verdict": "FAIL",
+    "internal": "PASS (+.046/+.040/+.096, seed LCBs +.023/+.016/+.072)",
+    "jsettlers": "222 vs 195 of 512, +.053, 95% CI [+.002,+.104], one-sided LCB at alpha .0125 = -.005",
+    "note": "The first attempt's FAIL stays recorded and is reported next to this re-test."
+  },
+  "tables": {
+    "jsettlers": "experiments/jsettlers-retest-tiles.json and experiments/jsettlers-retest-served.json (Mac mini): the same 2048 seeded all-SMART JSettlers games per policy"
+  },
+  "scope": "Only the failed JSettlers table is re-run. The internal tables passed on fresh held-out seeds in the first attempt and are not re-run; their result carries over unchanged.",
+  "gate": "PASS iff the paired JSettlers table passes: per-game difference won(tiles) - won(served) over the 2048 games paired by game name, after scripts/jsettlers_paired.py confirms compatible receipts (same base seed, patch, all_smart, game set) and identical setup per game; mean difference >= 0 and one-sided paired-normal LCB > 0 at alpha .05/4 = .0125 (the first attempt's per-table level, kept, not loosened); both runs 0 bridge errors, 0 truncations, all 2048 games completed; more than 5% of games excluded fails the table.",
+  "power": {
+    "alternative_effect": 0.045,
+    "planning_sigma": 0.586,
+    "games": 2048,
+    "alpha_one_sided": 0.0125,
+    "power": 0.891,
+    "note": "Alternative +.045: the internal held-out Tactical lift (+.046), below the first attempt's JSettlers point (+.053) to avoid planning on a possibly inflated estimate. Sigma .586: per-game paired SD measured in the first attempt. Pass requires a mean above ~+.029 (2.241 x .586/sqrt(2048)). 1024 games would give power .585 at +.045 and was rejected as underpowered."
+  },
+  "multiplicity": "This is a second test of the same hypothesis after a failure. The per-table alpha stays at .0125 and both attempts are reported; a PASS here supports the promotion with that history stated, it does not erase the first FAIL.",
+  "consequence": "PASS: the owner promotion is supported (internal held-out PASS + JSettlers re-test PASS); serving PR #45 can be updated with both results for Jerry's merge decision. FAIL: no further re-test of this table on this model; planner_offer_accept stays served.",
+  "note": "Predeclared 2026-11-08 before any re-test game; fresh base seed 20261114."
+}
