@@ -1,0 +1,70 @@
+{
+  "name": "stac-trades-smoke",
+  "purpose": "Bridge smoke for player trading through STAC's chat negotiation: the served policy (one seat) against 3 POMCP-TS-CR and, separately, 3 STAC JSettlers 1.1.16 robots, all trading. Checks that offers in both directions are answered, accepted trades execute, and no turn stalls into a forced end. Bridge health only; not a strength claim.",
+  "policy": "planner_offer_accept",
+  "seed": 20261112,
+  "stac": {
+    "repo": "https://github.com/ruflab/StacSettlers",
+    "commit": "c9e3b66f69e796b1cdd56a508ec32a6ceed1141d",
+    "patch": {
+      "file": "runs/external/stac-catanai-v2.patch",
+      "sha256": "ebadcfcb42c1dc272d9b2e6f25225e68c25ee877b45f6f72e7c69c91c52aa052"
+    },
+    "seed": 20261112,
+    "no_player_trades": false,
+    "fully_observable": false,
+    "observable_vp": false,
+    "chat_negotiation": true,
+    "force_end_turn_sec": 30,
+    "jvm_heap": "3g",
+    "player_trading": "chat"
+  },
+  "agents": {
+    "pomcp_ts_cr": {
+      "source": "Dobre & Lascarides, POMCP with Human Preferences in Settlers of Catan (AIIDE 2018), POMCP-TS-CR; paper setting 10k iterations, 4 threads, C=4 with PUCT, offers limit 3",
+      "flags": [
+        "MCTS_ITERATIONS:10000",
+        "MCTS_THREADS:4",
+        "MCTS_Cp:4.0",
+        "MCTS_TYPED_ROLLOUTS",
+        "MCTS_FACTORED_BELIEF",
+        "MCTS_OFFERS_LIMIT:3",
+        "MCTS_POMCP",
+        "MCTS_LIST_POMS",
+        "MCTS_HUMAN_ACTION_TYPE_PDF_CONDITIONED_SEEDING",
+        "MCTS_PUCT",
+        "MCTS_HUMAN_ACTION_TYPE_PDF_SEEDING_TEMPERATURE:7",
+        "MCTS_HUMAN_ACTION_TYPE_CONDITIONED_DIST_ROLLOUTS"
+      ],
+      "time_cap_ms": 10000
+    },
+    "jsettlers": {
+      "source": "STAC-bundled JSettlers 1.1.16 robot (SOCDefaultRobotFactory, server default parameters: FAST strategy)"
+    }
+  },
+  "blocks": [
+    {
+      "name": "StacTradePomcp",
+      "opponent": "pomcp_ts_cr",
+      "games": 4,
+      "jvm_heap": "8g"
+    },
+    {
+      "name": "StacTradeJset",
+      "opponent": "jsettlers",
+      "games": 4
+    }
+  ],
+  "parallel_blocks": 2,
+  "bridge_timeout_ms": 30000,
+  "timeout_sec_per_game": 1200,
+  "pass_bar": {
+    "completed_games": 8,
+    "bridge_errors": 0,
+    "min_player_trades_executed": 1,
+    "max_offer_timeouts": 0,
+    "max_force_ends": 0
+  },
+  "limitations": "8 games; bridge health only. Player trades on in both directions through STAC's chat negotiation; our bot never makes counter-offers and rejects counter-offers to its own offers. STAC's MCTS play is not reproducible even when seeded. Fresh seed 20261112 (not used by earlier STAC runs). The MCTS 10 s per-search cap is a deviation from the paper.",
+  "predeclared": "2026-11-08 before any trading game; pass bar fixed here."
+}

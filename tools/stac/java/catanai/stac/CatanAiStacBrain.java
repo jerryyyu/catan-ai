@@ -9,6 +9,8 @@ import com.google.gson.JsonObject;
 import catanai.jsettlers.DecisionLog;
 import catanai.jsettlers.PythonBridge;
 
+import soc.dialogue.StacDialogueManager;
+import soc.dialogue.StacTradeMessage;
 import soc.game.SOCCity;
 import soc.game.SOCDevCardConstants;
 import soc.game.SOCGame;
@@ -18,9 +20,13 @@ import soc.game.SOCResourceSet;
 import soc.game.SOCRoad;
 import soc.game.SOCSettlement;
 import soc.game.SOCTradeOffer;
+import soc.game.StacTradeOffer;
+import soc.message.SOCGameTextMsg;
 import soc.message.SOCGameState;
 import soc.robot.SOCRobotBrainImpl;
 import soc.robot.SOCRobotClient;
+import soc.robot.stac.Persuasion;
+import soc.robot.stac.StacRobotBrain;
 import soc.util.CappedQueue;
 import soc.util.SOCRobotParameters;
 
@@ -32,10 +38,25 @@ import soc.util.SOCRobotParameters;
  *<P>
  * Decisions bridged: initial settlements and roads, roll vs. playing a development card before the
  * roll, each PLAY1 action (build, buy, bank/port trade, play a card, end turn), free roads from Road
- * Building, robber placement and victim, and discards. Player trading is off for these matches
- * (the match patch's server-side block, {@code Trades=false} and {@code NO_TRADES} for STAC's robots;
- * the bridge disables the policy's offers), so offers are never made, and an offer to us (which the
- * server cannot execute) is left to STAC and logged as a fallback.
+ * Building, robber placement and victim, and discards.
+ *<P>
+ * Player trading has two match modes. With STAC's chat negotiation off (the default), the match
+ * patch blocks player exchanges, the bridge disables the policy's offers, and an offer to us is left
+ * to STAC and logged as a fallback. With chat negotiation on ({@link StacRobotBrain#isChatNegotiation()},
+ * set by the Simulation config), trades use STAC's chat format ({@link StacTradeMessage}): an offer
+ * {@code TRD:from:to:<offer>}, answers {@code ACC}, {@code REJ} or {@code NO_RESPONSE}, and the
+ * offerer's confirming {@code ACC}, after which STAC's server executes the exchange. This brain then
+ * <ul>
+ * <li>answers every chat offer addressed to it with the policy's accept/reject decision (the same
+ *     {@code trade_response} request as the JSettlers bridge), or a reject when the offer cannot be a
+ *     legal trade (not involving the current player, or a give set we do not hold);</li>
+ * <li>sends the policy's own {@code offer} as a chat offer, waits for the recipient's answer, and
+ *     confirms an accept so the server executes it (a reject, no-response or counter-offer ends the
+ *     attempt and the policy is asked again);</li>
+ * <li>counts each player's public chat answers to the current player's offers for the snapshot's
+ *     {@code trade_answers}, as the JSettlers client does for protocol answers.</li>
+ * </ul>
+ * Every chat trade event is written to the decision log as a {@code chat_trade} record.
  *<P>
  * When the bridge cannot give a STAC-legal action, the inherited STAC/JSettlers 1.1.16 logic
  * ({@link SOCRobotBrainImpl}) decides and the decision is logged as a {@code fallback} with its
@@ -59,6 +80,12 @@ public class CatanAiStacBrain extends SOCRobotBrainImpl
     private int repeats;
     private int ourPN = -1;
     private String gameName;
+
+    /** Per player number: {accepted, answered} public chat answers to the current player's offers. */
+    private final int[][] chatAnswers = new int[4][2];
+    /** Our chat offer awaiting its recipient's answer, or null. */
+    private StacTradeOffer pendingOffer;
+    private int pendingTo = -1;
 
     public CatanAiStacBrain(final SOCRobotClient rc, final SOCRobotParameters params, final SOCGame ga,
         final CappedQueue mq)
@@ -105,13 +132,17 @@ public class CatanAiStacBrain extends SOCRobotBrainImpl
             final JsonObject snap = StacStateJson.snapshot(game, pn, decision);
             snap.addProperty("kind", "decide");
             snap.add("js_legal", StacStateJson.legal(game, pn, decision));
-            final JsonArray answers = new JsonArray();  // player trading is off: no public answers
-            for (int i = 0; i < game.maxPlayers; ++i)
+            // Public chat answers to offers (all zero when player trading is off).
+            final JsonArray answers = new JsonArray();
+            synchronized (chatAnswers)
             {
-                final JsonArray x = new JsonArray();
-                x.add(0);
-                x.add(0);
-                answers.add(x);
+                for (int i = 0; i < game.maxPlayers; ++i)
+                {
+                    final JsonArray x = new JsonArray();
+                    x.add(chatAnswers[i][0]);
+                    x.add(chatAnswers[i][1]);
+                    answers.add(x);
+                }
             }
             snap.add("trade_answers", answers);
             if (extra != null)
@@ -378,6 +409,12 @@ public class CatanAiStacBrain extends SOCRobotBrainImpl
             endOurTurn();
             return;
         }
+        if (pendingOffer != null)
+        {
+            // The wait for an answer timed out (SOCRobotBrain cleared waitingForTradeResponse).
+            chatTrade("offer_timeout", pendingTo, pendingOffer, null);
+            clearPendingOffer();
+        }
         final JsonObject r = ask("actions", null);
         final String c = cmd(r);
         final String key = r.has("action") ? r.get("action").toString() : c;
@@ -425,17 +462,190 @@ public class CatanAiStacBrain extends SOCRobotBrainImpl
         case "end_turn":
             endOurTurn();
             break;
+        case "offer":
+            if (StacRobotBrain.isChatNegotiation() && makeChatOffer(r))
+                break;
+            if (! r.has("reason"))
+                r.addProperty("reason", StacRobotBrain.isChatNegotiation()
+                    ? "offer not makeable in STAC" : "player trading is disabled for this match");
+            fallback("actions", r);
+            super.getActionForPLAY1();
+            break;
         default:
-            if (c.equals("offer"))
-                r.addProperty("reason", "player trading is disabled for this match");
             fallback("actions", r);
             super.getActionForPLAY1();
         }
     }
 
+    // ------------------------------------------------------------------ chat trading
+
+    private void clearPendingOffer()
+    {
+        pendingOffer = null;
+        pendingTo = -1;
+        ourPlayerData.setCurrentOffer(null);
+    }
+
+    /** Send the policy's offer in STAC's chat format; false (with a reason on r) if it cannot be made. */
+    private boolean makeChatOffer(final JsonObject r)
+    {
+        final int pn = ourPlayerData.getPlayerNumber();
+        final int to = r.get("to").getAsInt();
+        final SOCResourceSet give = StacStateJson.resourceSet(r.getAsJsonObject("give"));
+        final SOCResourceSet get = StacStateJson.resourceSet(r.getAsJsonObject("get"));
+        if ((to < 0) || (to >= game.maxPlayers) || (to == pn) || (give.getTotal() == 0) || (get.getTotal() == 0)
+            || ! ourPlayerData.getResources().contains(give))
+        {
+            r.addProperty("reason", "offer not makeable in STAC: recipient " + to + " give " + give + " get " + get);
+            return false;
+        }
+        final boolean[] toArr = new boolean[game.maxPlayers];
+        toArr[to] = true;
+        final StacTradeOffer offer = new StacTradeOffer(game.getName(), pn, toArr, give, false, get, false);
+        ourPlayerData.setCurrentOffer(offer);
+        pendingOffer = offer;
+        pendingTo = to;
+        waitingForTradeResponse = true;
+        counter = 0;
+        client.sendText(game, new StacTradeMessage(Integer.toString(pn), Integer.toString(to), offer, false,
+            new Persuasion(), "Would you trade?").toMessage());
+        chatTrade("offer_sent", to, offer, null);
+        return true;
+    }
+
+    private static boolean addressedTo(final StacTradeMessage tm, final int pn)
+    {
+        final String rec = tm.getReceivers();
+        if (rec == null)
+            return false;
+        for (final String x : rec.split(","))
+            if (x.trim().equals(Integer.toString(pn)))
+                return true;
+        return false;
+    }
+
+    private void reply(final boolean accept, final int to)
+    {
+        final int pn = ourPlayerData.getPlayerNumber();
+        client.sendText(game, accept ? StacDialogueManager.toMessage(new StacTradeMessage(Integer.toString(pn),
+                Integer.toString(to), true, false, false, false, null, false, "Deal.").toString())
+            : StacDialogueManager.toMessage(new StacTradeMessage(Integer.toString(pn), Integer.toString(to),
+                false, true, false, false, null, false, "No thanks.").toString()));
+    }
+
+    @Override
+    protected void handleChat(final SOCGameTextMsg gtm)
+    {
+        final String text = gtm.getText();
+        if (! StacRobotBrain.isChatNegotiation() || (text == null) || ! text.startsWith(StacTradeMessage.TRADE))
+            return;
+        final StacTradeMessage tm;
+        final int sender;
+        try
+        {
+            tm = StacTradeMessage.parse(StacDialogueManager.fromMessage(text));
+            sender = tm.getSenderInt();
+        } catch (RuntimeException e) {
+            chatTrade("unparsed", -1, null, "unparsed chat trade message: " + e);
+            return;
+        }
+        final int pn = ourPlayerData.getPlayerNumber();
+        final int current = game.getCurrentPlayerNumber();
+        if ((sender < 0) || (sender >= game.maxPlayers) || (sender == pn))
+            return;
+        if ((tm.isAccept() || tm.isReject()) && (sender != current))
+        {
+            synchronized (chatAnswers)
+            {
+                if (tm.isAccept())
+                    ++chatAnswers[sender][0];
+                ++chatAnswers[sender][1];
+            }
+        }
+        if (! addressedTo(tm, pn))
+            return;
+        final StacTradeOffer offer = tm.getOffer();
+
+        // An answer to our pending offer.
+        if ((pendingOffer != null) && (sender == pendingTo))
+        {
+            final StacTradeOffer ours = pendingOffer;
+            if (tm.isAccept())
+            {
+                reply(true, sender);  // the confirming accept; the server executes the exchange
+                clearPendingOffer();
+                waitingForTradeResponse = false;
+                waitingForTradeMsg = true;
+                counter = 0;
+                chatTrade("offer_accepted", sender, ours, null);
+                return;
+            }
+            if (tm.isReject() || tm.isNoResponse() || (offer != null))
+            {
+                if (offer != null)
+                    reply(false, sender);  // we never take counter-offers
+                clearPendingOffer();
+                waitingForTradeResponse = false;
+                counter = 0;
+                chatTrade(offer != null ? "offer_countered" : (tm.isReject() ? "offer_rejected" : "offer_no_response"),
+                    sender, ours, null);
+                return;
+            }
+        }
+
+        if (offer == null)
+            return;  // accepts, rejects and no-responses to offers that are not ours
+        // An offer to us: only a trade with the current player can execute.
+        String refuse = null;
+        if ((sender != current) && (pn != current))
+            refuse = "offer not involving the current player";
+        else if (offer.isPartialOffer() || offer.hasDisjunctiveGiveSet() || offer.hasDisjunctiveGetSet())
+            refuse = "partial or disjunctive offer";
+        else if (! ourPlayerData.getResources().contains(offer.getGetSet()))
+            refuse = "we do not hold the requested resources";
+        else if (pendingOffer != null)
+            refuse = "our own offer is pending";
+        if (refuse != null)
+        {
+            reply(false, sender);
+            chatTrade("answered_reject", sender, offer, refuse);
+            return;
+        }
+        final JsonObject r = ask("trade_response", s -> s.add("offer", StacStateJson.offer(offer)));
+        final String c = cmd(r);
+        if (! c.equals("accept") && ! c.equals("reject"))
+        {
+            r.addProperty("reason", "no accept/reject from the policy (" + c + "); rejected");
+            fallback("trade_response", r);
+        }
+        final boolean accept = c.equals("accept");
+        reply(accept, sender);
+        chatTrade(accept ? "answered_accept" : "answered_reject", sender, offer, null);
+    }
+
+    /** One decision-log record per chat trade event. */
+    private void chatTrade(final String event, final int other, final SOCTradeOffer offer, final String reason)
+    {
+        final JsonObject rec = new JsonObject();
+        rec.addProperty("type", "chat_trade");
+        rec.addProperty("game", game.getName());
+        rec.addProperty("seat", ourPlayerData.getPlayerNumber());
+        rec.addProperty("event", event);
+        rec.addProperty("other", other);
+        rec.addProperty("turn_count", game.getTurnCount());
+        rec.addProperty("current", game.getCurrentPlayerNumber());
+        if (offer != null)
+            rec.add("offer", StacStateJson.offer(offer));
+        if (reason != null)
+            rec.addProperty("reason", reason);
+        DecisionLog.write(rec);
+    }
+
     /** End our turn exactly as {@code SOCRobotBrain.getActionForPLAY1} does. */
     private void endOurTurn()
     {
+        if (pendingOffer != null)
+            clearPendingOffer();
         waitingForGameState = true;
         counter = 0;
         expectPLAY = true;
@@ -599,8 +809,9 @@ public class CatanAiStacBrain extends SOCRobotBrainImpl
     @Override
     protected int considerOffer(final SOCTradeOffer offer)
     {
+        // Protocol offers: only STAC's chat negotiation carries player trades in these matches.
         if (offer.getTo()[ourPlayerData.getPlayerNumber()])
-            fallback("trade_response", refusal("player trading is disabled for this match; offer left to STAC"));
+            fallback("trade_response", refusal("protocol offer (not chat); left to STAC"));
         return super.considerOffer(offer);
     }
 

@@ -100,7 +100,7 @@ Applied to the pinned commit; every change is opt-in or behaviour-neutral:
 | Discard | More than 7 cards: discard half (rounded down) | Same | Exact discard set checked against the hand |
 | Bank | **No finite resource supply** (production, year of plenty and bank trades never run out) | 19 cards per resource | Engine can only be *more* restrictive; opponents' placeholder hands come from STAC's totals |
 | Bank/port trades | 4:1, 3:1 generic port, 2:1 resource port | Same | Engine rate vs STAC rate cross-checked per decision |
-| Player trades | Off for these matches (see below) | Engine supports offers | Policy offers disabled; no trade answers exist |
+| Player trades | Declared per match: off, or chat negotiation (see below) | Engine supports offers | Off: policy offers disabled. Chat: offers and answers in STAC's chat format |
 
 ## Hidden information
 
@@ -115,13 +115,43 @@ rejects anything else, and the tests run it on every recorded STAC snapshot, che
 `Observation` exposes no opponent hand or card list, and check that `StacStateJson` writes no other
 per-player key.
 
-## Player trading is off
+## Player trading
 
-STAC's MCTS agents offer trades through chat negotiation that the JSettlers robots never answer
-(their turns stall until the server forces them to end), so player trading is off in both directions:
+Each match declares `stac.player_trading`.
+
+**`off` (default).** STAC's MCTS agents offer trades only through chat negotiation, which plain
+JSettlers robots never answer, so with chat off player trading is off in both directions:
 `Trades=false` for STAC's JSettlers brains, `NO_TRADES` for the MCTS agents, `policy.offers = False` for
 the served planner (it then ends the turn where it would have offered), and the patched server refuses
 any player exchange and logs it. The receipt fails if STAC's results show an executed player trade.
+
+**`chat`.** STAC's chat negotiation on (`ChatNegotiation=true`, `Trades=true`, no `NO_TRADES`, no server
+block; the config must say `chat_negotiation: true`, `no_player_trades: false`). Trades are chat messages
+in STAC's format (`soc.dialogue.StacTradeMessage`, `|` sent as `~`):
+
+| Message | Text |
+|---|---|
+| Offer | `TRD:<from>:<to>:game=<g>~from=<from>~to=<4 booleans>~give=<set>~disj=false~get=<set>~disj=false~nlchatstring=<text>` |
+| Accept / reject / no response | `TRD:<from>:<to>:ACC~nlchatstring=…`, `…:REJ~…`, `…:NO_RESPONSE~…` |
+
+STAC's server pairs each answer with the current player's offer and executes the exchange when the
+offerer confirms an accept with its own `ACC` (robots only; no human confirmation step). Our brain:
+
+- **Offers to us.** Answers every chat offer addressed to it: the policy's `trade_response` decision
+  (the same request as the JSettlers bridge) becomes `ACC` or `REJ`. It rejects without asking when the
+  trade could not execute (neither side is the current player, a partial or disjunctive offer, a give
+  set we do not hold, or our own offer pending).
+- **Our offers.** The policy keeps its offers (`stacbridge --player-trades`). An `offer` reply is sent as
+  a chat offer to one recipient; the brain waits for the answer, confirms an `ACC` (the server then
+  executes it), and on `REJ`, `NO_RESPONSE` or a counter-offer (which it rejects) asks the policy again.
+  An offer still unanswered when the robot loop's wait expires is dropped and logged `offer_timeout`.
+- **Public answers.** Each player's chat accepts and rejects to the current player's offers are counted
+  into the snapshot's `trade_answers`, as the JSettlers client counts protocol answers.
+
+Every chat trade event is a `chat_trade` record in `decisions.jsonl`, summed per game and block in the
+receipt (`chat_trades`), next to STAC's own `player_trades_executed`. Optional pass-bar keys
+`min_player_trades_executed`, `max_offer_timeouts` and `max_force_ends` let a trading smoke fail when
+trades never execute or turns stall.
 
 ## Decisions and fallbacks
 
@@ -181,3 +211,23 @@ game logged hidden (FullyObservable/ObservableVP/chat off), every logged seed eq
 STAC's results agree with the server's end line on every winner. Determinism (same seed, two runs, 4
 games per opponent): setup identical 8/8, dice identical for every shared roll index 8/8, end-to-end
 identical 4/4 JSettlers games and 0/4 POMCP games (POMCP play is not reproducible), same winner 6/8.
+
+## Chat-trading smokes (2026-11-08, patch v2)
+
+Receipts (local, not committed): `runs/stac-trades-smoke-v1/receipt.json` (sha256 prefix in the PR),
+`runs/stac-trades-smoke-v2/receipt.json`. Bridge health only; 4-game blocks are not strength claims.
+
+| Smoke | Block | Games | Our wins | Executed player trades (table) | Our offers: sent / accepted / rejected / timed out | Their offers we accepted / rejected | Bridge errors | Fallbacks | Forced turn ends | Pass |
+|---|---|---|---|---|---|---|---|---|---|---|
+| v1 (seed 20261112, 3bfcf78) | vs 3 POMCP-TS-CR | 4 | 1 | 74 | 25 / 6 / 19 / 0 | 27 / 231 | 0 | 0 | 0 | |
+| v1 | vs 3 plain JSettlers | 2 of 4 (block timed out) | 1 | 15 | 47 / 0 / 0 / 46 | n/a (they offer through the protocol; 122 left to STAC) | 0 | 122 | 1 | **FAIL** |
+| v2 (seed 20261113, 4d879c4) | vs 3 POMCP-TS-CR | 4 | 2 | 119 | 30 / 11 / 19 / 0 | 39 / 202 | 0 | 0 | 0 | |
+| v2 | vs 3 STAC negotiators | 4 | 0 | 89 | 40 / 9 / 28 / 0 (3 countered) | 171 / 426 | 0 | 0 | 0 | **PASS** |
+
+v1 failed on its declared bar because plain JSettlers robots ignore chat (each of our offers waited
+out the robot loop's ~100 s response timeout); chat mode now refuses that opponent. v2: every game
+completed, 0 legal-set mismatches, all games logged hidden with chat negotiation on and no server
+trade block, every logged seed equal to the derived one, STAC's results agree with the server on
+every winner, our decision latency p50 / p95 / max 4.4 / 20.4 / 80 ms. STAC's negotiator makes many
+offers per turn; whether our accept rule is exploitable at that rate is an open question for a
+measured run, not something 4 games can show.
