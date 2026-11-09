@@ -1,0 +1,51 @@
+{
+  "name": "tiles-ens5-screen",
+  "stage": "dev",
+  "candidate": "planner_pv2_tiles_ens5",
+  "control": "planner_pv2_tiles",
+  "requires_search": false,
+  "seeds_per_panel": 260,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "tactical",
+      "seed": 2985000,
+      "opponents": [
+        "tactical",
+        "tactical",
+        "tactical"
+      ]
+    },
+    {
+      "name": "mixed",
+      "seed": 2986000,
+      "opponents": [
+        "builder",
+        "tactical",
+        "expander"
+      ]
+    },
+    {
+      "name": "self",
+      "seed": 2987000,
+      "opponents": [
+        "planner_offer_accept",
+        "planner_offer_accept",
+        "planner_offer_accept"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.02,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 5,
+    "maximum_turn_seconds": 20
+  },
+  "power": {
+    "alternative_effect": 0.04,
+    "planning_sigma": 0.22,
+    "power": 0.8,
+    "note": "Binding screen of experiments/tiles-tta-ens.json (predeclared 2026-11-09 before any training; PR #53). Offline gate passed ens5 and ens5_tta; ens5 selected by the declared rule (highest cross-eval pick - served: .0098; board #1 comment 6748388722; receipt runs/tiles-ens-v1/gate.json sha256 2d440e8b\u2026). Candidate planner_pv2_tiles_ens5 (src/catan_ai/tiles_ensemble.py): planner_pv2_tiles with its value replaced by logit(mean P(I win)) of the served tiles weights and seeds 1-4, each member pinned to the .pt hash the gate scored. Control planner_pv2_tiles (served). Gate as declared: +.02 paired lift on each of tactical / mixed / self, 0 truncations, p95 decision <= 2 s, step max <= 5 s, turn max <= 20 s. Power: alternative +.04, sigma .22, power .8; check_design admits 260. Fresh seeds 2985000/2986000/2987000 (declared in tiles-tta-ens.json). Latency check (3 games, seeds 2969600-2969602, not screen seeds): decision p95 .07 s, max .14 s. Run with CATAN_ENGINE=python; weights local (meta committed)."
+  }
+}

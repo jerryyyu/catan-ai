@@ -1,0 +1,283 @@
+{
+ "schema": "catan-value-tiles-v1",
+ "arm": "tiles",
+ "pt_sha256": "f780db65298c56cd181ba53cf017f68ff875f7e5d9d4b26b7d645abff916e3df",
+ "npz_sha256": "5bb1cb0149e18ad61f1bb6f2fef8cdb29a8a6d17314e2dfc80bad020820618d4",
+ "source_run": "runs/tiles-ens-v1/seed3 (ultra; experiments/tiles-tta-ens.json)",
+ "arrays": {
+  "mean": [
+   1324
+  ],
+  "parity_logit": [
+   456
+  ],
+  "parity_x": [
+   456,
+   1324
+  ],
+  "sd": [
+   1324
+  ],
+  "tidx": [
+   19,
+   116
+  ],
+  "types": [
+   24
+  ],
+  "w:encoder.layers.0.linear1.bias": [
+   256
+  ],
+  "w:encoder.layers.0.linear1.weight": [
+   256,
+   128
+  ],
+  "w:encoder.layers.0.linear2.bias": [
+   128
+  ],
+  "w:encoder.layers.0.linear2.weight": [
+   128,
+   256
+  ],
+  "w:encoder.layers.0.norm1.bias": [
+   128
+  ],
+  "w:encoder.layers.0.norm1.weight": [
+   128
+  ],
+  "w:encoder.layers.0.norm2.bias": [
+   128
+  ],
+  "w:encoder.layers.0.norm2.weight": [
+   128
+  ],
+  "w:encoder.layers.0.self_attn.in_proj_bias": [
+   384
+  ],
+  "w:encoder.layers.0.self_attn.in_proj_weight": [
+   384,
+   128
+  ],
+  "w:encoder.layers.0.self_attn.out_proj.bias": [
+   128
+  ],
+  "w:encoder.layers.0.self_attn.out_proj.weight": [
+   128,
+   128
+  ],
+  "w:encoder.layers.1.linear1.bias": [
+   256
+  ],
+  "w:encoder.layers.1.linear1.weight": [
+   256,
+   128
+  ],
+  "w:encoder.layers.1.linear2.bias": [
+   128
+  ],
+  "w:encoder.layers.1.linear2.weight": [
+   128,
+   256
+  ],
+  "w:encoder.layers.1.norm1.bias": [
+   128
+  ],
+  "w:encoder.layers.1.norm1.weight": [
+   128
+  ],
+  "w:encoder.layers.1.norm2.bias": [
+   128
+  ],
+  "w:encoder.layers.1.norm2.weight": [
+   128
+  ],
+  "w:encoder.layers.1.self_attn.in_proj_bias": [
+   384
+  ],
+  "w:encoder.layers.1.self_attn.in_proj_weight": [
+   384,
+   128
+  ],
+  "w:encoder.layers.1.self_attn.out_proj.bias": [
+   128
+  ],
+  "w:encoder.layers.1.self_attn.out_proj.weight": [
+   128,
+   128
+  ],
+  "w:encoder.layers.2.linear1.bias": [
+   256
+  ],
+  "w:encoder.layers.2.linear1.weight": [
+   256,
+   128
+  ],
+  "w:encoder.layers.2.linear2.bias": [
+   128
+  ],
+  "w:encoder.layers.2.linear2.weight": [
+   128,
+   256
+  ],
+  "w:encoder.layers.2.norm1.bias": [
+   128
+  ],
+  "w:encoder.layers.2.norm1.weight": [
+   128
+  ],
+  "w:encoder.layers.2.norm2.bias": [
+   128
+  ],
+  "w:encoder.layers.2.norm2.weight": [
+   128
+  ],
+  "w:encoder.layers.2.self_attn.in_proj_bias": [
+   384
+  ],
+  "w:encoder.layers.2.self_attn.in_proj_weight": [
+   384,
+   128
+  ],
+  "w:encoder.layers.2.self_attn.out_proj.bias": [
+   128
+  ],
+  "w:encoder.layers.2.self_attn.out_proj.weight": [
+   128,
+   128
+  ],
+  "w:encoder.layers.3.linear1.bias": [
+   256
+  ],
+  "w:encoder.layers.3.linear1.weight": [
+   256,
+   128
+  ],
+  "w:encoder.layers.3.linear2.bias": [
+   128
+  ],
+  "w:encoder.layers.3.linear2.weight": [
+   128,
+   256
+  ],
+  "w:encoder.layers.3.norm1.bias": [
+   128
+  ],
+  "w:encoder.layers.3.norm1.weight": [
+   128
+  ],
+  "w:encoder.layers.3.norm2.bias": [
+   128
+  ],
+  "w:encoder.layers.3.norm2.weight": [
+   128
+  ],
+  "w:encoder.layers.3.self_attn.in_proj_bias": [
+   384
+  ],
+  "w:encoder.layers.3.self_attn.in_proj_weight": [
+   384,
+   128
+  ],
+  "w:encoder.layers.3.self_attn.out_proj.bias": [
+   128
+  ],
+  "w:encoder.layers.3.self_attn.out_proj.weight": [
+   128,
+   128
+  ],
+  "w:glob.bias": [
+   128
+  ],
+  "w:glob.weight": [
+   128,
+   20
+  ],
+  "w:head.bias": [
+   1
+  ],
+  "w:head.weight": [
+   1,
+   128
+  ],
+  "w:kind": [
+   3,
+   128
+  ],
+  "w:norm.bias": [
+   128
+  ],
+  "w:norm.weight": [
+   128
+  ],
+  "w:player.bias": [
+   128
+  ],
+  "w:player.weight": [
+   128,
+   27
+  ],
+  "w:pos": [
+   24,
+   128
+  ],
+  "w:tile.bias": [
+   128
+  ],
+  "w:tile.weight": [
+   128,
+   116
+  ]
+ },
+ "params": 555009,
+ "epoch": 9,
+ "val_bce": 0.4525724646622107,
+ "epochs": 12,
+ "train_identity": "357454ad9f771952b02214b8efc4ee95aa0254efb9720b00368d7b460d6111fd",
+ "train_seconds": 580.3235960419988,
+ "config": {
+  "name": "arch-bakeoff",
+  "stage": "offline (existing data only; no new data generation)",
+  "data": {
+   "shards": "runs/value-v2-100k-shards",
+   "same_as": "value-v2-100k-aug-b (identical roots, point end_turn, stride 3, split train 2650000+95000 / test 2745000+5000)",
+   "game_records": [
+    "runs/value100k-v1",
+    "runs/value100k-v1b"
+   ],
+   "extra_targets": "winner seat and final turn from each game record (per-row seat = argmax of the encoder-v2 absolute-seat one-hot; consistency check: relative winner == 0 iff y == 1 on every row)"
+  },
+  "common": {
+   "optimizer": "adamw",
+   "learning_rate": 0.0007,
+   "weight_decay": 0.05,
+   "schedule": "cosine",
+   "warmup_fraction": 0.03,
+   "augment": "one of the 12 hex symmetries per row per batch (encoder-v2 permutation applied before any structuring)",
+   "epochs": 12,
+   "batch": 4096,
+   "validation_games": 5000,
+   "seed": 3,
+   "epoch_selection": "lowest validation BCE of P(I win) on the last 5,000 train games; never test"
+  },
+  "arms": {
+   "base": "residual MLP exactly as value-v2-100k-aug-b (1324 -> 512, 3 residual blocks, dropout .1, LayerNorm head), single sigmoid P(I win), retrained here with the common settings as the paired reference",
+   "heads": "same trunk as base; heads: (a) 4-way softmax over the winner's seat relative to me (cross-entropy, weight 1; P(I win) = p[me]); (b) turns remaining until the game ends / 100, Huber, weight 0.1 (auxiliary only). Shengji precedent: richer deciding target helped, auxiliary heads only as training targets",
+   "tiles": "tile-token transformer: 19 tile tokens (tile features + its 6 corners' vertex features + its 6 sides' edge features, Settlers-RL style), 4 player tokens (seat-relative), 1 global token; learned type/position embeddings; 4 pre-norm encoder layers, d 128, 4 heads, MLP 256, dropout .1; P(I win) from the global token",
+   "cnn": "hex-grid CNN (AlphaGo-style board planes): vertices, edges and tile centres placed on a 2D grid from the fixed board coordinates (26 channels: tile 8 + vertex 14 + edge 4), 6 residual 3x3 conv blocks, 64 channels, global average + max pool, concatenated with the per-player and global features into a 256 MLP head; P(I win)"
+  },
+  "gate": {
+   "primary": "per arm vs base, on the 5,000 test games' rows (paired, same rows): AUC(arm) - AUC(base) >= +0.010 with game-clustered bootstrap 95% LCB > 0 (1,000 resamples, seed 29)",
+   "reported": "test AUC and log loss of every arm; calibration (10-bin ECE); parameters; train seconds; for heads, the 4-way log loss",
+   "next": "Arms that pass are cross-evaluated with the pv2 within-decision gate (scripts/cross_eval_pv2.py on the pv2 test decisions); among passing arms the one with the lowest validation BCE (not test) goes to a powered e2e screen inside planner_pv2_b_fix, predeclared separately. A failed bar is recorded, not retuned."
+  },
+  "note": "Predeclared 2026-11-07 before any training (Jerry: 'Yea both - tile based features or a CNN like AlphaGo is also interesting to get board state'; follows the model audit: who-wins/turns-left heads from the shengji findings, tile tokens from Settlers-RL, board planes from AlphaGo/Catanatron's board tensor). Reference result on the same test set: value-v2-100k-aug-b AUC .7715. Ultra (MPS available)."
+ },
+ "torch_version": "2.15.0",
+ "probe": {
+  "seed": 20261108,
+  "random_rows": 64,
+  "game_seed": 2690000,
+  "rows": 456
+ },
+ "parity_max_abs_diff": 1.3156394600422061e-06
+}
