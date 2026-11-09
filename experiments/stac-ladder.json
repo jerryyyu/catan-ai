@@ -1,0 +1,27 @@
+{
+  "name": "stac-ladder",
+  "stage": "external benchmark measurement (no promotion consequence)",
+  "decision": "Jerry 2026-11-08: 'how can we screen our best policies vs STAC now trading is fixed'; evaluation principle (same day): screens vs our best policies and the best external policies.",
+  "runs": [
+    "experiments/stac-ladder-served.json (planner_offer_accept, served)",
+    "experiments/stac-ladder-tiles.json (planner_pv2_tiles, strongest candidate)"
+  ],
+  "host": "ultra, both configs launched together (3 blocks each at a time); run only after Codex PASS on this predeclaration",
+  "trading": "player_trading chat (PR #47): offers and answers both ways; our policy's offer and accept logic; plain JSettlers excluded (ignores chat)",
+  "health_bar": "per receipt: all 768 games completed, 0 bridge errors, 0 offer timeouts, every game logged hidden with chat on, every logged seed equal to the derived one, STAC results agree on every winner; scripts/stac_paired.py healthy (<= 5% of pairs excluded). A receipt failing health is reported but its shares are not used.",
+  "reported": {
+    "per policy and opponent": "win share, Wilson 95%, fair share .25, retirement rule (share >= .50 with Wilson lower bound > .40)",
+    "paired": "tiles - served per opponent: mean paired difference with a two-sided paired-normal 95% interval (a measurement, not a gate)",
+    "also": "mean VP, position counts, chat-trade counts (offers sent/accepted/rejected, answers), executed player trades, MCTS cap hits/overruns, decision latency"
+  },
+  "precision": {
+    "pomcp_games_per_policy": 256,
+    "wilson_halfwidth_at_.25": 0.053,
+    "paired_se_at_sd_.55": 0.034,
+    "negotiator_games_per_policy": 512,
+    "wilson_halfwidth_at_.25_neg": 0.038,
+    "note": "Sized for a benchmark table (shares to about +/-.05), not for detecting a small difference between the two policies; a paired difference under ~.07 is not expected to be resolved."
+  },
+  "analysis_command": "python scripts/stac_paired.py runs/stac-ladder/tiles/receipt.json runs/stac-ladder/served/receipt.json --out runs/stac-ladder/paired.json",
+  "note": "Predeclared 2026-11-08 before any ladder game; fresh STAC seed 20261115."
+}
