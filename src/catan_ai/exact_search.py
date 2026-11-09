@@ -56,7 +56,7 @@ def turn_sequences(planner, view, seat, max_nodes, max_states, worlds=None):
                     continue
                 child.players[seat].pay('development')
             else:
-                child.apply(seat, action)
+                child.apply_trusted(seat, action)  # action is from this state's legal set
             key = _own_key(child, seat, bought)
             if key in seen:
                 continue

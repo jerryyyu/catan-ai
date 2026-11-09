@@ -64,7 +64,7 @@ def served_sequences(planner, view, seat):
                 if buy:
                     child.players[seat].pay('development')
                 else:
-                    child.apply(seat, action)
+                    child.apply_trusted(seat, action)  # action is from this state's legal set
                 score = planner._leaf(child, seat) + (planner.purchase_value if buy else 0) - .01 * (depth + 1)
                 seq = path + [action]
                 key = json.dumps(seq[0], sort_keys=True)
@@ -94,7 +94,7 @@ def _replay(world, seat, seq):
             return world, True  # the purchase ends the sequence (served search never continues past it)
         if action not in world.legal_actions(seat):
             return None
-        world.apply(seat, action)
+        world.apply_trusted(seat, action)  # membership just checked on this state
     return world, False
 
 

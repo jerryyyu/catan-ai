@@ -7,7 +7,7 @@ import pytest
 from catan_ai import _engine_py as E
 from catan_ai import pv_search as pv
 from catan_ai.bots import make_policy
-from catan_ai.engine import BACKEND, Game
+from catan_ai.engine import BACKEND, Game, IllegalAction
 from catan_ai.experiments import source_files
 from catan_ai.observation import Observation
 from catan_ai.parameter_planner import DEFAULT
@@ -60,6 +60,37 @@ def test_fast_game_copy_equals_a_generic_deep_copy():
         for a, b in zip(fast.players, world.players):
             assert vars(a) == vars(b) and a is not b and a.resources is not b.resources
         assert fast.rng.getstate() == world.rng.getstate()
+
+
+def test_public_apply_always_validates_even_without_event_recording(monkeypatch):
+    """Codex HOLD @e8f5f34: record_events=False is a logging setting, not a trust signal."""
+    monkeypatch.setattr(E, '_VALIDATE_SEARCH', False)
+    g = Game.new(['p'] * 4, 1)
+    g.record_events = False
+    with pytest.raises(IllegalAction):
+        g.apply(g.current, {'type': 'end_turn'})  # illegal during setup
+    views, _ = _views(4100012, 5)
+    world = public_projection(views[0][0])
+    assert world.record_events is False
+    with pytest.raises(IllegalAction):
+        world.apply(views[0][1], {'type': 'build_city', 'vertex': 10 ** 6})
+
+
+def test_trusted_apply_equals_apply_for_legal_actions():
+    views, _ = _views(4100014, 20)
+    for view, seat in views:
+        world = public_projection(view)
+        for action in world.legal_actions(seat)[:6]:
+            if action['type'] == 'offer_trade':
+                continue
+            a, b = deepcopy(world), deepcopy(world)
+            a.apply(seat, action)
+            b.apply_trusted(seat, action)
+            assert vars(a).keys() == vars(b).keys()
+            for k in vars(a):
+                if k not in ('players', 'board', 'rng', '_observed_cache'):
+                    assert getattr(a, k) == getattr(b, k), k
+            assert [vars(p) for p in a.players] == [vars(p) for p in b.players]
 
 
 @pytest.mark.skipif(BACKEND != 'python', reason='trusted apply lives in the Python engine')

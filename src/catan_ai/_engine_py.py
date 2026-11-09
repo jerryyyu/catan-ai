@@ -496,7 +496,17 @@ class Game:
             rows.append(freeze(event['public'] | event['private'].get(viewer, {})))
         return tuple(rows)
 
-    def _apply(self, seat: int, action: dict[str, Any]) -> None:
+    def apply_trusted(self, seat: int, action: dict[str, Any]) -> None:
+        """Internal search entry point: apply ``action``, which the caller has just taken from
+        ``self.legal_actions(seat)`` on this same state, without re-deriving the legal set (perf report
+        item 3). Only search enumeration calls this; ``apply`` always validates. Event-recording games
+        and CATAN_VALIDATE_SEARCH=1 validate here too."""
+        if self.record_events or _VALIDATE_SEARCH:
+            self.apply(seat, action)
+            return
+        self._apply(seat, action, trusted=True)
+
+    def _apply(self, seat: int, action: dict[str, Any], trusted: bool = False) -> None:
         if type(seat) is not int or seat not in range(4) or not isinstance(action, dict):
             raise IllegalAction('invalid actor or action')
         if action.get("type") == "offer_trade":
@@ -508,10 +518,7 @@ class Game:
             if not isinstance(edge, (list, tuple)) or len(edge) != 2 or any(type(v) is not int for v in edge):
                 raise IllegalAction('edge requires two integer vertices')
             normalized["edge"] = sorted(edge)
-        # Search copies (record_events False) are trusted: their callers apply actions taken from
-        # legal_actions() of the same state, so re-deriving the legal set here is redundant (perf
-        # report item 3). Real games always validate; CATAN_VALIDATE_SEARCH=1 validates copies too.
-        if self.record_events or _VALIDATE_SEARCH:
+        if not trusted:  # only apply_trusted (search enumeration on this same state) skips validation
             legal = self.legal_actions(seat)
             try:
                 encoded = json.dumps(normalized, sort_keys=True, allow_nan=False)

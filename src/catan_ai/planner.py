@@ -152,7 +152,7 @@ class EconomicPlanner(HeuristicBot):
                     if buy:
                         child.players[seat].pay('development')
                     else:
-                        child.apply(seat, action)
+                        child.apply_trusted(seat, action)  # action is from this state's legal set
                     score = self._leaf(child, seat) + (self.purchase_value if buy else 0) - .01 * (depth + 1)
                     first_action = first or action
                     if score > best_score:
