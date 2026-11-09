@@ -1,0 +1,29 @@
+{
+  "name": "tiles-tta-ens",
+  "stage": "offline gate, then an e2e screen (both predeclared here, before any training or evaluation)",
+  "decision": "Jerry 2026-11-09: 'Let's execute on the transformer improvements' (board #1 row T1/T2: test-time symmetry averaging and a seed ensemble).",
+  "reference": "runs/arch-bakeoff-v1/tiles.pt (the served planner_pv2_tiles weights; test AUC .7859; seed 0)",
+  "data": "runs/value-v2-100k-shards (same split as arch-bakeoff-v1: train 2650000+95000, test 2745000+5000; sealed 2026-11-08T22:02:33Z)",
+  "ensemble_training": "four more 'tiles' models with experiments/arch-bakeoff.json unchanged except common.seed = 1, 2, 3, 4 (scripts/tiles_tta_ens.py train-seed); everything else (architecture, optimizer, 12 epochs, augmentation, epoch selection on the last 5,000 train games) identical. The ensemble is these four plus the reference (seed 0).",
+  "arms": {
+    "tta": "reference weights; P(I win) averaged over the 12 hex symmetries of the encoder-v2 input (the same permutations as training augmentation)",
+    "ens5": "mean P(I win) of the 5 seeds, no symmetry averaging",
+    "ens5_tta": "mean P(I win) over 5 seeds x 12 symmetries"
+  },
+  "offline_gate": {
+    "primary": "each arm judged alone against the reference on the 5,000 test games' rows: AUC(arm) - AUC(reference) >= 0 with the game-clustered bootstrap 95% LCB > -0.002 (1,000 resamples, seed 29), AND within-decision cross-eval on runs/pv2-test-v2 (scripts/cross_eval_arch.py with the arm's models and --tta as declared, reference run with the same script): arm pick - served >= the reference's on the same decisions, with the arm's cross-eval eligible (recorded zero truncation and LCB > 0)",
+    "reported": "test AUC, log loss, ECE10, bootstrap AUC-diff interval per arm; per-seed AUC; cross-eval pick - served with interval; city-vs-end ranking",
+    "selection": "if more than one arm passes, the screen candidate is the passing arm with the highest cross-eval pick - served; ties go to the cheaper arm (tta, then ens5, then ens5_tta)",
+    "on_fail": "recorded; no screen"
+  },
+  "screen": {
+    "candidate": "planner_pv2_tiles with the selected arm's scorer (NumPy serving; implemented only after the gate passes)",
+    "control": "planner_pv2_tiles",
+    "tables": "tactical / mixed / self as in exact-screen",
+    "gate": "+.02 paired lift on every table, 0 truncations, p95 decision <= 2 s, step max <= 5 s, turn max <= 20 s",
+    "seeds_per_panel": 260,
+    "power": "alternative +.04, planning sigma .22, power .8 (check_design admitted 260 for the same design in exact-screen)",
+    "fresh_seeds": [2985000, 2986000, 2987000]
+  },
+  "note": "Predeclared 2026-11-09 before any training, scoring or game. Weights stay local; only metadata is committed."
+}
