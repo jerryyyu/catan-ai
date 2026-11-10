@@ -161,6 +161,16 @@ def summarize(config, rows):
     return result
 
 
+def check_calibration(config, calibration, source):
+    """A paired-normal held-out's calibration receipt must match this implementation, alpha and floor."""
+    if not calibration['pass'] or calibration['source']['inference.py'] != source['inference.py']:
+        raise ValueError('inference calibration does not match this implementation')
+    if calibration['alpha'] != .05 / len(config['panels']):
+        raise ValueError('inference calibration must match per-panel alpha')
+    if calibration.get('sd_floor', .25) != config.get('variance_floor', .25):
+        raise ValueError('inference calibration must match the declared variance_floor')
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=Path, required=True)
@@ -202,13 +212,7 @@ def main():
         if config.get('inference') == 'paired_normal':
             if not args.calibration:
                 raise ValueError('approximate inference requires its calibration result')
-            calibration = json.loads(args.calibration.read_text())
-            if not calibration['pass'] or calibration['source']['inference.py'] != source['inference.py']:
-                raise ValueError('inference calibration does not match this implementation')
-            if calibration['alpha'] != .05 / len(config['panels']):
-                raise ValueError('inference calibration must match per-panel alpha')
-            if calibration.get('sd_floor', .25) != config.get('variance_floor', .25):
-                raise ValueError('inference calibration must match the declared variance_floor')
+            check_calibration(config, json.loads(args.calibration.read_text()), source)
     identity = {'config': config, 'source': source, 'host': platform.node(), 'process_cap': 1}
     if checkpoint is not None:
         identity['checkpoint'] = checkpoint
