@@ -434,6 +434,50 @@
     0.394
    ],
    "receipt": "jsettlers-retest/served"
+  },
+  {
+   "opponent": "STAC POMCP-TS-CR (trading)",
+   "bot": "planner_pv2_tiles",
+   "games": 256,
+   "win": 0.305,
+   "ci": [
+    0.252,
+    0.364
+   ],
+   "receipt": "stac-ladder-v1/tiles"
+  },
+  {
+   "opponent": "STAC POMCP-TS-CR (trading)",
+   "bot": "planner_offer_accept",
+   "games": 256,
+   "win": 0.258,
+   "ci": [
+    0.208,
+    0.315
+   ],
+   "receipt": "stac-ladder-v1/served"
+  },
+  {
+   "opponent": "STAC negotiator (trading)",
+   "bot": "planner_pv2_tiles",
+   "games": 512,
+   "win": 0.332,
+   "ci": [
+    0.293,
+    0.374
+   ],
+   "receipt": "stac-ladder-v1/tiles"
+  },
+  {
+   "opponent": "STAC negotiator (trading)",
+   "bot": "planner_offer_accept",
+   "games": 512,
+   "win": 0.209,
+   "ci": [
+    0.176,
+    0.246
+   ],
+   "receipt": "stac-ladder-v1/served"
   }
  ],
  "external_ais": [
@@ -456,14 +500,14 @@
    "search": "POMCP, 10k sims × 4 threads",
    "hidden": "Belief over hands",
    "per_decision": "~0.8 s",
-   "status": "ladder running, trading on"
+   "status": "ladder done (trading on)"
   },
   {
    "name": "STAC negotiator",
    "search": "JSettlers planning rules, no lookahead",
    "hidden": "Tracks seen cards",
    "per_decision": "ms",
-   "status": "ladder running, trading on"
+   "status": "ladder done (trading on)"
   },
   {
    "name": "Settlers-RL",
@@ -547,9 +591,19 @@
  ],
  "in_flight": [
   {
-   "name": "STAC trading ladder (served + old served; 256 POMCP + 512 negotiator games each)",
+   "name": "Turn-exact search screen vs served (planner_pv2_exact)",
    "where": "ultra",
-   "status": "interim POMCP .307 / .291 at ~175 games"
+   "status": "running"
+  },
+  {
+   "name": "T1/T2: symmetry averaging + 5-seed ensemble (offline gate)",
+   "where": "ultra",
+   "status": "training seeds"
+  },
+  {
+   "name": "T3: 100k on-policy games of planner_pv2_tiles",
+   "where": "ultra",
+   "status": "paused during exact screen"
   }
  ],
  "policies": [
@@ -596,6 +650,18 @@
      0.413,
      0.456,
      2048
+    ],
+    "stac_pomcp": [
+     0.305,
+     0.252,
+     0.364,
+     256
+    ],
+    "stac_negotiator": [
+     0.332,
+     0.293,
+     0.374,
+     512
     ]
    }
   },
@@ -624,6 +690,18 @@
      0.352,
      0.394,
      2048
+    ],
+    "stac_pomcp": [
+     0.258,
+     0.208,
+     0.315,
+     256
+    ],
+    "stac_negotiator": [
+     0.209,
+     0.176,
+     0.246,
+     512
     ]
    }
   },

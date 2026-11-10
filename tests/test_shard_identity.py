@@ -144,3 +144,19 @@ def test_producer_write_shard_is_accepted(tmp_path):
     assert train_value_v2.shards(root, 'train')['y'].tolist() == [0, 1, 1]
     with pytest.raises(FileExistsError):
         reencode_v2.write_shard(root, 'test', 0, [20], [(20, [[1.] * 3], [0], [(1, 0, .1, .1)], '01' * 32)])
+
+
+def test_truncated_games_contribute_no_rows_and_are_recorded(tmp_path):
+    """Red team D2: a game without a winner would label every seat 0; it is replay-verified but dropped."""
+    import reencode_v2
+    root = tmp_path / 'd'
+    root.mkdir()
+    (root / 'DONE.json').write_text(json.dumps({'config': {'split': {'train': [10, 2], 'test': [20, 1]},
+                                                           'shard_games': 2}}))
+    results = [(10, [[0.] * 3], [1], [(1, 0, .5, .2)], 'cd' * 32, False),
+               (11, [], [], [], 'ef' * 32, True)]
+    reencode_v2.write_shard(root, 'train', 0, [10, 11], results)
+    meta = json.loads((root / 'train-0000.json').read_text())
+    assert meta['rows'] == 1 and meta['truncated_games'] == [11]
+    assert set(meta['source_sha256']) == {'10', '11'}
+    assert train_value_v2.shards(root, 'train')['game'].tolist() == [10]

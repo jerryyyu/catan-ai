@@ -12,6 +12,9 @@ submit the same actions and may not reimplement legality.
   `planning_sigma`, `power`) and size it so the configured gate passes at that
   alternative; the evaluator refuses underpowered designs. Check past signal
   with `scripts/screen_power.py`.
+- Launch new runs (screens, data generation, ladders) on Cython through
+  `scripts/cython_run.py -- <command>`; it builds, binds a parity-checked local
+  checkpoint and fails closed.
 - Rotate candidate policies through all seats on the same seed block. Separate
   gameplay-strength, correctness, latency, and calibration claims.
 - Never expose hidden resources through player-facing state. Add a boundary test

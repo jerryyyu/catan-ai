@@ -1,0 +1,25 @@
+{
+ "name": "value-v2-tiles",
+ "stage": "re-encode (on-policy data of the served bot)",
+ "roots": [
+  {
+   "root": "value-tiles-v1",
+   "identity_sha256": "238914d01ecba1427e4a86527bb593ad145756873fd4c8ad446125826660da5e"
+  }
+ ],
+ "point": "end_turn",
+ "stride": 3,
+ "max_turns": 1000,
+ "shard_games": 5000,
+ "split": {
+  "train": [
+   3100000,
+   95000
+  ],
+  "test": [
+   3195000,
+   5000
+  ]
+ },
+ "note": "Board #1 T3 (Jerry 2026-11-09). Re-encodes experiments/value-data-tiles.json (100,000 self-play games of planner_pv2_tiles; producer identity 238914d0\u2026, value net 27dd7818\u2026, source 4931c20) with encoder v2 exactly as value-v2-100k: end-of-turn rows, every 3rd row per game (offset seed % 3), float16 shards of 5,000 games. scripts/reencode_v2.py replays with the root's declared policy and drops truncated games (red team D2), listing them in DONE.json. Predeclared 2026-11-09 before the data finished and before any re-encoding or training."
+}
