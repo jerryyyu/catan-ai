@@ -1,0 +1,13 @@
+{
+  "name": "exact-dev2",
+  "stage": "dev (new evaluation policy)",
+  "decision": "Jerry 2026-11-10: drop the heuristic tables; self table = copies of the served bot ('1. Yes'); re-test exact search under the new rules ('2. Yes').",
+  "tables": {
+    "self_served": "experiments/exact-self-screen.json (evaluator; 260 seeds; three planner_pv2_tiles opponents)",
+    "jsettlers": "experiments/jsettlers-exact-dev-{exact,tiles}.json (Mac mini; 1024 paired seeded games)"
+  },
+  "gate": "PASS iff both: (1) self_served point lift >= +.02 with the evaluator's gates (0 truncations, latency); (2) JSettlers paired mean difference won(exact) - won(tiles) >= +.02 over the 1024 games paired by game name, receipts compatible with identical setups, 0 bridge errors, all games completed, <= 5% excluded.",
+  "power": "self_served: .90 at +.04 (check_design). JSettlers: per-game SD ~.59 (2048-game runs) gives SE ~.018 at 1024; P(point >= +.02 | true +.04) ~ .86.",
+  "next": "A pass leads to a separately predeclared held-out on fresh seeds (self_served sized at 0.75x the DEV point with variance_floor .10 once PR #63 merges, plus 2048 paired JSettlers games). A fail is recorded; no re-test without an owner decision.",
+  "note": "Predeclared 2026-11-10 before any game. Fresh seeds 3060000+ and JSettlers base 20261117."
+}
