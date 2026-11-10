@@ -1,0 +1,35 @@
+{
+  "name": "jsettlers-retest-tiles",
+  "purpose": "Re-test of the JSettlers table for the planner_pv2_tiles promotion: planner_pv2_tiles alone vs three all-SMART JSettlers 2.6.10 robots on seeded games (base seed 20261114, 2048 games), paired by game name with the other policy's run (experiments/tiles-retest.json).",
+  "policy": "planner_pv2_tiles",
+  "seed": 20261114,
+  "games": 2048,
+  "jsettlers": {
+    "tag": "release-2.6.10",
+    "commit": "c5141056d8e3fff548817b3a1712eb66085e897b",
+    "patch": {
+      "file": "runs/external/jsettlers-seed-v2.patch",
+      "sha256": "d18f25934bc0d8a429f5d237e33d653ef06186c3e3e2304e69c6cf0166b3014c"
+    },
+    "seed": 20261114,
+    "all_smart": true
+  },
+  "server": {
+    "port": 8894,
+    "max_connections": 50,
+    "builtin_robots": 6,
+    "percent3p": 25,
+    "botgames_parallel": 1,
+    "botgames_wait_sec": 5,
+    "fast_pause_percent": 1,
+    "timeout_turn_sec": 120
+  },
+  "timeout_sec_per_game": 900,
+  "pass_bar": {
+    "completed_games": 2048,
+    "bridge_errors": 0
+  },
+  "analysis": "Paired with the other policy's receipt by scripts/jsettlers_paired.py --alpha 0.0125 --expect-games 2048 (see experiments/tiles-retest.json).",
+  "limitations": "The patch file is GPLv3-derived and lives only in runs/external (never in this repo); its sha256 is pinned here. all_smart makes every locally started robot use JSettlers' SMART strategy params, including our extrabot's inherited fallback brain.",
+  "note": "Predeclared 2026-11-08 before any re-test game. Same server settings, patch v2, all-SMART robots as jsettlers-heldout-*; fresh base seed 20261114 (not used by any earlier run); 2048 games; only the policy differs between the pair."
+}
