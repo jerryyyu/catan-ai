@@ -47,10 +47,10 @@ bars below are the honest steps toward it.
     table rather than held-out only.
 
   STAC POMCP-TS-CR with trading stays the headline external measurement.
-- **Variance floor relaxed.** New paired-normal gates do not apply the fixed .25 SD floor of
-  `inference.paired_normal_lcb`. A floor-free variant must be implemented and calibrated before a
-  predeclaration uses it; each config states its floor. Receipts already judged with the floor keep
-  their verdicts.
+- **Variance floor relaxed** to a declared `variance_floor: 0.10` for paired-normal gates with at least
+  512 seeds per table (PR #63). The synthetic calibration passes at .10 for 512 and 1,124 seeds; a
+  floor of 0 fails it on skewed nulls, which the floor protects against. Each config states its floor
+  and its calibration receipt must match. Receipts already judged with the .25 floor keep their verdicts.
 - **No human pilot yet**; there are no human players.
 - **Exact search may use up to 5 s per decision at data-generation time** (expert iteration).
 - Sizing: plan held-outs at a fraction of the weakest table's DEV point estimate, not the DEV alternative.
