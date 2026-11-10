@@ -616,7 +616,8 @@ def main(argv=None):
         parser.error('--epochs applies to train only')
     cfg = json.loads(args.config.read_text())
     check_data(cfg, args.data)
-    cfg_gate(cfg)
+    if args.command == 'gate':
+        cfg_gate(cfg)  # only the bakeoff gate reads these; a train-only declaration (tiles-onpolicy) words its own gate
     args.out.mkdir(parents=True, exist_ok=True)
     output = args.out / (f'{args.arm}-train.json' if args.command == 'train' else 'gate.json')
     refuse_existing(output, *((args.out / f'{args.arm}.pt',) if args.command == 'train' else ()))

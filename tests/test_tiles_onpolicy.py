@@ -70,3 +70,14 @@ def test_gate_inputs_are_bound_to_their_declared_populations(tmp_path):
         g.check_inputs(other, orig)
     with pytest.raises(ValueError, match='no DONE.json'):
         g.check_inputs(tmp_path, orig)
+
+
+def test_train_runs_under_the_onpolicy_declaration(tmp_path, monkeypatch):
+    """T3 train aborted on 2026-11-10 (ultra, rc=train-failed): main parsed the bakeoff's gate sentence
+    even for ``train``; the on-policy declaration words its own gate (tiles_onpolicy_gate.py)."""
+    monkeypatch.setattr(ab, 'check_data', lambda cfg, data: None)
+    monkeypatch.setattr(ab, 'train', lambda args, cfg: {'arm': args.arm})
+    out = ab.main(['train', '--config', str(g.DECL), '--arm', 'tiles', '--data', str(tmp_path), '--out', str(tmp_path / 'o')])
+    assert out['arm'] == 'tiles' and (tmp_path / 'o' / 'tiles-train.json').exists()
+    with pytest.raises(ValueError, match='gate.primary'):
+        ab.main(['gate', '--config', str(g.DECL), '--data', str(tmp_path), '--out', str(tmp_path / 'g')])
