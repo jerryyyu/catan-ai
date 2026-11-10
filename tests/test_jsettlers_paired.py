@@ -79,3 +79,14 @@ def test_declared_design_and_health_evidence_are_required():
         cand = _receipt('planner_pv2_tiles', win)
         cand[key] = 1
         assert not jp.pair(cand, _receipt('planner_offer_accept', lose), alpha=0.0125, expect_games=160)['pass']
+
+
+def test_dev_point_bar_verdict_is_explicit_and_separate_from_the_lcb_pass():
+    cand = _receipt('planner_pv2_exact', [1, 0, 0, 1] * 40)
+    ctrl = _receipt('planner_pv2_tiles', [1, 0, 0, 0] * 40)  # +.25 point, noisy
+    r = jp.pair(cand, ctrl, alpha=0.05, point_bar=0.02)
+    assert r['point_bar'] == 0.02 and r['dev_pass'] is True
+    flat = jp.pair(_receipt('planner_pv2_exact', [1, 0] * 80), _receipt('planner_pv2_tiles', [1, 0] * 80),
+                   alpha=0.05, point_bar=0.02)
+    assert flat['mean_diff'] == 0 and flat['dev_pass'] is False
+    assert 'dev_pass' not in jp.pair(cand, ctrl, alpha=0.05)  # legacy callers unchanged

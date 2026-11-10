@@ -1,11 +1,12 @@
 # AI policies and benchmarks
 
-Last reconciled: **2026-11-08**.
+Last reconciled: **2026-11-10**.
 
-**Served default: `planner_offer_accept`** (ladder row 7 in [POLICIES.md](POLICIES.md)). **Strongest measured
-candidate: `planner_pv2_tiles`** (not served; promotion needs a predeclared +5 pp screen on every table, a held-out
-run, and Jerry's call). The served bot is unchanged throughout: its 16-game trace hash is
-`9fd2805e9678f4f225a76fa7e2e522c55e3c981cdcba60d1e6e28c774921b4c1`.
+**Served default: `planner_pv2_tiles`** (ladder row 8 in [POLICIES.md](POLICIES.md); promoted by Jerry on
+2026-11-08, served since 2026-11-09 after its held-out and JSettlers re-test, PR #45). Its 16-game trace hash is
+`c7d07a76c9f3249f170ade344e3564df62b3a127c4b311b05eeea586334cb815`. The previous default `planner_offer_accept`
+(row 7, trace `9fd2805e…`) is the fallback. **Strongest measured candidate: `planner_pv2_exact`** (turn-exact
+search): DEV screen PASS; held-out FAIL on the mixed table only; paired JSettlers +.042 (LCB +.015) over the served bot.
 
 This file is the map of every AI this project plays with or against: what each one is, how it decides, and what
 it measured. It complements, and does not replace:
@@ -22,8 +23,10 @@ across different seeds or opponents are **descriptive**, not paired.
 
 - **Internal tables (paired).** Each seed is played four times with the candidate rotated through every seat, and
   again with the control in the same seats and the same dice. Lift is candidate wins minus control wins per game
-  ("extra wins per 100 games" is the same number ×100). Tables: **tactical** (three Tactical), **mixed** (Builder,
-  Tactical, Expander), **self** (three copies of the served bot).
+  ("extra wins per 100 games" is the same number ×100). Tables used through 2026-11-09: **tactical** (three
+  Tactical), **mixed** (Builder, Tactical, Expander), **self** (three copies of `planner_offer_accept`, the bot
+  served until 2026-11-08, not of the current control). From 2026-11-10 the heuristic tables are dropped; see
+  "Evaluation policy" in [PLAN.md](PLAN.md).
 - **External ladders.** One bot alone against three copies of an outside AI, rotated through all four seats; fair
   share is .25. **Retirement rule** (predeclared 2026-11-07): an outside AI is retired as a benchmark for a given
   bot once that bot's win share is ≥ .50 with the 95% lower bound > .40.

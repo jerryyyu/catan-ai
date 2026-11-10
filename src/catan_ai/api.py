@@ -21,7 +21,11 @@ from .bots import Policy, make_policy
 from .engine import Game, IllegalAction
 from .observation import Observation
 from . import pilot_store
+
 from .experiments import source_files
+from .local_checkpoint import CYTHON_PARAMETER_CHECKPOINT, select_parameter_checkpoint  # noqa: F401
+
+select_parameter_checkpoint()
 
 
 app = FastAPI(title="Catan AI")

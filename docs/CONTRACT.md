@@ -7,8 +7,8 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Served default
 
-- **Policy:** `planner_pv2_tiles` for new solo web and API games since
-  2026-11-08, by owner promotion (Jerry). It is `planner_offer_accept` (below)
+- **Policy:** `planner_pv2_tiles` for new solo web and API games, promoted by
+  the owner (Jerry) on 2026-11-08 and served since 2026-11-09 (PR #45). It is `planner_offer_accept` (below)
   with its own-turn build decisions chosen by PV search: the served search
   proposes ending now plus its four best build sequences, and the arch-bakeoff-v1
   `tiles` value transformer (19 tile tokens + 4 player + 1 global, 555k

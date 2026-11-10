@@ -1,0 +1,83 @@
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+np = pytest.importorskip('numpy')
+pytest.importorskip('torch')
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))
+
+import arch_bakeoff as ab  # noqa: E402
+import tiles_onpolicy_gate as g  # noqa: E402
+
+
+def test_declaration_resolves_split_and_data_keys():
+    cfg = json.loads(g.DECL.read_text())
+    assert ab.declared_split(cfg) == {'train': [3100000, 95000], 'test': [3195000, 5000]}
+    ref = json.loads((ROOT / 'experiments' / 'value-v2-tiles.json').read_text())
+    assert ref['split'] == ab.declared_split(cfg) and ref['roots'][0]['root'] == 'value-tiles-v1'
+    base = json.loads((ROOT / 'experiments' / 'arch-bakeoff.json').read_text())
+    assert cfg['common'] == base['common'] and cfg['arms']['tiles'] == base['arms']['tiles']
+
+
+def test_paired_auc_is_zero_for_identical_predictions():
+    rng = np.random.default_rng(0)
+    y = rng.integers(0, 2, 400).astype(float)
+    p = rng.random(400)
+    out = g.paired_auc(p, p, y, np.repeat(np.arange(100), 4))
+    assert out['diff'] == 0 and out['ci95'] == [0, 0]
+
+
+@pytest.mark.parametrize('mutate, expect', [
+    (lambda r: r.update(models_sha256=['other']), 'models'),
+    (lambda r: r.update(tta=True), 'symmetry'),
+    (lambda r: r.update(script_sha256='old'), 'script'),
+    (lambda r: r.update(test_corpus_sha256='X'), 'corpus'),
+])
+def test_xeval_binding(mutate, expect):
+    r = {'models_sha256': ['m'], 'tta': False, 'script_sha256': 'S', 'test_corpus_sha256': 'C'}
+    assert g.bind_xeval(dict(r), 'm', 'S', 'C') == []
+    bad = dict(r)
+    mutate(bad)
+    assert any(expect in p for p in g.bind_xeval(bad, 'm', 'S', 'C'))
+    assert any('corpus' in p for p in g.bind_xeval(dict(r), 'm', 'S', None))
+    assert g.bind_xeval(None, 'm', 'S', 'C') == ['receipt missing']
+
+
+def _done(tmp_path, name, decl_path, **change):
+    d = tmp_path / name
+    d.mkdir()
+    cfg = json.loads(Path(decl_path).read_text())
+    cfg.update(change)
+    (d / 'DONE.json').write_text(json.dumps({'config': cfg}))
+    return d
+
+
+def test_gate_inputs_are_bound_to_their_declared_populations(tmp_path):
+    on = _done(tmp_path, 'on', g.ONPOLICY_DECL)
+    orig = _done(tmp_path, 'orig', g.ORIGINAL_DECL)
+    splits = g.check_inputs(on, orig)
+    assert splits[0]['test'] == [3195000, 5000] and splits[1]['test'] == [2745000, 5000]
+    with pytest.raises(ValueError, match='same directory'):
+        g.check_inputs(orig, orig)  # the original data supplied twice
+    with pytest.raises(ValueError, match='value-v2-tiles'):
+        g.check_inputs(orig, on)  # swapped
+    other = _done(tmp_path, 'other', g.ONPOLICY_DECL, stride=2)  # self-consistent but differently declared
+    with pytest.raises(ValueError, match='stride'):
+        g.check_inputs(other, orig)
+    with pytest.raises(ValueError, match='no DONE.json'):
+        g.check_inputs(tmp_path, orig)
+
+
+def test_train_runs_under_the_onpolicy_declaration(tmp_path, monkeypatch):
+    """T3 train aborted on 2026-11-10 (ultra, rc=train-failed): main parsed the bakeoff's gate sentence
+    even for ``train``; the on-policy declaration words its own gate (tiles_onpolicy_gate.py)."""
+    monkeypatch.setattr(ab, 'check_data', lambda cfg, data: None)
+    monkeypatch.setattr(ab, 'train', lambda args, cfg: {'arm': args.arm})
+    out = ab.main(['train', '--config', str(g.DECL), '--arm', 'tiles', '--data', str(tmp_path), '--out', str(tmp_path / 'o')])
+    assert out['arm'] == 'tiles' and (tmp_path / 'o' / 'tiles-train.json').exists()
+    with pytest.raises(ValueError, match='gate.primary'):
+        ab.main(['gate', '--config', str(g.DECL), '--data', str(tmp_path), '--out', str(tmp_path / 'g')])
