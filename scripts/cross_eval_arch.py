@@ -57,7 +57,7 @@ def main():
         saved = torch.load(path, weights_only=False)
         if saved.get('smoke'):
             raise ValueError('smoke checkpoint')
-        net = make_net(torch, saved['arm']).to(device)
+        net = make_net(torch, saved['arm'], size=saved.get('size'), phase='phase_vec' in saved['state']).to(device)
         net.load_state_dict(saved['state'])
         models.append((net, saved))
     arm = models[0][1]['arm']

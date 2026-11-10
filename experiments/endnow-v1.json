@@ -1,0 +1,29 @@
+{
+  "name": "endnow-v1",
+  "stage": "counterfactual data (value-arms S2)",
+  "roots": [
+    {
+      "root": "value100k-v1",
+      "identity_sha256": "466fc3655f232c22ab0d7323a3af6070fb3be86ddc53f68ecdf6c477207b02c5"
+    },
+    {
+      "root": "value100k-v1b",
+      "identity_sha256": "83bef53dfba99cd558033132b9c0905ab8a31b6f1c1d4a8070b09203924a1a48"
+    }
+  ],
+  "point": "endnow",
+  "stride": 1,
+  "max_turns": 1000,
+  "shard_games": 5000,
+  "split": {
+    "train": [
+      2650000,
+      95000
+    ],
+    "test": [
+      2745000,
+      5000
+    ]
+  },
+  "note": "Predeclared 2026-11-10 (Jerry: 'Yes let's do it'). scripts/endnow_data.py: per source game, one uniformly drawn actions-phase decision (seeded seed*104729+11) where end_turn and a city/settlement build were legal and the data policy built; the seat's view is encoded as an end_turn row, the seat ends its turn, the game is played out by copies of the same bots (same dice); label = that seat won; forks reaching max_turns dropped and counted. Same 100k planner_offer_accept games and split as value-v2-100k (train rows feed S2; test rows are a reported end-now diagnostic for every arm)."
+}
