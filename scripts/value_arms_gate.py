@@ -101,11 +101,10 @@ def main(argv=None):
         net = ab.make_net(torch, 'tiles', ab.layout(), size=saved.get('size'), phase='phase_vec' in saved['state'])
         net.load_state_dict(saved['state'])
         nets[name] = (net.to(device), saved)
+    va.check_training(cfg, args.arm, new, args.runs)  # every training root, exactly (Codex HOLD @e19e5a1)
     roots = va.check_roots(cfg, args.runs, ['original', 'onpolicy'])
-    try:
-        roots.update(va.check_roots(cfg, args.runs, ['endnow']))
-    except ValueError:
-        pass  # the end-now diagnostic is reported only once that root is complete
+    if (args.runs / cfg['roots']['endnow']['shards'] / 'DONE.json').exists():
+        roots.update(va.check_roots(cfg, args.runs, ['endnow']))  # end-now diagnostic, reported once complete
     parts = {}
     for label, (path, split) in roots.items():
         test = ab.subsample(shards(path, 'test'), args.max_rows, 0)
@@ -137,7 +136,8 @@ def main(argv=None):
                                                    'city_ranked_above_end_by_model')},
            'reference_xeval': xr and {k: xr.get(k) for k in ('pick_minus_served', 'city_ranked_above_end_by_model')},
            'xeval_binding_problems': binding, 'pv2_corpus_sha256': corpus, 'params': new.get('params'),
-           'bar': {**gate, 'resamples': RESAMPLES, 'seed': BOOT_SEED, 'lower_percentile': PCT}, 'device': str(device)}
+           'bar': {**gate, 'resamples': RESAMPLES, 'seed': BOOT_SEED, 'lower_percentile': PCT}, 'device': str(device),
+           'train_roots': new['train'], 'model_provenance': new.get('provenance'), 'provenance': va.provenance()}
     with args.out.open('x') as f:
         json.dump(out, f, indent=1)
     print(json.dumps({'arm': args.arm, 'checks': checks, 'pass': passed}, indent=1))

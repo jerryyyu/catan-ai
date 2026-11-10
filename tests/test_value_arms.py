@@ -113,3 +113,70 @@ def test_train_smoke_mixes_roots_with_phase_and_weight(tmp_path):
     conf.write_text(json.dumps(bad))
     with pytest.raises(ValueError, match='not made under'):
         va.main(['--config', str(conf), '--arm', 's1', '--runs', '/', '--out', str(tmp_path / 'p'), '--device', 'cpu', '--epochs', '1'])
+
+
+def test_gate_binds_every_training_root(tmp_path):
+    """Codex HOLD @e19e5a1 (1): the recorded root set and each root's identity, digest and seal must match."""
+    import value_arms as va
+    cfg = json.loads(json.dumps(DECL))
+    cfg['roots'] = {'original': _root(tmp_path, 'a', 100, 12), 'roll': _root(tmp_path, 'b', 300, 12)}
+    cfg['arms'] = {'s1': {'data': ['original', 'roll'], 'phase': {'roll': 1}}}
+    rec = {n: va.root_identity(r['shards']) for n, r in cfg['roots'].items()}
+    va.check_training(cfg, 's1', {'train': rec}, '/')
+    with pytest.raises(ValueError, match='records roots'):
+        va.check_training(cfg, 's1', {'train': {'original': rec['original']}}, '/')  # auxiliary root missing
+    for name in ('original', 'roll'):
+        for key in ('identity', 'arrays_sha256', 'done_sha256'):
+            bad = {n: dict(v) for n, v in rec.items()}
+            bad[name][key] = 'stale'
+            with pytest.raises(ValueError, match=f'{name} {key}'):
+                va.check_training(cfg, 's1', {'train': bad}, '/')
+
+
+def test_train_receipt_and_checkpoint_carry_producer_provenance(tmp_path):
+    """Codex HOLD @e19e5a1 (2)."""
+    import value_arms as va
+    cfg = json.loads(json.dumps(DECL))
+    cfg['roots'] = {'original': _root(tmp_path, 'a', 100, 12), 'roll': _root(tmp_path, 'b', 300, 12)}
+    cfg['selection'] = ['original']
+    cfg['common'].update(validation_games=3, batch=8)
+    cfg['arms'] = {'t9': {'data': ['original', 'roll']}}
+    conf = tmp_path / 'arms.json'
+    conf.write_text(json.dumps(cfg))
+    out = va.main(['--config', str(conf), '--arm', 't9', '--runs', '/', '--out', str(tmp_path / 'o'), '--device', 'cpu', '--epochs', '1'])
+    saved = torch.load(tmp_path / 'o' / 't9.pt', weights_only=False)
+    for prov in (out['provenance'], saved['provenance']):
+        assert prov['source_revision'] and prov['engine_backend'] in ('python', 'cython')
+        assert 'engine_backend' in prov['source_files'] and 'encoding.py' in prov['source_files']
+        assert {'value_arms.py', 'arch_bakeoff.py', 'train_value_v2.py'} <= set(prov['scripts_sha256'])
+        assert 'torch' in prov['versions']
+    assert all('done_sha256' in v for v in out['train'].values())
+
+
+def test_endnow_done_seals_producer_provenance(tmp_path):
+    import endnow_data as e
+    seed = 2650000
+    row, _, _ = e.play(seed, 'planner_offer_accept', 1000)
+    from catan_ai.bots import make_policy
+    from catan_ai.engine import Game
+    from catan_ai.observation import Observation
+    game = Game.new([f'p{i}' for i in range(4)], seed)
+    bots = [make_policy('planner_offer_accept', seed * 17 + i + 1) for i in range(4)]
+    while game.winner is None:
+        s = game.current
+        game.apply(s, bots[s].choose(Observation.for_policy(game, s, bots[s]), s))
+    src = tmp_path / 'runs' / 'src'
+    (src / 'games').mkdir(parents=True)
+    (src / 'manifest.json').write_text(json.dumps({'identity_sha256': 'idx', 'config': {'policy': 'planner_offer_accept'}}))
+    (src / 'games' / f'{seed}.json').write_text(json.dumps({'seed': seed, 'identity': 'idx', 'winner': game.winner}))
+    decl = {'roots': [{'root': 'src', 'identity_sha256': 'idx'}], 'point': 'endnow', 'stride': 1, 'max_turns': 1000,
+            'shard_games': 1, 'split': {'train': [seed, 1]}}
+    conf = tmp_path / 'endnow.json'
+    conf.write_text(json.dumps(decl))
+    e.main(['--config', str(conf), '--runs', str(tmp_path / 'runs'), '--output', str(tmp_path / 'out')])
+    done = json.loads((tmp_path / 'out' / 'DONE.json').read_text())
+    prov = done['provenance']
+    assert prov['source_revision'] and 'endnow_data.py' in prov['scripts_sha256'] and 'encoding.py' in prov['source_files']
+    from train_value_v2 import shards
+    data = shards(tmp_path / 'out', 'train')
+    assert len(data['y']) == (row is not None)

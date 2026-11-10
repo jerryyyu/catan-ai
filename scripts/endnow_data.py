@@ -28,6 +28,7 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from reencode_v2 import write_shard  # noqa: E402
+from artifact_guard import producer_provenance as provenance  # noqa: E402
 
 BUILDS = ('build_city', 'build_settlement')
 
@@ -105,6 +106,7 @@ def main(argv=None):
     if cfg.get('point') != 'endnow':
         raise ValueError('not an endnow declaration')
     args.output.mkdir(parents=True, exist_ok=False)
+    started_provenance = provenance()
     by_seed = {}
     for root in cfg['roots']:
         manifest = json.loads((args.runs / root['root'] / 'manifest.json').read_text())
@@ -130,9 +132,11 @@ def main(argv=None):
             dropped += sidecar['truncated_games']
             print(json.dumps({'split': split, 'shard': name.name, 'rows': sidecar['rows'],
                               'seconds': round(time.monotonic() - started)}), flush=True)
+    if provenance()['source_files'] != started_provenance['source_files']:
+        raise ValueError('source changed while producing; not sealing this shard set')
     with (args.output / 'DONE.json').open('x') as stream:
         json.dump({'config': cfg, 'shards': written, 'truncated_games': dropped,
-                   'seconds': time.monotonic() - started}, stream)
+                   'seconds': time.monotonic() - started, 'provenance': started_provenance}, stream)
 
 
 if __name__ == '__main__':

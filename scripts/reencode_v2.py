@@ -25,6 +25,7 @@ import time
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from artifact_guard import producer_provenance  # noqa: E402
 from train_value_v2 import file_sha256, shard_stats  # noqa: E402
 
 
@@ -109,6 +110,7 @@ def main():
     args = parser.parse_args()
     cfg = json.loads(args.config.read_text())
     args.output.mkdir(parents=True, exist_ok=False)
+    started_provenance = producer_provenance()
     by_seed = {}
     for root in cfg['roots']:
         manifest = json.loads((args.runs / root['root'] / 'manifest.json').read_text())
@@ -139,7 +141,7 @@ def main():
                               'seconds': round(time.monotonic() - started)}), flush=True)
     with (args.output / 'DONE.json').open('x') as stream:
         json.dump({'config': cfg, 'shards': written, 'truncated_games': truncated,
-                   'seconds': time.monotonic() - started}, stream)
+                   'seconds': time.monotonic() - started, 'provenance': started_provenance}, stream)
 
 
 if __name__ == '__main__':

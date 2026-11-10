@@ -26,7 +26,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import arch_bakeoff as ab  # noqa: E402
-from artifact_guard import publish, refuse_existing  # noqa: E402
+from artifact_guard import producer_provenance as provenance, publish, refuse_existing  # noqa: E402
 from train_value_v2 import DATA_KEYS, make_optimizer, shards, symmetry_index  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +35,25 @@ DECL = ROOT / 'experiments' / 'value-arms.json'
 
 def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def root_identity(path, split='train'):
+    """What a checkpoint records for one training root: shard identity, array digest, the sealing DONE.json."""
+    d = shards(path, split)
+    return {'identity': d['identity'], 'arrays_sha256': d['arrays_sha256'], 'done_sha256': sha256(Path(path) / 'DONE.json')}
+
+
+def check_training(cfg, arm, saved, runs):
+    """The checkpoint must record exactly its arm's declared roots, each matching the shards on disk now."""
+    _, spec = arm_spec(cfg, arm)
+    recorded = saved.get('train') or {}
+    if sorted(recorded) != sorted(spec['data']):
+        raise ValueError(f'{arm}: checkpoint records roots {sorted(recorded)}, declared {sorted(spec["data"])}')
+    for name, (path, _) in check_roots(cfg, runs, spec['data']).items():
+        now = root_identity(path)
+        for key in ('identity', 'arrays_sha256', 'done_sha256'):
+            if recorded[name].get(key) != now[key]:
+                raise ValueError(f'{arm}: {name} {key} differs from the shards on disk')
 
 
 def arm_spec(cfg, name):
@@ -80,7 +99,8 @@ def load(cfg, spec, roots, max_rows, seed):
         parts.append((d['x'], d['y'], np.full(k, spec.get('phase', {}).get(name, 0), np.float32),
                       np.full(k, spec.get('weight', {}).get(name, 1.0), np.float32), val,
                       np.full(k, name in cfg['selection'], bool)))
-        ident[name] = {'identity': d['identity'], 'arrays_sha256': d['arrays_sha256']}
+        ident[name] = {'identity': d['identity'], 'arrays_sha256': d['arrays_sha256'],
+                       'done_sha256': sha256(Path(path) / 'DONE.json')}
     cat = [np.concatenate([p[i] for p in parts]) for i in range(6)]
     return cat, ident
 
@@ -154,10 +174,12 @@ def train(args, cfg):
     publish(path, lambda tmp: torch.save({
         'arm': 'tiles', 'value_arm': args.arm, 'state': best[2], 'mean': mean, 'sd': sd, 'size': spec.get('size'),
         'epoch': best[1], 'val_bce': best[0], 'config': cfg, 'train': ident, 'params': params, 'smoke': smoke,
-        'init_from_sha256': cfg['reference']['pt_sha256'] if reference is not None else None}, tmp))
+        'init_from_sha256': cfg['reference']['pt_sha256'] if reference is not None else None,
+        'provenance': provenance()}, tmp))
     return {'arm': args.arm, 'fit_rows': len(fit_rows), 'selection_val_rows': len(val_rows), 'chosen_epoch': best[1],
             'chosen_val_bce': best[0], 'history': history, 'params': params, 'device': str(device), 'smoke': smoke,
-            'train': ident, 'model_sha256': sha256(path), 'seconds': time.monotonic() - started}
+            'train': ident, 'model_sha256': sha256(path), 'seconds': time.monotonic() - started,
+            'provenance': provenance()}
 
 
 def main(argv=None):

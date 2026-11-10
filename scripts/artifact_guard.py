@@ -11,6 +11,7 @@
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 
 
@@ -49,3 +50,33 @@ def validate(saved, cfg, data_cfg, manifest, point=None):
     (tlo, tn), (vlo, vn) = data_cfg['split']['train'], data_cfg['split']['test']
     if set(range(tlo, tlo + tn)) & set(range(vlo, vlo + vn)):
         raise ValueError('train and test splits overlap')
+
+
+def producer_provenance():
+    """Producer identity for a sealed artifact (Codex HOLD @e19e5a1): source revision (a snapshot's COMMIT, else
+    git HEAD plus dirty paths), every catan_ai source and engine-binary hash (``source_files``), the hash of
+    every loaded module under scripts/, and the interpreter / library versions."""
+    import platform
+    import subprocess
+    from catan_ai.experiments import source_files
+    from catan_ai.engine import BACKEND
+    root = Path(__file__).resolve().parents[1]
+    commit = root / 'COMMIT'
+    revision, dirty = (commit.read_text().strip(), []) if commit.exists() else (None, None)
+    if revision is None:
+        try:
+            revision = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=root, capture_output=True, text=True,
+                                      timeout=10).stdout.strip() or None
+            dirty = subprocess.run(['git', 'status', '--porcelain', '--', 'src', 'scripts', 'experiments'], cwd=root,
+                                   capture_output=True, text=True, timeout=10).stdout.splitlines()
+        except (OSError, subprocess.SubprocessError):
+            pass
+    here = Path(__file__).resolve().parent
+    scripts = {Path(m.__file__).name: hashlib.sha256(Path(m.__file__).read_bytes()).hexdigest() for m in list(sys.modules.values())
+               if getattr(m, '__file__', None) and Path(m.__file__).resolve().parent == here}
+    versions = {'python': platform.python_version()}
+    for lib in ('numpy', 'torch'):
+        if lib in sys.modules:
+            versions[lib] = sys.modules[lib].__version__
+    return {'source_revision': revision, 'dirty_paths': dirty, 'engine_backend': BACKEND,
+            'source_files': source_files(), 'scripts_sha256': dict(sorted(scripts.items())), 'versions': versions}
