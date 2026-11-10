@@ -131,6 +131,8 @@ class HeuristicBot:
 
 
 def make_policy(name: str, seed: int) -> Policy:
+    from .local_checkpoint import select_parameter_checkpoint
+    select_parameter_checkpoint()  # Cython runs load the local Cython-bound checkpoint (no-op under Python)
     rng = random.Random(seed)
     if name == 'planner_parameter':
         from .parameter_planner import ParameterPlanner

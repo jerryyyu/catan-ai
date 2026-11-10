@@ -13,3 +13,14 @@ def test_cython_selects_local_checkpoint_only_when_present_and_unset(tmp_path):
     assert explicit['CATAN_PARAMETER_MODEL'] == 'mine.json'
     plain = {}
     assert api.select_parameter_checkpoint(plain, 'python', path) is None and plain == {}  # python keeps the committed one
+
+
+def test_make_policy_selects_the_local_checkpoint_under_cython(tmp_path, monkeypatch):
+    from catan_ai import bots, local_checkpoint
+    path = tmp_path / 'planner_parameter.cython.json'
+    path.write_text('{}')
+    calls = []
+    monkeypatch.setattr(local_checkpoint, 'select_parameter_checkpoint',
+                        lambda *a, **k: calls.append(1) or None)
+    bots.make_policy('heuristic', 1)
+    assert calls == [1]
