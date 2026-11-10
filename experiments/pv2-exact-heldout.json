@@ -1,0 +1,54 @@
+{
+ "name": "pv2-exact-heldout",
+ "stage": "heldout",
+ "candidate": "planner_pv2_exact",
+ "control": "planner_pv2_tiles",
+ "requires_search": false,
+ "seeds_per_panel": 1124,
+ "max_turns": 1000,
+ "panels": [
+  {
+   "name": "tactical",
+   "seed": 3020000,
+   "opponents": [
+    "tactical",
+    "tactical",
+    "tactical"
+   ]
+  },
+  {
+   "name": "mixed",
+   "seed": 3030000,
+   "opponents": [
+    "builder",
+    "tactical",
+    "expander"
+   ]
+  },
+  {
+   "name": "self",
+   "seed": 3040000,
+   "opponents": [
+    "planner_offer_accept",
+    "planner_offer_accept",
+    "planner_offer_accept"
+   ]
+  }
+ ],
+ "gates": {
+  "maximum_match_truncations": 0,
+  "minimum_paired_win_lift": 0.0,
+  "minimum_paired_lcb": 0.0,
+  "maximum_p95_decision_seconds": 2,
+  "maximum_step_seconds": 5,
+  "maximum_turn_seconds": 20
+ },
+ "power": {
+  "alternative_effect": 0.03,
+  "planning_sigma": 0.28,
+  "power": 0.8,
+  "note": "Predeclared 2026-11-09 before any held-out game. Confirmatory held-out for planner_pv2_exact (turn-exact search; source = exact-source-v2 snapshot at 29f9c03, the DEV snapshot, as the evaluator requires) after its DEV screen exact-screen-v2 PASSED (+.043 / +.021 / +.080 vs served planner_pv2_tiles; board #1 comment 6750097143; receipt runs/exact-screen-v2.json sha256 30aba2ee\u2026). Gate: paired-normal seed-cluster LCB > 0 (alpha .05/3 per table, the evaluator's family correction) and point lift >= 0 on every table, 0 truncations, latency gates as in DEV (p95 <= 2 s, step <= 5 s, turn <= 20 s). Power: alternative +.03 (below the DEV tactical/self points, above mixed +.021, so the mixed table is the likely binding one), sigma .28 (largest DEV cluster SD .282); check_design requires 1124 seeds per table. Fresh seeds 3020000/3030000/3040000 (+1124 each; no earlier use). Calibration receipt runs/offer-accept-tables-calibration-v1.json (as for the tiles held-out). Together with the JSettlers paired table in experiments/exact-heldout.json."
+ },
+ "requires_dev_pass": true,
+ "inference": "paired_normal"
+}

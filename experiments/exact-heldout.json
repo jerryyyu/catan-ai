@@ -1,0 +1,13 @@
+{
+  "name": "exact-heldout",
+  "stage": "heldout (confirmatory, before any promotion decision)",
+  "decision": "Exact search DEV PASS (exact-screen-v2, board #1 comment 6750097143); Jerry's evaluation principle (2026-11-08): screens vs our best policies and the best external policies.",
+  "tables": {
+    "internal": "experiments/pv2-exact-heldout.json (evaluator, ultra): tactical / mixed / self, planner_pv2_exact vs served planner_pv2_tiles, 1124 fresh seeds each",
+    "jsettlers": "experiments/jsettlers-exact-heldout-exact.json and -tiles.json (Mac mini): the same 2048 seeded all-SMART JSettlers games per policy"
+  },
+  "gate": "PASS iff (1) the internal evaluator receipt passes (paired-normal seed-cluster LCB > 0 at alpha .05/3 and point lift >= 0 on every table, 0 truncations, latency gates) AND (2) the JSettlers paired table: per-game difference won(exact) - won(tiles) over the 2048 games paired by game name after scripts/jsettlers_paired.py confirms compatible receipts and identical setup per game; mean >= 0 and one-sided paired-normal LCB > 0 at alpha .05/4; both runs 0 bridge errors, 0 truncations, all games completed; more than 5% excluded fails the table.",
+  "power_jsettlers": "2048 pairs: with the tiles re-test's per-game SD .594, a pass needs a mean above about +.029; power is about .5 if exact's JSettlers gain over tiles is +.03 and about .9 at +.045. Exact's JSettlers gain over tiles is unmeasured, so this table may be underpowered; declared as such, not resized after seeing data.",
+  "consequence": "PASS: supports promoting planner_pv2_exact (owner's call). FAIL: planner_pv2_tiles stays served; no re-test of a failed table without a new owner decision.",
+  "note": "Predeclared 2026-11-09 before any held-out game. Fresh seeds: internal 3020000/3030000/3040000 (+1124), JSettlers base 20261116."
+}
