@@ -28,6 +28,20 @@ class Resource(str, Enum):
 
 
 RESOURCES = tuple(Resource)
+_ATOMS = (int, str, float, bool, type(None), Resource)
+_PLAYER_CONTAINERS = frozenset({'resources', 'roads', 'settlements', 'cities', 'development'})
+_VALIDATE_SEARCH = __import__('os').environ.get('CATAN_VALIDATE_SEARCH') == '1'
+
+
+def _atom(value) -> bool:
+    return type(value) in _ATOMS or (type(value) is tuple and all(type(v) in _ATOMS for v in value))
+
+
+def _flat(container) -> bool:
+    """True when a list/set/dict holds only immutable atoms (or tuples of atoms): a shallow copy is a deep copy."""
+    if type(container) is dict:
+        return all(_atom(k) and _atom(v) for k, v in container.items())
+    return all(_atom(v) for v in container)
 DESERT = "desert"
 COSTS = {
     "road": {Resource.BRICK: 1, Resource.LUMBER: 1},
@@ -132,13 +146,17 @@ class Player:
         # a recursive visit to every resource key and piece in each search node.
         result = type(self).__new__(type(self))
         memo[id(self)] = result
+        state = {}
         for name, value in self.__dict__.items():
-            if name in {'resources', 'roads', 'settlements', 'cities', 'development'}:
+            if name in _PLAYER_CONTAINERS:
                 if id(value) not in memo:
                     memo[id(value)] = value.copy()
-                setattr(result, name, memo[id(value)])
+                state[name] = memo[id(value)]
+            elif type(value) in _ATOMS:
+                state[name] = value  # immutable: deepcopy would return it unchanged
             else:
-                setattr(result, name, deepcopy(value, memo))
+                state[name] = deepcopy(value, memo)
+        result.__dict__.update(state)
         return result
 
     @property
@@ -243,7 +261,17 @@ class Game:
             rng.__dict__.update(deepcopy(self.rng.__dict__, memo))
         # The per-viewer event cache is derived from ``events``; copies rebuild it lazily.
         state = {k: v for k, v in self.__dict__.items() if k != '_observed_cache'}
-        result.__dict__.update(deepcopy(state, memo))
+        fast = {}
+        for name, value in state.items():
+            # Atoms and flat containers of atoms (resource/turn ints, enum members, vertex tuples,
+            # strings) are copied without the generic recursive walk; memo aliasing is kept.
+            if type(value) in _ATOMS:
+                fast[name] = value
+            elif type(value) in (list, dict, set) and id(value) not in memo and _flat(value):
+                memo[id(value)] = fast[name] = value.copy()
+            else:
+                fast[name] = deepcopy(value, memo)
+        result.__dict__.update(fast)
         return result
 
     def __getstate__(self):
@@ -468,25 +496,36 @@ class Game:
             rows.append(freeze(event['public'] | event['private'].get(viewer, {})))
         return tuple(rows)
 
-    def _apply(self, seat: int, action: dict[str, Any]) -> None:
+    def apply_trusted(self, seat: int, action: dict[str, Any]) -> None:
+        """Internal search entry point: apply ``action``, which the caller has just taken from
+        ``self.legal_actions(seat)`` on this same state, without re-deriving the legal set (perf report
+        item 3). Only search enumeration calls this; ``apply`` always validates. Event-recording games
+        and CATAN_VALIDATE_SEARCH=1 validate here too."""
+        if self.record_events or _VALIDATE_SEARCH:
+            self.apply(seat, action)
+            return
+        self._apply(seat, action, trusted=True)
+
+    def _apply(self, seat: int, action: dict[str, Any], trusted: bool = False) -> None:
         if type(seat) is not int or seat not in range(4) or not isinstance(action, dict):
             raise IllegalAction('invalid actor or action')
         if action.get("type") == "offer_trade":
             self._offer_trade(seat, action)
             return
-        legal = self.legal_actions(seat)
         normalized = dict(action)
         if "edge" in normalized:
             edge = normalized['edge']
             if not isinstance(edge, (list, tuple)) or len(edge) != 2 or any(type(v) is not int for v in edge):
                 raise IllegalAction('edge requires two integer vertices')
             normalized["edge"] = sorted(edge)
-        try:
-            encoded = json.dumps(normalized, sort_keys=True, allow_nan=False)
-        except (ValueError, TypeError) as exc:
-            raise IllegalAction('action must contain valid JSON values') from exc
-        if not any(normalized == a and encoded == json.dumps(a, sort_keys=True) for a in legal):
-            raise IllegalAction(f"illegal action {normalized}; phase={self.phase}, seat={seat}")
+        if not trusted:  # only apply_trusted (search enumeration on this same state) skips validation
+            legal = self.legal_actions(seat)
+            try:
+                encoded = json.dumps(normalized, sort_keys=True, allow_nan=False)
+            except (ValueError, TypeError) as exc:
+                raise IllegalAction('action must contain valid JSON values') from exc
+            if not any(normalized == a and encoded == json.dumps(a, sort_keys=True) for a in legal):
+                raise IllegalAction(f"illegal action {normalized}; phase={self.phase}, seat={seat}")
         kind = normalized["type"]
         if kind in {"accept_trade", "reject_trade"}:
             assert self.trade_offer is not None

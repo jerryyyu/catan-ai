@@ -38,6 +38,17 @@ cd web && npm install && npm run dev       # http://localhost:5173 (proxies /api
 
 A production build in `web/dist` is served by FastAPI.
 
+Faster serving with the Cython engine (about 1.15-1.2x; decisions identical). The Cython binding pins the
+compiled binaries, so it is made on each machine and never committed:
+
+```bash
+uv run --group native python scripts/build_native.py build_ext --inplace
+CATAN_ENGINE=cython uv run --with numpy python scripts/bind_cython_checkpoint.py   # refuses unless traces match Python
+CATAN_ENGINE=cython uv run catan-server
+```
+
+Rebuild and rebind after any source change.
+
 ## Simulate and measure
 
 ```bash
