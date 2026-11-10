@@ -12,6 +12,10 @@ Steps, each failing closed:
 3. Run the command with ``CATAN_ENGINE=cython``. ``bots.make_policy`` then loads the Cython-bound
    checkpoint, and every receipt records the backend and binary hashes through ``source_files()``.
 
+An explicit ``CATAN_PARAMETER_MODEL`` is kept for the command (only the served-checkpoint bind step runs
+without it) and must load under Cython, or the launcher refuses before running anything (Codex HOLD
+@f8f8849: a custom-model evaluation must never silently fall back to the served weights).
+
 The command runs from the source root of this script. Its exit status is returned.
 """
 import os
@@ -33,9 +37,9 @@ def main(argv=None):
     if '--' not in argv or argv.index('--') == len(argv) - 1:
         raise SystemExit('usage: cython_run.py -- COMMAND [ARGS...]')
     command = argv[argv.index('--') + 1:]
-    env = dict(os.environ, CATAN_ENGINE='cython')
-    env['PYTHONPATH'] = os.pathsep.join(filter(None, [str(ROOT / 'src'), env.get('PYTHONPATH')]))
-    env.pop('CATAN_PARAMETER_MODEL', None)  # the local Cython-bound checkpoint is chosen in step 3
+    run_env = dict(os.environ, CATAN_ENGINE='cython')
+    run_env['PYTHONPATH'] = os.pathsep.join(filter(None, [str(ROOT / 'src'), run_env.get('PYTHONPATH')]))
+    env = {k: v for k, v in run_env.items() if k != 'CATAN_PARAMETER_MODEL'}  # build and served bind only
     if not engine_ready(env):
         built = subprocess.run([sys.executable, str(ROOT / 'scripts' / 'build_native.py'), 'build_ext', '--inplace'],
                                cwd=ROOT, env=env)
@@ -44,8 +48,15 @@ def main(argv=None):
     bound = subprocess.run([sys.executable, str(ROOT / 'scripts' / 'bind_cython_checkpoint.py')], cwd=ROOT, env=env)
     if bound.returncode:
         raise SystemExit('Cython checkpoint not bound (parity failed); refusing to run on Cython')
+    explicit = run_env.get('CATAN_PARAMETER_MODEL')
+    if explicit:
+        probe = subprocess.run([sys.executable, '-c', 'from catan_ai.parameter_planner import load_parameters; load_parameters()'],
+                               cwd=ROOT, env=run_env, capture_output=True, text=True)
+        if probe.returncode:
+            raise SystemExit(f'CATAN_PARAMETER_MODEL={explicit} does not load under Cython (bind it for this engine); '
+                             'refusing to run rather than substitute the served checkpoint')
     print(f'cython_run: CATAN_ENGINE=cython, running {" ".join(command)}', file=sys.stderr, flush=True)
-    return subprocess.run(command, cwd=ROOT, env=env).returncode
+    return subprocess.run(command, cwd=ROOT, env=run_env).returncode
 
 
 if __name__ == '__main__':
