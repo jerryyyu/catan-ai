@@ -35,14 +35,36 @@ bars below are the honest steps toward it.
 
 ## Standard comparison (from 2026-11-01)
 
+## Evaluation policy (owner decisions 2026-11-10; supersedes the table list below for new predeclarations)
+
+- **Control:** the served bot (`planner_pv2_tiles`) holds the control seat.
+- **No heuristic tables.** The tactical (3× Tactical) and mixed (Builder, Tactical,
+  Expander) tables are dropped from new gates ("we don't need to eval against
+  builder, tactical, expander"). Results already recorded under them stand.
+- **Tables for new screens and held-outs:**
+  - self: three copies of a strong internal bot;
+  - a seeded, paired JSettlers table (`scripts/jsettlers_paired.py`; all-SMART, patch v2), now a screen-stage
+    table rather than held-out only.
+
+  STAC POMCP-TS-CR with trading stays the headline external measurement.
+- **Variance floor relaxed.** New paired-normal gates do not apply the fixed .25 SD floor of
+  `inference.paired_normal_lcb`. A floor-free variant must be implemented and calibrated before a
+  predeclaration uses it; each config states its floor. Receipts already judged with the floor keep
+  their verdicts.
+- **No human pilot yet**; there are no human players.
+- **Exact search may use up to 5 s per decision at data-generation time** (expert iteration).
+- Sizing: plan held-outs at a fraction of the weakest table's DEV point estimate, not the DEV alternative.
+
 The owner retired Catanatron as a gate on 2026-11-01: "improve vs our best".
-Every new candidate is now screened paired against the served
-`planner_parameter`, which holds the control seat, on three tables:
+Until 2026-11-09 every new candidate was screened paired against the served
+`planner_parameter`, which held the control seat, on three tables:
 
 - **tactical**: three Tactical opponents (continuity with past screens);
 - **mixed**: Builder, Tactical and Expander (style diversity, including players
   that never trade);
-- **self**: three `planner_parameter` opponents. This is the table that most
+- **self**: three `planner_parameter` opponents at the time; later configs used
+  three `planner_offer_accept` (the previous served bot), not copies of the
+  current control. This is the table that most
   resembles playing our best, and it tests whether a gain survives against an
   opponent of the same strength.
 
