@@ -32,7 +32,14 @@ REPLACEABLE = ('build_city', 'build_settlement', 'build_road', 'bank_trade', 'bu
 
 
 def served_sequences(planner, view, seat):
-    """The served turn search, keeping the best-scoring sequence for each first move."""
+    """The served turn search, keeping the best-scoring sequence for each first move.
+
+    When the served ``choose`` has just searched this same view, its tree is reused (it records the
+    best sequence per first move with identical root, cap, order and tie-breaking)."""
+    memo = getattr(planner, '_served_tree', None)
+    if memo is not None and memo[0] == id(view) and memo[1] == seat:
+        planner._served_tree = None
+        return sorted(memo[2].values(), key=lambda t: -t[0])
     legal = view.legal_actions(seat)
     root = public_projection(view)
     if planner.buy_after_root and sum(e['action']['type'] == 'buy_development' for e in view.events) < 25:
@@ -57,7 +64,7 @@ def served_sequences(planner, view, seat):
                 if buy:
                     child.players[seat].pay('development')
                 else:
-                    child.apply(seat, action)
+                    child.apply_trusted(seat, action)  # action is from this state's legal set
                 score = planner._leaf(child, seat) + (planner.purchase_value if buy else 0) - .01 * (depth + 1)
                 seq = path + [action]
                 key = json.dumps(seq[0], sort_keys=True)
@@ -87,7 +94,7 @@ def _replay(world, seat, seq):
             return world, True  # the purchase ends the sequence (served search never continues past it)
         if action not in world.legal_actions(seat):
             return None
-        world.apply(seat, action)
+        world.apply_trusted(seat, action)  # membership just checked on this state
     return world, False
 
 
@@ -100,7 +107,11 @@ def afterstate_encoding(planner, view, seat, seq):
     replayed = _replay(planner._world(view), seat, seq)
     if replayed is None:
         return None
-    world, bought = replayed
+    return encode_afterstate(replayed[0], replayed[1], view, seat)
+
+
+def encode_afterstate(world, bought, view, seat):
+    """``afterstate_encoding`` of an already replayed world: ``(features, won)``."""
     if world.winner == seat:
         return None, True
     if not bought:
