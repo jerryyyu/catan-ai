@@ -29,14 +29,41 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import arch_bakeoff as ab  # noqa: E402
-from train_value_v2 import shards  # noqa: E402
+from train_value_v2 import DATA_KEYS, shards  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 DECL = ROOT / 'experiments' / 'tiles-onpolicy.json'
 SERVED_META = ROOT / 'checkpoints' / 'value_tiles_v1.meta.json'
 XEVAL_SCRIPT = Path(__file__).resolve().parent / 'cross_eval_arch.py'
 PV2_DATA_CONFIG = ROOT / 'experiments' / 'pv2-test-v2-data.json'
+ONPOLICY_DECL = ROOT / 'experiments' / 'value-v2-tiles.json'
+ORIGINAL_DECL = ROOT / 'experiments' / 'value-v2-100k.json'
 RESAMPLES, BOOT_SEED = 1000, 29
+
+
+def check_population(root, declaration):
+    """Refuse a shard directory not completed under ``declaration``'s data keys (roots and identities,
+    point, stride, max_turns, shard_games, split) (Codex HOLD @3b390e8)."""
+    decl = json.loads(Path(declaration).read_text())
+    done = Path(root) / 'DONE.json'
+    made = json.loads(done.read_text())['config'] if done.exists() else None
+    if made is None:
+        raise ValueError(f'{root}: no DONE.json (not a completed shard set)')
+    differ = [k for k in DATA_KEYS if made.get(k) != decl.get(k)]
+    if differ:
+        raise ValueError(f'{root}: not made under {Path(declaration).name} (differs on {differ})')
+    return decl['split']
+
+
+def check_inputs(onpolicy_root, original_root, onpolicy_decl=None, original_decl=None):
+    """Both AUC inputs bound to their declared populations, and distinct."""
+    if Path(onpolicy_root).resolve() == Path(original_root).resolve():
+        raise ValueError('the on-policy and original test sets are the same directory')
+    on = check_population(onpolicy_root, onpolicy_decl or ONPOLICY_DECL)
+    orig = check_population(original_root, original_decl or ORIGINAL_DECL)
+    if on['test'] == orig['test']:
+        raise ValueError('the two declared test splits coincide')
+    return on, orig
 ONPOLICY_LCB, ORIGINAL_LCB, XEVAL_MARGIN = -0.002, -0.005, 0.002
 
 
@@ -94,6 +121,12 @@ def main(argv=None):
     new = torch.load(args.new, weights_only=False, map_location='cpu')
     if new['arm'] != 'tiles' or new['config'] != decl or (new.get('smoke') and not smoke):
         raise ValueError('candidate is not a full tiles checkpoint trained under experiments/tiles-onpolicy.json')
+    splits = check_inputs(args.onpolicy_data, args.original_data)
+    trained = shards(args.onpolicy_data, 'train')
+    if not smoke and (new.get('train_identity') != trained['identity']
+                      or new.get('train_arrays_sha256') != trained['arrays_sha256']):
+        raise ValueError('candidate was not trained on the declared on-policy train shards')
+    del trained
     ref_sha, served_pt = sha256(args.reference), json.loads(SERVED_META.read_text())['pt_sha256']
     if not smoke and ref_sha != served_pt:
         raise ValueError(f'reference {ref_sha} is not the served checkpoint {served_pt}')
@@ -104,8 +137,11 @@ def main(argv=None):
         net.load_state_dict(saved['state'])
         nets[name] = (net.to(device), saved)
     parts = {}
-    for label, root in (('onpolicy', args.onpolicy_data), ('original', args.original_data)):
+    for (label, root), split in zip((('onpolicy', args.onpolicy_data), ('original', args.original_data)), splits):
         test = ab.subsample(shards(root, 'test'), args.max_rows, 0)
+        lo, n = split['test']
+        if test['game'].min() < lo or test['game'].max() >= lo + n:
+            raise ValueError(f'{label}: test rows hold games outside the declared test split {split["test"]}')
         rows = np.arange(len(test['y']))
         preds = {n: ab.score(torch, net, 'tiles', test['x'], rows, s['mean'].to(device), s['sd'].to(device), device)[0]
                  for n, (net, s) in nets.items()}

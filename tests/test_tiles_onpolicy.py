@@ -45,3 +45,28 @@ def test_xeval_binding(mutate, expect):
     assert any(expect in p for p in g.bind_xeval(bad, 'm', 'S', 'C'))
     assert any('corpus' in p for p in g.bind_xeval(dict(r), 'm', 'S', None))
     assert g.bind_xeval(None, 'm', 'S', 'C') == ['receipt missing']
+
+
+def _done(tmp_path, name, decl_path, **change):
+    d = tmp_path / name
+    d.mkdir()
+    cfg = json.loads(Path(decl_path).read_text())
+    cfg.update(change)
+    (d / 'DONE.json').write_text(json.dumps({'config': cfg}))
+    return d
+
+
+def test_gate_inputs_are_bound_to_their_declared_populations(tmp_path):
+    on = _done(tmp_path, 'on', g.ONPOLICY_DECL)
+    orig = _done(tmp_path, 'orig', g.ORIGINAL_DECL)
+    splits = g.check_inputs(on, orig)
+    assert splits[0]['test'] == [3195000, 5000] and splits[1]['test'] == [2745000, 5000]
+    with pytest.raises(ValueError, match='same directory'):
+        g.check_inputs(orig, orig)  # the original data supplied twice
+    with pytest.raises(ValueError, match='value-v2-tiles'):
+        g.check_inputs(orig, on)  # swapped
+    other = _done(tmp_path, 'other', g.ONPOLICY_DECL, stride=2)  # self-consistent but differently declared
+    with pytest.raises(ValueError, match='stride'):
+        g.check_inputs(other, orig)
+    with pytest.raises(ValueError, match='no DONE.json'):
+        g.check_inputs(tmp_path, orig)
