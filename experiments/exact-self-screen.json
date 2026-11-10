@@ -1,0 +1,33 @@
+{
+  "name": "exact-self-screen",
+  "stage": "dev",
+  "candidate": "planner_pv2_exact",
+  "control": "planner_pv2_tiles",
+  "requires_search": false,
+  "seeds_per_panel": 400,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "self_served",
+      "seed": 3060000,
+      "opponents": [
+        "planner_pv2_tiles",
+        "planner_pv2_tiles",
+        "planner_pv2_tiles"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.02,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 5,
+    "maximum_turn_seconds": 20
+  },
+  "power": {
+    "alternative_effect": 0.04,
+    "planning_sigma": 0.25,
+    "power": 0.8,
+    "note": "DEV screen under the 2026-11-10 evaluation policy (docs/PLAN.md: no heuristic tables; control = served bot; self table = three copies of the served bot; seeded JSettlers at screen stage). Jerry 2026-11-10: self table '1. Yes'; exact re-test '2. Yes'. planner_pv2_exact (main, src/catan_ai/exact_search.py, budgets 5000/1200) vs served planner_pv2_tiles with three planner_pv2_tiles opponents. Gate: point lift >= +.02, 0 truncations, latency p95 <= 2 s, step <= 5 s, turn <= 20 s. check_design: one panel, alternative +.04, sigma .25 (largest prior cluster SD .282 was vs offer_accept copies; .25 declared), requires 111 seeds alone; 400 gives .945, so that the declared DEV conjunction with the JSettlers table (.861 at 1024 pairs) passes with probability about .81 >= .80 at +.04 (Codex HOLD @3a148f4: size the conjunction). Fresh seeds 3060000-3060399. Runs under Cython via scripts/cython_run.py. Prior exact results are on the old tables (tactical/mixed/self = 3x planner_offer_accept) and do not satisfy this DEV."
+  }
+}

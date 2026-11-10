@@ -18,25 +18,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .bots import Policy, make_policy
-from .engine import BACKEND, Game, IllegalAction
+from .engine import Game, IllegalAction
 from .observation import Observation
 from . import pilot_store
 
 from .experiments import source_files
-
-
-CYTHON_PARAMETER_CHECKPOINT = Path(__file__).resolve().parents[2] / 'checkpoints' / 'planner_parameter.cython.json'
-
-
-def select_parameter_checkpoint(environ=os.environ, backend=BACKEND, path=CYTHON_PARAMETER_CHECKPOINT):
-    """Under the Cython engine, serve the local Cython-bound copy of the fitted checkpoint when it exists
-    (scripts/bind_cython_checkpoint.py); an explicit CATAN_PARAMETER_MODEL always wins. Returns the path
-    chosen, or None."""
-    if backend == 'cython' and not environ.get('CATAN_PARAMETER_MODEL') and Path(path).exists():
-        environ['CATAN_PARAMETER_MODEL'] = str(path)
-        return str(path)
-    return None
-
+from .local_checkpoint import CYTHON_PARAMETER_CHECKPOINT, select_parameter_checkpoint  # noqa: F401
 
 select_parameter_checkpoint()
 

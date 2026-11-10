@@ -131,6 +131,8 @@ class HeuristicBot:
 
 
 def make_policy(name: str, seed: int) -> Policy:
+    from .local_checkpoint import select_parameter_checkpoint
+    select_parameter_checkpoint()  # Cython runs load the local Cython-bound checkpoint (no-op under Python)
     rng = random.Random(seed)
     if name == 'planner_parameter':
         from .parameter_planner import ParameterPlanner
@@ -180,6 +182,9 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_pv2_exact':
         from .exact_search import TurnExactPlanner
         return TurnExactPlanner(rng)
+    if name == 'planner_pv2_tiles_buyfix':
+        from .purchase_scoring import PVSearchTilesBuyFixPlanner
+        return PVSearchTilesBuyFixPlanner(rng)
     if name == 'planner_pv2_puct':
         from .puct_search import PUCTSearchPlanner
         return PUCTSearchPlanner(rng)

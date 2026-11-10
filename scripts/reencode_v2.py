@@ -29,7 +29,8 @@ from train_value_v2 import file_sha256, shard_stats  # noqa: E402
 
 
 def replay(args):
-    seed, path, identity, point, stride, max_turns = args
+    seed, path, identity, point, stride, max_turns, *rest = args
+    policy = rest[0] if rest else 'planner_offer_accept'
     from catan_ai.bots import make_policy
     from catan_ai.encoding import encode
     from catan_ai.engine import Game
@@ -41,7 +42,6 @@ def replay(args):
         raise ValueError(f'{path} does not belong to the declared root')
     stored = [r for r in record['value_rows'] if r['point'] == point]
     keep = set(range(seed % stride, len(stored), stride))
-    policy = 'planner_offer_accept'
     game = Game.new([f'{policy}-{i}' for i in range(4)], seed)
     bots = [make_policy(policy, seed * 17 + i + 1) for i in range(4)]
     seen, k, xs, ys, keys = set(), 0, [], [], []
@@ -59,7 +59,11 @@ def replay(args):
         game.apply(seat, action)
     if k != len(stored) or game.winner != record['winner']:
         raise ValueError(f'seed {seed}: replay diverged ({k} of {len(stored)} rows)')
-    return seed, xs, ys, keys, hashlib.sha256(raw).hexdigest()
+    if record['winner'] is None:
+        # A truncated game has no winner, so every seat's label would read 0 (red team D2, 2026-11-09):
+        # replay-verified but contributes no rows; counted in the shard sidecar and DONE.json.
+        return seed, [], [], [], hashlib.sha256(raw).hexdigest(), True
+    return seed, xs, ys, keys, hashlib.sha256(raw).hexdigest(), False
 
 
 def _row(k, keep, stored, game, seat, view, bot, xs, ys, keys, encode, value_features):
@@ -78,10 +82,10 @@ def _row(k, keep, stored, game, seat, view, bot, xs, ys, keys, encode, value_fea
 
 def write_shard(output, split, index, chunk, results):
     """Write one shard (``open('x')``) and its sidecar binding the NPZ bytes, rows and games."""
-    xs = [x for _, gx, _, _, _ in results for x in gx]
-    ys = [y for _, _, gy, _, _ in results for y in gy]
-    games = [s for s, gx, _, _, _ in results for _ in gx]
-    ks = [k for _, _, _, gk, _ in results for k in gk]
+    xs = [x for _, gx, *_ in results for x in gx]
+    ys = [y for _, _, gy, *_ in results for y in gy]
+    games = [s for s, gx, *_ in results for _ in gx]
+    ks = [k for _, _, _, gk, *_ in results for k in gk]
     arrays = {'x': np.asarray(xs, dtype=np.float16), 'y': np.asarray(ys, dtype=np.uint8),
               'game': np.asarray(games, dtype=np.int32), 'leaf': np.asarray([k[2] for k in ks], dtype=np.float32),
               'shared': np.asarray([k[3] for k in ks], dtype=np.float32)}
@@ -89,7 +93,8 @@ def write_shard(output, split, index, chunk, results):
     with name.open('xb') as stream:
         np.savez(stream, **arrays)
     sidecar = {'split': split, 'seeds': [chunk[0], chunk[-1]], **shard_stats(arrays),
-               'npz_sha256': file_sha256(name), 'source_sha256': {str(s): h for s, _, _, _, h in results}}
+               'npz_sha256': file_sha256(name), 'source_sha256': {str(r[0]): r[4] for r in results},
+               'truncated_games': sorted(r[0] for r in results if len(r) > 5 and r[5])}
     with name.with_suffix('.json').open('x') as stream:
         json.dump(sidecar, stream)
     return name
@@ -113,8 +118,8 @@ def main():
             seed = int(path.stem)
             if seed in by_seed:
                 raise ValueError(f'seed {seed} present in two roots')
-            by_seed[seed] = (str(path), root['identity_sha256'])
-    started, written = time.monotonic(), {}
+            by_seed[seed] = (str(path), root['identity_sha256'], manifest['config'].get('policy', 'planner_offer_accept'))
+    started, written, truncated = time.monotonic(), {}, []
     for split, (lo, n) in cfg['split'].items():
         seeds = list(range(lo, lo + n))
         missing = [s for s in seeds if s not in by_seed]
@@ -122,16 +127,19 @@ def main():
             raise ValueError(f'{split}: {len(missing)} seeds missing, e.g. {missing[:3]}')
         for shard_start in range(0, n, cfg['shard_games']):
             chunk = seeds[shard_start:shard_start + cfg['shard_games']]
-            jobs = [(s, *by_seed[s], cfg['point'], cfg['stride'], cfg['max_turns']) for s in chunk]
+            jobs = [(s, by_seed[s][0], by_seed[s][1], cfg['point'], cfg['stride'], cfg['max_turns'],
+                     by_seed[s][2]) for s in chunk]
             with Pool(args.workers) as pool:
                 results = pool.map(replay, jobs, chunksize=4)
             name = write_shard(args.output, split, shard_start // cfg['shard_games'], chunk, results)
             sidecar = json.loads(name.with_suffix('.json').read_text())
             written[name.stem] = sidecar['npz_sha256']
+            truncated += sidecar['truncated_games']
             print(json.dumps({'split': split, 'shard': name.name, 'rows': sidecar['rows'],
                               'seconds': round(time.monotonic() - started)}), flush=True)
     with (args.output / 'DONE.json').open('x') as stream:
-        json.dump({'config': cfg, 'shards': written, 'seconds': time.monotonic() - started}, stream)
+        json.dump({'config': cfg, 'shards': written, 'truncated_games': truncated,
+                   'seconds': time.monotonic() - started}, stream)
 
 
 if __name__ == '__main__':

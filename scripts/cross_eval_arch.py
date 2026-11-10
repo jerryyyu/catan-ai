@@ -36,7 +36,10 @@ def ineligible_reason(lcb, censored):
 def main():
     import torch
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=Path, required=True)
+    parser.add_argument('--model', type=Path, nargs='+', required=True,
+                        help='one checkpoint, or several for a mean-probability ensemble (experiments/tiles-tta-ens.json)')
+    parser.add_argument('--tta', action='store_true',
+                        help='average P(I win) over the 12 hex symmetries of the encoder-v2 input')
     parser.add_argument('--pv2-data-config', type=Path, required=True)
     parser.add_argument('--pv2-train-config', type=Path, required=True)
     parser.add_argument('--pv2-data', type=Path, required=True)
@@ -48,13 +51,22 @@ def main():
     manifest = json.loads((args.pv2_data / 'manifest.json').read_text())
     if manifest['config'] != dcfg:
         raise ValueError('pv2 data root was produced with a different data config')
-    saved = torch.load(args.model, weights_only=False)
-    if saved.get('smoke'):
-        raise ValueError('smoke checkpoint')
-    arm = saved['arm']
     device = torch.device(args.device)
-    net = make_net(torch, arm).to(device)
-    net.load_state_dict(saved['state'])
+    models = []
+    for path in args.model:
+        saved = torch.load(path, weights_only=False)
+        if saved.get('smoke'):
+            raise ValueError('smoke checkpoint')
+        net = make_net(torch, saved['arm']).to(device)
+        net.load_state_dict(saved['state'])
+        models.append((net, saved))
+    arm = models[0][1]['arm']
+    if any(s['arm'] != arm for _, s in models):
+        raise ValueError('an ensemble mixes architectures')
+    perms = [None]
+    if args.tta:
+        from train_value_v2 import symmetry_index
+        perms = list(symmetry_index(torch).numpy())
     lo, n = dcfg['split']['test']
     games, corpus = load(args.pv2_data, lo, n, manifest['identity_sha256'])
     rows, cm, cp, cn = [], 0, 0, 0
@@ -63,8 +75,13 @@ def main():
         p = {}
         if live:
             x = np.asarray([cands[i]['x'] for i in live], dtype=np.float16)
-            out, _ = score(torch, net, arm, x, np.arange(len(live)), saved['mean'], saved['sd'], device)
-            p = dict(zip(live, out))
+            total = np.zeros(len(live))
+            for net, saved in models:
+                for perm in perms:
+                    out, _ = score(torch, net, arm, x if perm is None else x[:, perm], np.arange(len(live)),
+                                   saved['mean'], saved['sd'], device)
+                    total += out
+            p = dict(zip(live, total / (len(models) * len(perms))))
         scores = [float('inf') if c['won_now'] else float(p[i]) for i, c in enumerate(cands)]
         rate = [c['wins'] / c['playouts'] if c['playouts'] else 1. for c in cands]
         served = next(i for i, c in enumerate(cands) if c['served'])
@@ -87,7 +104,9 @@ def main():
     lcb = draws[int(.025 * len(draws))]
     censored = truncation(games)
     reason = ineligible_reason(lcb, censored)
-    result = {'arm': arm, 'model_sha256': hashlib.sha256(args.model.read_bytes()).hexdigest(),
+    hashes = [hashlib.sha256(m.read_bytes()).hexdigest() for m in args.model]
+    result = {'arm': arm, 'model_sha256': hashes[0] if len(hashes) == 1 else hashlib.sha256(''.join(hashes).encode()).hexdigest(),
+              'models_sha256': hashes, 'tta': args.tta,
               'test_decisions': len(rows), 'pick_minus_served': sum(r[1] for r in rows) / len(rows),
               'pick_minus_served_lcb95': lcb,
               'pick_minus_served_ucb95': draws[int(.975 * len(draws)) - 1],
