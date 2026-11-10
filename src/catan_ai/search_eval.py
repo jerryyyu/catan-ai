@@ -110,7 +110,8 @@ def summarize(config, rows):
                                       / config['seeds_per_panel'])) if lift is not None else None
         method = config.get('inference', 'hoeffding')
         if method == 'paired_normal':
-            lcb = paired_normal_lcb(clusters, .05 / len(config['panels'])) if lift is not None else None
+            lcb = (paired_normal_lcb(clusters, .05 / len(config['panels']), config.get('variance_floor', .25))
+                   if lift is not None else None)
         elif method != 'hoeffding':
             raise ValueError('unknown inference method')
         passed = (truncated <= gates['maximum_match_truncations'] and lift is not None
@@ -153,7 +154,8 @@ def summarize(config, rows):
     if config.get('stage') == 'regression_audit':
         for panel in panels.values():
             clusters = panel['seed_cluster_differences']
-            panel['regression_ucb'] = (-paired_normal_lcb([-x for x in clusters], .05 / len(panels))
+            panel['regression_ucb'] = (-paired_normal_lcb([-x for x in clusters], .05 / len(panels),
+                                                          config.get('variance_floor', .25))
                                        if panel['match_truncations'] == 0 and panel['external_faults'] == 0 else None)
         result.update(pass_for_promotion=False, purpose='non-promotion regression audit', **{'pass': False})
     return result
@@ -205,6 +207,8 @@ def main():
                 raise ValueError('inference calibration does not match this implementation')
             if calibration['alpha'] != .05 / len(config['panels']):
                 raise ValueError('inference calibration must match per-panel alpha')
+            if calibration.get('sd_floor', .25) != config.get('variance_floor', .25):
+                raise ValueError('inference calibration must match the declared variance_floor')
     identity = {'config': config, 'source': source, 'host': platform.node(), 'process_cap': 1}
     if checkpoint is not None:
         identity['checkpoint'] = checkpoint
