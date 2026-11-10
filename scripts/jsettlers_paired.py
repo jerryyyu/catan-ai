@@ -57,7 +57,8 @@ def health_problems(r: dict, name: str, expect_games: int | None) -> list[str]:
     return problems
 
 
-def pair(cand: dict, ctrl: dict, alpha: float, max_excluded: float = 0.05, expect_games: int | None = None) -> dict:
+def pair(cand: dict, ctrl: dict, alpha: float, max_excluded: float = 0.05, expect_games: int | None = None,
+         point_bar: float | None = None) -> dict:
     problems = [p for p in smoke.receipt_problems(cand, ctrl)
                 if not any(p.startswith(prefix) for prefix in POLICY_FREE_PROBLEMS)]
     problems += health_problems(cand, 'candidate', expect_games) + health_problems(ctrl, 'control', expect_games)
@@ -99,6 +100,11 @@ def pair(cand: dict, ctrl: dict, alpha: float, max_excluded: float = 0.05, expec
                           and result['mean_diff'] >= 0 and result['lcb'] > 0)
     if too_many_excluded:
         result['fail_reason'] = f'more than {max_excluded:.0%} of games excluded'
+    if point_bar is not None:
+        # A DEV screen's verdict: the paired point lift clears its bar, with the same health checks.
+        result['point_bar'] = point_bar
+        result['dev_pass'] = bool(result['compatible'] and not too_many_excluded and len(diffs) >= 2
+                                  and result['mean_diff'] >= point_bar)
     return result
 
 
@@ -108,18 +114,21 @@ def main():
     parser.add_argument('control', type=Path)
     parser.add_argument('--alpha', type=float, required=True)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--point-bar', type=float, default=None,
+                        help='DEV verdict: dev_pass = healthy and paired point lift >= this bar (the LCB pass is still reported)')
     parser.add_argument('--expect-games', type=int, required=True,
                         help='the declared game count of each run (512 for experiments/tiles-heldout.json)')
     args = parser.parse_args()
     cand = json.loads(args.candidate.read_text())
     ctrl = json.loads(args.control.read_text())
-    result = pair(cand, ctrl, args.alpha, expect_games=args.expect_games)
+    result = pair(cand, ctrl, args.alpha, expect_games=args.expect_games, point_bar=args.point_bar)
     result['candidate_receipt'] = str(args.candidate)
     result['control_receipt'] = str(args.control)
     with args.out.open('x') as stream:
         json.dump(result, stream, indent=1)
     print(json.dumps({k: v for k, v in result.items() if k != 'excluded'}, indent=1))
-    return 0 if result['pass'] else 1
+    verdict = result['dev_pass'] if args.point_bar is not None else result['pass']
+    return 0 if verdict else 1
 
 
 if __name__ == '__main__':
