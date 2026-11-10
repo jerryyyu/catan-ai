@@ -1,0 +1,135 @@
+{
+  "name": "value-arms",
+  "stage": "offline gate (one predeclaration for T7/T8/T9 and S1/S2)",
+  "decision": "Jerry 2026-11-10: 'yes and yes' + '1 A' (support fix first; then T9, T8, T7) and 'Yes let's do it, can we try the models we planned on new data'. Board #1 rows 'Transformer capacity and data scale' and the recipe review (comment 6771511862).",
+  "reference": {
+    "pt": "arch-bakeoff-v1/tiles.pt",
+    "pt_sha256": "fb239324ad2195b77965f69aa28e7f8dcf3caa756e84d1892ba5f804a33972ae",
+    "note": "the served planner_pv2_tiles weights (checkpoints/value_tiles_v1.meta.json pt_sha256)"
+  },
+  "roots": {
+    "original": {
+      "shards": "value-v2-100k-shards",
+      "declaration": "value-v2-100k.json"
+    },
+    "onpolicy": {
+      "shards": "value-v2-tiles-shards",
+      "declaration": "value-v2-tiles.json"
+    },
+    "roll": {
+      "shards": "value-v2-100k-roll-shards",
+      "declaration": "value-v2-100k-roll.json"
+    },
+    "endnow": {
+      "shards": "endnow-v1-shards",
+      "declaration": "endnow-v1.json"
+    }
+  },
+  "selection": [
+    "original",
+    "onpolicy"
+  ],
+  "common": {
+    "optimizer": "adamw",
+    "learning_rate": 0.0007,
+    "weight_decay": 0.05,
+    "schedule": "cosine",
+    "warmup_fraction": 0.03,
+    "augment": "one of the 12 hex symmetries per row per batch (encoder-v2 permutation applied before any structuring)",
+    "epochs": 12,
+    "batch": 4096,
+    "validation_games": 5000,
+    "seed": 0,
+    "epoch_selection": "lowest validation BCE of P(I win) on the last 5,000 train games; never test"
+  },
+  "arms": {
+    "s1": {
+      "purpose": "support fix A: original end_turn rows + original turn-start rows with a phase flag (phase 1 = turn start; served afterstates are phase 0)",
+      "data": [
+        "original",
+        "roll"
+      ],
+      "phase": {
+        "roll": 1
+      }
+    },
+    "s2": {
+      "purpose": "support fix B: original end_turn rows + counterfactual end-now rows with true playout labels, weight 5",
+      "data": [
+        "original",
+        "endnow"
+      ],
+      "weight": {
+        "endnow": 5
+      }
+    },
+    "t9": {
+      "purpose": "served architecture from scratch on original + on-policy data (size control for T7)",
+      "data": [
+        "original",
+        "onpolicy"
+      ]
+    },
+    "t8": {
+      "purpose": "warm start from the served checkpoint (its standardization kept) on original + on-policy data",
+      "data": [
+        "original",
+        "onpolicy"
+      ],
+      "init_from": "reference",
+      "common": {
+        "learning_rate": 0.0001,
+        "epochs": 3
+      }
+    },
+    "t7": {
+      "purpose": "larger tiles transformer (~3M params) on original + on-policy data",
+      "data": [
+        "original",
+        "onpolicy"
+      ],
+      "size": {
+        "d": 256,
+        "heads": 8,
+        "mlp": 512,
+        "layers": 6,
+        "dropout": 0.1
+      }
+    }
+  },
+  "gate": {
+    "reference_note": "every arm vs the served reference on the same rows; game-clustered bootstrap, 1000 resamples, seed 31; Bonferroni over the 5 arms: one-sided alpha .01 per arm (1st percentile)",
+    "all_arms": {
+      "original_test_lcb_gt": -0.005,
+      "onpolicy_test_lcb_gt": -0.005,
+      "xeval_margin": 0.002,
+      "xeval": "scripts/cross_eval_arch.py on runs/pv2-test-v2 (both receipts from this tree, no TTA, corpus recomputed): new pick - served >= reference pick - served - margin, new receipt eligible"
+    },
+    "capacity_arms": {
+      "arms": [
+        "t7",
+        "t8",
+        "t9"
+      ],
+      "onpolicy_test_diff_lcb_gt": 0.0
+    },
+    "support_arms": {
+      "arms": [
+        "s1",
+        "s2"
+      ],
+      "city_ranked_above_end_max": 0.8,
+      "note": "xeval city_ranked_above_end_by_model; served reference ~.92, playouts .563"
+    },
+    "reported": [
+      "test AUC, log loss, ECE10 on original and on-policy tests",
+      "end-now diagnostic: AUC and log loss on endnow-v1 test rows (2745000+5000)",
+      "city_ranked_above_end_by_model for every arm",
+      "params, chosen epoch, train seconds"
+    ],
+    "on_fail": "recorded; no screen for that arm",
+    "on_pass": "a separately predeclared DEV screen under the 2026-11-10 policy (self 3x served, 400 seeds + 1024 paired JSettlers); T7 needs a serving latency check (p95 decision <= 2 s) before its screen"
+  },
+  "order": "ultra: roll re-encode then endnow generation (CPU); t9, t8, t7 train as soon as this merges (data exists); s1 after the roll shards, s2 after the endnow shards; each arm gated when its xeval exists",
+  "note": "Predeclared 2026-11-10 before any of these arms trained or any of their data was produced. Weights stay local; only metadata is committed."
+}

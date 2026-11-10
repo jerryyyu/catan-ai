@@ -165,9 +165,16 @@ def base_spec():
     return {k: cfg[k] for k in ('arch', 'hidden', 'blocks', 'dropout')}
 
 
-def make_net(torch, arm, board=None):
+def make_net(torch, arm, board=None, size=None, phase=False):
+    """``size`` overrides the tiles arm's {d, heads, mlp, layers, dropout} (value-arms T7); ``phase`` adds a
+    learned vector to the global token for phase-1 rows (value-arms S1). Defaults build the served net
+    exactly (same parameters and state-dict keys)."""
     nn = torch.nn
     board = board if board is not None else layout()
+    sz = {'d': TILES_D, 'heads': TILES_HEADS, 'mlp': TILES_MLP, 'layers': TILES_LAYERS, 'dropout': TILES_DROPOUT,
+          **(size or {})}
+    if (size or phase) and arm != 'tiles':
+        raise ValueError('size and phase apply to the tiles arm only')
 
     class Base(nn.Module):
         def __init__(self):
@@ -191,20 +198,27 @@ def make_net(torch, arm, board=None):
     class Tiles(nn.Module):
         def __init__(self):
             super().__init__()
-            d = TILES_D
+            d = sz['d']
             self.register_buffer('tidx', torch.from_numpy(tile_index(board)))
             self.register_buffer('types', torch.tensor([0] * N_TILES + [1] * N_PLAYERS + [2]))
             self.tile, self.player, self.glob = nn.Linear(TOKEN_W, d), nn.Linear(PLAYER_W, d), nn.Linear(GLOBAL_W, d)
             self.pos = nn.Parameter(torch.randn(N_TILES + N_PLAYERS + 1, d) * .02)
             self.kind = nn.Parameter(torch.randn(3, d) * .02)
-            layer = nn.TransformerEncoderLayer(d, TILES_HEADS, TILES_MLP, TILES_DROPOUT, batch_first=True, norm_first=True)
-            self.encoder = nn.TransformerEncoder(layer, TILES_LAYERS, enable_nested_tensor=False)
+            layer = nn.TransformerEncoderLayer(d, sz['heads'], sz['mlp'], sz['dropout'], batch_first=True, norm_first=True)
+            self.encoder = nn.TransformerEncoder(layer, sz['layers'], enable_nested_tensor=False)
             self.norm, self.head = nn.LayerNorm(d), nn.Linear(d, 1)
+            if phase:
+                self.phase_vec = nn.Parameter(torch.zeros(d))
 
-        def forward(self, x):
+        def forward(self, x, phase=None):
             n = len(x)
+            g = self.glob(x[:, G0:])
+            if phase is not None:
+                if not hasattr(self, 'phase_vec'):
+                    raise ValueError('this net was built without a phase vector')
+                g = g + phase.to(g.dtype).unsqueeze(1) * self.phase_vec
             h = torch.cat([self.tile(x[:, self.tidx]), self.player(x[:, P0:G0].reshape(n, N_PLAYERS, PLAYER_W)),
-                           self.glob(x[:, G0:]).unsqueeze(1)], 1) + self.pos + self.kind[self.types]
+                           g.unsqueeze(1)], 1) + self.pos + self.kind[self.types]
             return self.head(self.norm(self.encoder(h)[:, -1])).squeeze(-1)
 
     class Res(nn.Module):
