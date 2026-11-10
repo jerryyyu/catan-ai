@@ -134,7 +134,7 @@ def test_first_move_must_be_legal_in_the_real_game(fake_net, monkeypatch):
     decisions, bot = _decisions('planner_pv2_exact', 41, 15)
     illegal = {'type': 'bank_trade', 'give': 'lumber', 'receive': 'grain'}
 
-    def poisoned(planner, view, seat, max_nodes, max_states):
+    def poisoned(planner, view, seat, max_nodes, max_states, worlds=None):
         return [[illegal]], 1, False
     monkeypatch.setattr(es, 'turn_sequences', poisoned)
     monkeypatch.setattr(es, 'afterstate_encoding',

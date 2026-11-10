@@ -20,7 +20,7 @@ from copy import deepcopy
 import json
 import math
 
-from .pv_search import PVSearchTilesPlanner, REPLACEABLE, afterstate_encoding, candidate_sequences
+from .pv_search import PVSearchTilesPlanner, REPLACEABLE, afterstate_encoding, candidate_sequences, encode_afterstate
 from .unified_planner import AcceptanceOfferPlanner
 
 EXPAND = ('build_city', 'build_settlement', 'build_road', 'bank_trade', 'buy_development')
@@ -32,8 +32,11 @@ def _own_key(game, seat, bought):
             tuple(sorted(p.cities)), tuple(sorted(tuple(sorted(e)) for e in p.roads)), bought)
 
 
-def turn_sequences(planner, view, seat, max_nodes, max_states):
-    """Own-turn sequences reaching distinct afterstates, breadth-first; (sequences, nodes, capped)."""
+def turn_sequences(planner, view, seat, max_nodes, max_states, worlds=None):
+    """Own-turn sequences reaching distinct afterstates, breadth-first; (sequences, nodes, capped).
+
+    With ``worlds`` (a dict), each returned sequence's afterstate world and purchase flag are stored
+    under its JSON key, so the caller can encode it without replaying the sequence again."""
     root = planner._world(view)
     seen = {_own_key(root, seat, False)}
     out, queue, nodes, capped = [], deque([(root, [])]), 0, False
@@ -53,12 +56,14 @@ def turn_sequences(planner, view, seat, max_nodes, max_states):
                     continue
                 child.players[seat].pay('development')
             else:
-                child.apply(seat, action)
+                child.apply_trusted(seat, action)  # action is from this state's legal set
             key = _own_key(child, seat, bought)
             if key in seen:
                 continue
             seen.add(key)
             out.append(seq + [action])
+            if worlds is not None:
+                worlds[json.dumps(out[-1], sort_keys=True)] = (child, bought)
             if not bought and child.winner is None:
                 queue.append((child, seq + [action]))
     return out, nodes, capped
@@ -73,6 +78,20 @@ class TurnExactPlanner(PVSearchTilesPlanner):
     def __init__(self, rng=None):
         super().__init__(rng)
         self.last_search = None
+        self._cache_key, self._cache = None, {}
+
+    def _cached_logits(self, turn_key, rows):
+        """Logits with a within-turn cache keyed by the exact feature row; later calls in a turn
+        re-score mostly the same afterstates. Misses are scored in one batch."""
+        if turn_key != self._cache_key:
+            self._cache_key, self._cache = turn_key, {}
+        keys = [tuple(r) for r in rows]
+        missing = [i for i, k in enumerate(keys) if k not in self._cache]
+        if missing:
+            fresh = self._logits([rows[i] for i in missing])
+            for i, z in zip(missing, fresh):
+                self._cache[keys[i]] = z
+        return [self._cache[k] for k in keys]
 
     def choose(self, view, seat):
         before = self.last_offer_turn
@@ -81,7 +100,8 @@ class TurnExactPlanner(PVSearchTilesPlanner):
                 or served['type'] not in REPLACEABLE or not any(a['type'] == 'end_turn' for a in view.actions)):
             return served
         pv = candidate_sequences(self, view, seat, self.K)
-        extra, nodes, capped = turn_sequences(self, view, seat, self.MAX_NODES, self.MAX_STATES)
+        built = {}
+        extra, nodes, capped = turn_sequences(self, view, seat, self.MAX_NODES, self.MAX_STATES, built)
         # The card-counted world estimates opponents' hands and so the bank's supply; only the real
         # legal set may supply the move actually played (exact-screen-v1 aborted on an illegal bank
         # trade the world allowed). Deeper steps are a plan, replanned against the real game.
@@ -91,10 +111,13 @@ class TurnExactPlanner(PVSearchTilesPlanner):
         seqs = pv + [s for s in extra if s[0] in legal and json.dumps(s, sort_keys=True) not in listed]
         scored = []
         for seq in seqs:
-            encoded = afterstate_encoding(self, view, seat, seq)
+            reuse = built.get(json.dumps(seq, sort_keys=True))
+            # an enumerated afterstate is the same world the replay would rebuild (same root, legal moves)
+            encoded = (encode_afterstate(reuse[0], reuse[1], view, seat) if reuse is not None
+                       else afterstate_encoding(self, view, seat, seq))
             if encoded is not None:
                 scored.append((seq, *encoded))
-        logits = self._logits([x for _, x, won in scored if not won]) if scored else []
+        logits = self._cached_logits((view.turn, seat), [x for _, x, won in scored if not won]) if scored else []
         best, pick, it = -math.inf, None, iter(logits)
         for seq, _, won in scored:
             value = math.inf if won else next(it)
