@@ -1,0 +1,29 @@
+{
+  "name": "value-data-tiles",
+  "stage": "data-generation",
+  "schema": 2,
+  "policy": "planner_pv2_tiles",
+  "max_turns": 1000,
+  "seeds": [
+    3100000,
+    100000
+  ],
+  "decision_rate": 0.0,
+  "candidates": 4,
+  "playouts": 0,
+  "value_points": [
+    "roll",
+    "end_turn"
+  ],
+  "split": {
+    "train": [
+      3100000,
+      95000
+    ],
+    "test": [
+      3195000,
+      5000
+    ]
+  },
+  "note": "Board #1 row T3 (Jerry 2026-11-09: 'Let's execute on the transformer improvements'). On-policy value data for the served bot: 100,000 self-play games of planner_pv2_tiles (all four seats; weights checkpoints/value_tiles_v1.npz sha256 27dd7818\u2026), the same producer, schema and fields as value-data-100k (scripts/rank_data.py), fresh seeds 3100000-3199999 (no earlier run uses this block), split train 95,000 / test 5,000. Re-encoding to encoder v2 uses scripts/reencode_v2.py, which now replays each root with the policy its manifest declares. Training arms and their offline gate and screen are predeclared separately before any training or test read. Weights stay local. Predeclared 2026-11-09 before any game."
+}

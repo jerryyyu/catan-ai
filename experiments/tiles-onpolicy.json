@@ -1,0 +1,48 @@
+{
+  "name": "tiles-onpolicy",
+  "stage": "offline gate, then an e2e screen (both predeclared here, before re-encoding or training)",
+  "data": {
+    "shards": "runs/value-v2-tiles-shards",
+    "same_as": "value-v2-tiles (roots value-tiles-v1, point end_turn, stride 3, split train 3100000+95000 / test 3195000+5000)",
+    "game_records": [
+      "runs/value-tiles-v1"
+    ],
+    "reference_test": "runs/value-v2-100k-shards test split (2745000+5000; planner_offer_accept self-play), scored for non-inferiority"
+  },
+  "common": {
+    "optimizer": "adamw",
+    "learning_rate": 0.0007,
+    "weight_decay": 0.05,
+    "schedule": "cosine",
+    "warmup_fraction": 0.03,
+    "augment": "one of the 12 hex symmetries per row per batch (encoder-v2 permutation applied before any structuring)",
+    "epochs": 12,
+    "batch": 4096,
+    "validation_games": 5000,
+    "seed": 0,
+    "epoch_selection": "lowest validation BCE of P(I win) on the last 5,000 train games; never test"
+  },
+  "arms": {
+    "tiles": "tile-token transformer: 19 tile tokens (tile features + its 6 corners' vertex features + its 6 sides' edge features, Settlers-RL style), 4 player tokens (seat-relative), 1 global token; learned type/position embeddings; 4 pre-norm encoder layers, d 128, 4 heads, MLP 256, dropout .1; P(I win) from the global token"
+  },
+  "gate": {
+    "primary": "arm 'tiles' trained on the on-policy data (common settings unchanged: architecture, AdamW 7e-4, wd .05, cosine 3% warmup, 12 epochs, batch 4096, 12-symmetry augmentation, seed 0, epoch selection on the last 5,000 train games) vs the served reference runs/arch-bakeoff-v1/tiles.pt (pt fb239324\u2026), judged on: (1) the on-policy test rows (3195000+5000): AUC(new) - AUC(ref) >= 0 with game-clustered bootstrap 95% LCB > -0.002 (1,000 resamples, seed 29); (2) the original test rows (2745000+5000): non-inferior, AUC(new) - AUC(ref) game-clustered LCB > -0.005; (3) within-decision cross-eval on runs/pv2-test-v2 (scripts/cross_eval_arch.py, both receipts bound as in tiles-tta-ens): new pick - served >= ref pick - served - 0.002, new receipt eligible. All three must hold; anything missing is not a pass.",
+    "reported": "test AUC, log loss, ECE10 on both test sets; cross-eval with city-vs-end ranking; truncated games dropped (count)",
+    "on_fail": "recorded; no screen"
+  },
+  "note": "Board #1 T3 (Jerry 2026-11-09: 'Let's execute on the transformer improvements'; owner decision to bundle the purchase fixes). Predeclared 2026-11-09 before re-encoding, training or any test read. Weights stay local; only metadata is committed.",
+  "screen": {
+    "candidate": "planner_pv2_tiles with the new on-policy weights AND the red-team purchase-scoring fixes (D1/D3/D4, PR #59), bundled per the owner's decision (board #1 comment 6756308802)",
+    "control": "planner_pv2_tiles (served)",
+    "tables": "tactical / mixed / self as in exact-screen",
+    "gate": "+.02 paired lift on every table, 0 truncations, p95 decision <= 2 s, step max <= 5 s, turn max <= 20 s",
+    "seeds_per_panel": 260,
+    "power": "alternative +.04, sigma .22, power .8 (check_design admitted 260 for this design)",
+    "fresh_seeds": [
+      3050000,
+      3051000,
+      3052000
+    ],
+    "attribution": "a bundled candidate: a pass supports the bundle, not either change alone"
+  }
+}

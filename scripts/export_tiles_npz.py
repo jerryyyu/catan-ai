@@ -67,7 +67,12 @@ def torch_logits(torch, net, ckpt, rows):
 
 
 def probe_rows(mean, sd):
-    """Fixed probe: rows whose standardized values are N(0, 1), plus real encoded positions."""
+    """Fixed probe: rows whose standardized values are N(0, 1), plus real encoded positions.
+
+    The real positions are encoded from the full game state, so they contain opponents' true hands.
+    That is harmless here (the rows only check NumPy-vs-torch parity of the exported weights), but this
+    pattern must never be copied into a data or serving path: those encode from the chooser's
+    card-counted world (red team 2026-11-09)."""
     from catan_ai.bots import make_policy
     from catan_ai.encoding import encode
     from catan_ai.engine import Game

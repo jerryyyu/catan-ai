@@ -1,0 +1,85 @@
+{
+  "name": "stac-ladder-served",
+  "purpose": "STAC ladder with player trading (chat negotiation): planner_offer_accept as one seat vs 3 POMCP-TS-CR (256 games) and vs 3 STAC negotiators (512 games), seeded so both policies (experiments/stac-ladder-{served,tiles}.json) face the same boards, decks, first players, seats and dice. Analysis experiments/stac-ladder.json.",
+  "policy": "planner_offer_accept",
+  "seed": 20261115,
+  "stac": {
+    "repo": "https://github.com/ruflab/StacSettlers",
+    "commit": "c9e3b66f69e796b1cdd56a508ec32a6ceed1141d",
+    "patch": {
+      "file": "runs/external/stac-catanai-v2.patch",
+      "sha256": "ebadcfcb42c1dc272d9b2e6f25225e68c25ee877b45f6f72e7c69c91c52aa052"
+    },
+    "seed": 20261115,
+    "no_player_trades": false,
+    "fully_observable": false,
+    "observable_vp": false,
+    "chat_negotiation": true,
+    "force_end_turn_sec": 30,
+    "jvm_heap": "3g",
+    "player_trading": "chat"
+  },
+  "agents": {
+    "pomcp_ts_cr": {
+      "source": "Dobre & Lascarides, POMCP with Human Preferences in Settlers of Catan (AIIDE 2018), POMCP-TS-CR; paper setting 10k iterations, 4 threads, C=4 with PUCT, offers limit 3",
+      "flags": [
+        "MCTS_ITERATIONS:10000",
+        "MCTS_THREADS:4",
+        "MCTS_Cp:4.0",
+        "MCTS_TYPED_ROLLOUTS",
+        "MCTS_FACTORED_BELIEF",
+        "MCTS_OFFERS_LIMIT:3",
+        "MCTS_POMCP",
+        "MCTS_LIST_POMS",
+        "MCTS_HUMAN_ACTION_TYPE_PDF_CONDITIONED_SEEDING",
+        "MCTS_PUCT",
+        "MCTS_HUMAN_ACTION_TYPE_PDF_SEEDING_TEMPERATURE:7",
+        "MCTS_HUMAN_ACTION_TYPE_CONDITIONED_DIST_ROLLOUTS"
+      ],
+      "time_cap_ms": 10000
+    },
+    "stac_negotiator": {
+      "source": "STAC's JSettlers-derived negotiating agent (soc.robot.stac.StacRobotBrain via StacRobotFactory, default StacRobotType): negotiates trades in STAC's chat format"
+    }
+  },
+  "blocks": [
+    {
+      "name": "LadPomcpA",
+      "opponent": "pomcp_ts_cr",
+      "games": 86,
+      "jvm_heap": "7g"
+    },
+    {
+      "name": "LadPomcpB",
+      "opponent": "pomcp_ts_cr",
+      "games": 85,
+      "jvm_heap": "7g"
+    },
+    {
+      "name": "LadPomcpC",
+      "opponent": "pomcp_ts_cr",
+      "games": 85,
+      "jvm_heap": "7g"
+    },
+    {
+      "name": "LadNegA",
+      "opponent": "stac_negotiator",
+      "games": 256
+    },
+    {
+      "name": "LadNegB",
+      "opponent": "stac_negotiator",
+      "games": 256
+    }
+  ],
+  "parallel_blocks": 3,
+  "bridge_timeout_ms": 30000,
+  "timeout_sec_per_game": 1200,
+  "pass_bar": {
+    "completed_games": 768,
+    "bridge_errors": 0,
+    "max_offer_timeouts": 0
+  },
+  "limitations": "STAC's MCTS agents are not reproducible even when seeded, so pairing removes environment luck (board, deck, first player, seats, dice by roll index, steals, discards) but not opponent-play variance. Seats come from STAC's seeded shuffle, not a rotation (position counts are recorded and identical across the pair). The 10 s per-search cap deviates from the paper's uncapped 10k iterations; cap hits and >1 s overruns are counted. Our bot never counter-offers. Both policies run concurrently on the same host (ultra) so MCTS time budgets are comparable.",
+  "predeclared": "2026-11-08 before any ladder game."
+}
