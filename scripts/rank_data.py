@@ -61,9 +61,18 @@ def canonical_sha(value):
 
 
 def source_revision():
+    """The snapshot's COMMIT file, else the git HEAD of a checkout (red team 2026-11-09), else None."""
     import catan_ai
-    commit = Path(catan_ai.__file__).resolve().parents[2] / 'COMMIT'
-    return commit.read_text().strip() if commit.exists() else None
+    import subprocess
+    root = Path(catan_ai.__file__).resolve().parents[2]
+    commit = root / 'COMMIT'
+    if commit.exists():
+        return commit.read_text().strip()
+    try:
+        out = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=root, capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout.strip() or None if out.returncode == 0 else None
 
 
 def run_identity(config):
