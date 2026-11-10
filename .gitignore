@@ -22,3 +22,5 @@ checkpoints/*.pt
 
 # built atlas page (published as an artifact; source is docs/atlas/registry.json)
 docs/atlas/atlas.html
+checkpoints/planner_parameter.cython.json
+checkpoints/planner_parameter.cython.receipt.json

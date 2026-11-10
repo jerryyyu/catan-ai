@@ -153,11 +153,12 @@ def _share_cell(v) -> str:
 
 def policy_matrix(reg: dict) -> str:
     ext = reg.get('external_columns', [])
-    head1 = ('<tr class="grp"><th colspan="3"></th><th colspan="4" class="g">vs production '
-             f'(<code>{esc(reg["production"]["served"])}</code>): lift, pp</th>'
+    base = reg.get('lift_baseline', reg['production']['served'])
+    head1 = ('<tr class="grp"><th colspan="3"></th><th colspan="4" class="g">vs '
+             f'<code>{esc(base)}</code>: lift, pp</th>'
              f'<th colspan="{len(ext)}" class="g">vs external AIs: win share</th></tr>')
     head2 = ('<tr><th>Policy</th><th>Search</th><th>Value model</th>'
-             '<th class="n">Tactical</th><th class="n">Mixed</th><th class="n">Prod copies</th><th class="n">Seeds</th>'
+             '<th class="n">Tactical</th><th class="n">Mixed</th><th class="n">3× baseline</th><th class="n">Seeds</th>'
              + ''.join(f'<th class="n">{esc(c["label"])}</th>' for c in ext) + '</tr>')
     body, group = [], None
     for pol in reg['policies']:
@@ -166,13 +167,13 @@ def policy_matrix(reg: dict) -> str:
             body.append(f'<tr class="section"><td colspan="{7 + len(ext)}">{esc(group)}</td></tr>')
         vp = pol.get('vs_prod')
         if vp is None:
-            lift = ('<td class="n cell none" colspan="4">baseline</td>' if pol['status'] == 'served'
+            lift = ('<td class="n cell none" colspan="4">baseline</td>' if pol['name'] == base
                     else '<td class="n cell none" colspan="4">not yet measured</td>')
         else:
             lift = ''.join(_lift_cell(vp.get(t)) for t in TABLES) + f'<td class="n dim">{vp["seeds"]}</td>'
         shares = ''.join(_share_cell((pol.get('external') or {}).get(c['key'])) for c in ext)
         status = pol['status']
-        chip = 'pass' if status == 'served' else ('fail' if 'FAIL' in status else 'run')
+        chip = 'pass' if status.startswith('served') else ('fail' if 'FAIL' in status else 'run')
         body.append(f'<tr><td class="pol"><code>{esc(pol["name"])}</code><span class="chip {chip}">{esc(status)}</span></td>'
                     f'<td class="txt">{esc(pol["search"])}</td><td class="txt">{esc(pol["model"])}</td>{lift}{shares}</tr>')
     return f'<div class="scroll matrix"><table>{head1}{head2}{"".join(body)}</table></div>'
@@ -258,7 +259,7 @@ def render(reg: dict) -> str:
   <h2>In flight</h2>
   <div class="scroll"><table>{flight}</table></div>
 </section>
-<footer class="dim">Source <code>docs/atlas/registry.json</code> · served trace <code>{esc(prod['served_trace_sha256'][:12])}</code> · candidate trace <code>{esc(prod['candidate_trace_sha256'][:12])}</code></footer>
+<footer class="dim">Source <code>docs/atlas/registry.json</code> · served trace <code>{esc(prod['served_trace_sha256'][:12])}</code> {(' · candidate trace <code>' + esc(prod['candidate_trace_sha256'][:12]) + '</code>') if prod.get('candidate_trace_sha256') else ''}</footer>
 </div>
 """
 

@@ -205,7 +205,17 @@ def test_git_revision_resolved_from_script_repo_not_cwd(tmp_path, monkeypatch):
     assert rev['git_metadata'] == 'available' and len(rev['revision']) == 40 and isinstance(rev['dirty'], bool)
 
 
-def test_real_tiles_candidate_identity_hashes_weights():
+@pytest.fixture
+def bound_parameter_checkpoint(tmp_path, monkeypatch):
+    """A test checkpoint bound to the active backend's sources (the production binding is unchanged)."""
+    from catan_ai.experiments import source_files
+    from catan_ai.parameter_planner import DEFAULT
+    path = tmp_path / 'model.json'
+    path.write_text(json.dumps({'schema': 1, 'weights': DEFAULT, 'source': source_files()}))
+    monkeypatch.setenv('CATAN_PARAMETER_MODEL', str(path))
+
+
+def test_real_tiles_candidate_identity_hashes_weights(bound_parameter_checkpoint):
     pytest.importorskip('numpy')
     from catan_ai.tiles_value import TILES_V1
     if not Path(f'{TILES_V1}.npz').exists():

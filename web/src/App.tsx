@@ -22,8 +22,11 @@ function Pilot() {
   const [state, setState] = useState<State | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [opponent, setOpponent] = useState('planner_offer_accept');
+  // Empty until /api/bots answers; then the server's default (served bot or its fallback).
+  const [opponent, setOpponent] = useState('');
   const [servedAvailable, setServedAvailable] = useState<boolean | null>(null);
+  const [checkpointAvailable, setCheckpointAvailable] = useState<boolean | null>(null);
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [humanSeat, setHumanSeat] = useState(0);
   const [showReplay, setShowReplay] = useState(false);
 
@@ -31,10 +34,16 @@ function Pilot() {
     let active = true;
     fetch('/api/bots').then(response => response.ok ? response.json() : null).then(data => {
       if (!active) return;
-      const available = Boolean(data?.served_available);
-      setServedAvailable(available);
-      if (!available) setOpponent(current => current === 'planner_offer_accept' ? (data?.default ?? 'tactical') : current);
-    }).catch(() => { if (active) { setServedAvailable(false); setOpponent(current => current === 'planner_offer_accept' ? 'tactical' : current); } });
+      setServedAvailable(Boolean(data?.served_available));
+      setCheckpointAvailable(Boolean(data?.checkpoint_available ?? data?.served_available));
+      setFallbackReason(typeof data?.fallback_reason === 'string' ? data.fallback_reason : null);
+      setOpponent(current => current || (typeof data?.default === 'string' ? data.default : 'tactical'));
+    }).catch(() => {
+      if (!active) return;
+      setServedAvailable(false); setCheckpointAvailable(false);
+      setFallbackReason('Bot list unavailable');
+      setOpponent(current => current || 'tactical');
+    });
     return () => { active = false; };
   }, []);
 
@@ -79,7 +88,9 @@ function Pilot() {
     finally { setBusy(false); }
   }
 
-  if (!state) return <main className="landing"><div className="eyebrow">A reproducible game lab</div><h1>Catan<br/><em>AI</em></h1><p>Play the bots. Measure the next idea. Keep the engine honest.</p><label>Opponents <select aria-label="Opponents" value={opponent} onChange={e => setOpponent(e.target.value)} disabled={busy}><option value="heuristic">Heuristic</option><option value="mc">Monte Carlo LCB (experimental)</option><option value="planner_offer_accept" disabled={servedAvailable === false}>Trained planner (default)</option><option value="planner_offer_guard" disabled={servedAvailable === false}>Trained planner, offers ignore refusals</option><option value="planner_unified_offer" disabled={servedAvailable === false}>Trained planner, unguarded offers</option><option value="planner_unified" disabled={servedAvailable === false}>Trained planner, no trade offers</option><option value="planner_devfix" disabled={servedAvailable === false}>Trained planner, build search only</option><option value="planner_parameter" disabled={servedAvailable === false}>Trained planner, before the card fix</option><option value="tactical">Tactical (previous default)</option><option value="mc_mean">Monte Carlo mean (experimental, slower)</option><option value="learned">Learned baseline (experimental)</option></select></label><label>Your seat <select aria-label="Your seat" value={humanSeat} onChange={e => setHumanSeat(Number(e.target.value))} disabled={busy}>{[0, 1, 2, 3].map(seat => <option key={seat} value={seat}>Seat {seat + 1}</option>)}</select></label><button onClick={newGame} disabled={busy || servedAvailable === null}>Start a game</button>{servedAvailable === false && <p className="error">Trained planner unavailable on this server version. Using Tactical.</p>}{error && <p className="error">{error}</p>}</main>;
+  if (!state) return <main className="landing"><div className="eyebrow">A reproducible game lab</div><h1>Catan<br/><em>AI</em></h1><p>Play the bots. Measure the next idea. Keep the engine honest.</p><label>Opponents <select aria-label="Opponents" value={opponent} onChange={e => setOpponent(e.target.value)} disabled={busy}><option value="heuristic">Heuristic</option><option value="mc">Monte Carlo LCB (experimental)</option><option value="planner_pv2_tiles" disabled={servedAvailable === false}>Trained planner with value search (served default)</option><option value="planner_offer_accept" disabled={checkpointAvailable === false}>Trained planner, no value search (previous default)</option><option value="planner_offer_guard" disabled={checkpointAvailable === false}>Trained planner, offers ignore refusals</option><option value="planner_unified_offer" disabled={checkpointAvailable === false}>Trained planner, unguarded offers</option><option value="planner_unified" disabled={checkpointAvailable === false}>Trained planner, no trade offers</option><option value="planner_devfix" disabled={checkpointAvailable === false}>Trained planner, build search only</option><option value="planner_parameter" disabled={checkpointAvailable === false}>Trained planner, before the card fix</option><option value="tactical">Tactical (fallback)</option><option value="mc_mean">Monte Carlo mean (experimental, slower)</option><option value="learned">Learned baseline (experimental)</option></select></label><label>Your seat <select aria-label="Your seat" value={humanSeat} onChange={e => setHumanSeat(Number(e.target.value))} disabled={busy}>{[0, 1, 2, 3].map(seat => <option key={seat} value={seat}>Seat {seat + 1}</option>)}</select></label><button onClick={newGame} disabled={busy || !opponent}>Start a game</button>{checkpointAvailable === false
+    ? <p className="error">Trained planner unavailable on this server version. Using Tactical.{fallbackReason && ` (${fallbackReason})`}</p>
+    : servedAvailable === false && fallbackReason && <p className="error">{fallbackReason}. Using the trained planner without value search.</p>}{error && <p className="error">{error}</p>}</main>;
 
   if (showReplay && gameId) return <Replay gameId={gameId} close={() => setShowReplay(false)}/>;
   const self = state.players.find(p => p.resources !== null)!;

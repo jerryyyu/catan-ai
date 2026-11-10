@@ -3,7 +3,11 @@ name = "catan-ai"
 version = "0.1.0"
 description = "A reproducible Catan-like game engine, AI lab, and web player"
 requires-python = ">=3.11"
-dependencies = ["fastapi>=0.110", "uvicorn[standard]>=0.29"]
+dependencies = [
+    "fastapi>=0.110",
+    "numpy>=2.4.6",
+    "uvicorn[standard]>=0.29",
+]
 
 [project.scripts]
 catan-server = "catan_ai.api:main"
