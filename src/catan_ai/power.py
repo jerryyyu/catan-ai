@@ -71,12 +71,13 @@ def panel_differences(rows, panel):
     return [sum(v) / len(v) for _, v in sorted(by_seed.items())]
 
 
-def gate_threshold(gates, inference, panels, clusters, sigma):
+def gate_threshold(gates, inference, panels, clusters, sigma, sd_floor=.25):
     """The point-estimate value a panel's lift must reach to pass every lift gate.
 
     The point bar applies directly. An LCB gate ``lcb > L`` becomes ``lift > L +
     margin``: Hoeffding's margin is fixed by the cluster count, and the paired
-    normal margin is approximated with the planning sigma.
+    normal margin uses ``max(sd_floor, sigma)``, the SD the evaluator's LCB will
+    actually apply (Codex HOLD @301c8e3); the planning sigma still governs sampling.
     """
     threshold = _finite('minimum_paired_win_lift', gates['minimum_paired_win_lift'], -1, 1)
     if 'minimum_paired_lcb' in gates:
@@ -85,7 +86,7 @@ def gate_threshold(gates, inference, panels, clusters, sigma):
         if inference == 'hoeffding':
             margin = math.sqrt(2 * math.log(panels / .05) / clusters)
         elif inference == 'paired_normal':
-            margin = _N.inv_cdf(1 - alpha) * sigma / math.sqrt(clusters)
+            margin = _N.inv_cdf(1 - alpha) * max(sd_floor, sigma) / math.sqrt(clusters)
         else:
             raise ValueError('unknown inference method')
         threshold = max(threshold, floor + margin)
@@ -94,9 +95,9 @@ def gate_threshold(gates, inference, panels, clusters, sigma):
     return threshold
 
 
-def family_pass_probability(alternative, sigma, clusters, gates, inference, panels):
+def family_pass_probability(alternative, sigma, clusters, gates, inference, panels, sd_floor=.25):
     """Probability that all ``panels`` independent panels pass at true lift ``alternative``."""
-    threshold = gate_threshold(gates, inference, panels, clusters, sigma)
+    threshold = gate_threshold(gates, inference, panels, clusters, sigma, sd_floor)
     if sigma == 0:
         panel = 1.0 if alternative >= threshold else 0.0
     else:
@@ -131,12 +132,20 @@ def check_design(config):
         raise ValueError('at least one panel required')
     gates = config['gates']
     inference = config.get('inference', 'hoeffding')
-    achieved, per_panel, threshold = family_pass_probability(alternative, sigma, clusters, gates, inference, panels)
+    from .inference import DEFAULT_SD_FLOOR, MIN_SEEDS_BELOW_DEFAULT_FLOOR
+    sd_floor = _finite('variance_floor', config.get('variance_floor', DEFAULT_SD_FLOOR), 0, 1)
+    min_clusters = MIN_SEEDS_BELOW_DEFAULT_FLOOR if sd_floor < DEFAULT_SD_FLOOR else 2
+    if inference == 'paired_normal' and clusters < min_clusters:
+        raise ValueError(f'variance_floor {sd_floor} below {DEFAULT_SD_FLOOR} needs at least '
+                         f'{MIN_SEEDS_BELOW_DEFAULT_FLOOR} seeds per panel')
+    achieved, per_panel, threshold = family_pass_probability(alternative, sigma, clusters, gates, inference, panels,
+                                                             sd_floor)
     needed = None
-    for n in _doubling_search(lambda n: family_pass_probability(alternative, sigma, n, gates, inference, panels)[0] >= target):
+    for n in _doubling_search(lambda n: n >= min_clusters and family_pass_probability(
+            alternative, sigma, n, gates, inference, panels, sd_floor)[0] >= target):
         needed = n
     record = {'alternative_effect': alternative, 'planning_sigma': sigma, 'power': target,
-              'inference': inference, 'panels': panels, 'clusters': clusters,
+              'inference': inference, 'panels': panels, 'clusters': clusters, 'variance_floor': sd_floor,
               'pass_threshold': threshold, 'panel_pass_probability': per_panel,
               'family_pass_probability': achieved, 'required_clusters': needed}
     if achieved < target:
