@@ -1,0 +1,16 @@
+{
+  "name": "tiles-onpolicy-dev2",
+  "stage": "dev (new evaluation policy)",
+  "supersedes": "the 'screen' block of experiments/tiles-onpolicy.json (that file is left byte-identical: the T3 checkpoint and scripts/tiles_onpolicy_gate.py are bound to it); its offline gate and on_fail rule are unchanged",
+  "decision": "Jerry 2026-11-10: 'yes match todays policy' (docs/PLAN.md evaluation policy: no heuristic tables; control = served bot; self table = three copies of the served bot; seeded JSettlers at screen stage).",
+  "runs_only_if": "the T3 offline gate (runs/tiles-onpolicy-v1/gate.json) has pass == true; otherwise recorded, no screen",
+  "candidate": "planner_pv2_tiles_t3: planner_pv2_tiles_buyfix purchase scoring (PR #59) + on-policy weights from runs/tiles-onpolicy-v1/tiles.pt; bundled per the owner's decision; a pass supports the bundle, not either change alone",
+  "tables": {
+    "self_served": "experiments/tiles-onpolicy-self-screen.json (evaluator; 400 seeds 3070000+; three planner_pv2_tiles opponents)",
+    "jsettlers": "experiments/jsettlers-t3-dev-{t3,tiles}.json (Mac mini; 1024 paired seeded games, base 20261118)"
+  },
+  "gate": "PASS iff both: (1) self_served point lift >= +.02 with the evaluator's gates (0 truncations, latency); (2) JSettlers scripts/jsettlers_paired.py --point-bar 0.02 'dev_pass' (paired point won(t3) - won(tiles) >= +.02, identical setups, 0 bridge errors, all games completed, <= 5% excluded).",
+  "power": "As exact-dev2: self_served .945 (400 seeds, sigma .25, alternative +.04) x JSettlers .861 (per-game SD .59, 1024 pairs) = .814.",
+  "next": "A pass leads to a separately predeclared held-out (self_served sized from the DEV point with variance_floor .10, >= 512 seeds; 2048 paired JSettlers games; STAC POMCP with trading reported). A fail is recorded.",
+  "note": "Predeclared 2026-11-10 before the T3 offline gate outcome was read."
+}

@@ -1,0 +1,35 @@
+{
+  "name": "jsettlers-t3-dev-t3",
+  "purpose": "DEV JSettlers table for the T3 candidate (experiments/tiles-onpolicy-dev2.json): planner_pv2_tiles_t3 alone vs three all-SMART JSettlers 2.6.10 robots, base seed 20261118, 1024 games, paired by game name with the other policy's run.",
+  "policy": "planner_pv2_tiles_t3",
+  "seed": 20261118,
+  "games": 1024,
+  "jsettlers": {
+    "tag": "release-2.6.10",
+    "commit": "c5141056d8e3fff548817b3a1712eb66085e897b",
+    "patch": {
+      "file": "runs/external/jsettlers-seed-v2.patch",
+      "sha256": "d18f25934bc0d8a429f5d237e33d653ef06186c3e3e2304e69c6cf0166b3014c"
+    },
+    "seed": 20261118,
+    "all_smart": true
+  },
+  "server": {
+    "port": 8896,
+    "max_connections": 50,
+    "builtin_robots": 6,
+    "percent3p": 25,
+    "botgames_parallel": 1,
+    "botgames_wait_sec": 5,
+    "fast_pause_percent": 1,
+    "timeout_turn_sec": 120
+  },
+  "timeout_sec_per_game": 900,
+  "pass_bar": {
+    "completed_games": 1024,
+    "bridge_errors": 0
+  },
+  "analysis": "Paired by scripts/jsettlers_paired.py --alpha 0.05 --expect-games 1024 --point-bar 0.02; the DEV verdict is 'dev_pass' (experiments/tiles-onpolicy-dev2.json).",
+  "limitations": "The patch file is GPLv3-derived and lives only in runs/external (never in this repo); its sha256 is pinned here. all_smart makes every locally started robot use JSettlers' SMART strategy params, including our extrabot's inherited fallback brain.",
+  "note": "Predeclared 2026-11-10 before the T3 offline gate outcome was read and before any game; fresh base seed 20261118; launch with `uv run --with numpy`."
+}
