@@ -35,20 +35,20 @@ PV2_DATA_CONFIG = ROOT / 'experiments' / 'pv2-test-v2-data.json'
 RESAMPLES, BOOT_SEED, PCT = 1000, 31, .01
 
 
-def paired_auc(p_new, p_ref, y, games):
+def paired_auc(p_new, p_ref, y, games, pct=PCT, seed=BOOT_SEED):
     by_game = {}
     for i, g in enumerate(games):
         by_game.setdefault(int(g), []).append(i)
     ids = sorted(by_game)
     idx = {g: np.asarray(v) for g, v in by_game.items()}
-    rng = random.Random(BOOT_SEED)
+    rng = random.Random(seed)
     diffs = []
     for _ in range(RESAMPLES):
         s = np.concatenate([idx[rng.choice(ids)] for _ in ids])
         diffs.append(ab.fast_auc(p_new[s], y[s]) - ab.fast_auc(p_ref[s], y[s]))
     diffs.sort()
     a_new, a_ref = ab.fast_auc(p_new, y), ab.fast_auc(p_ref, y)
-    return {'auc_new': a_new, 'auc_ref': a_ref, 'diff': a_new - a_ref, 'lcb_1pct': diffs[int(PCT * RESAMPLES)],
+    return {'auc_new': a_new, 'auc_ref': a_ref, 'diff': a_new - a_ref, 'lcb_1pct': diffs[int(PCT * RESAMPLES)], 'lcb': diffs[int(pct * RESAMPLES)], 'lcb_pct': pct,
             'log_loss_new': ab.log_loss(p_new, y), 'log_loss_ref': ab.log_loss(p_ref, y),
             'ece10_new': ab.ece(p_new, y), 'ece10_ref': ab.ece(p_ref, y), 'rows': len(y), 'games': len(ids)}
 

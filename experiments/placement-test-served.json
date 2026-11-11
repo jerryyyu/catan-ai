@@ -1,0 +1,20 @@
+{
+  "name": "placement-test-served",
+  "stage": "held-out placement test (placement-value P1)",
+  "roots": [],
+  "point": "placetest",
+  "policy": "planner_pv2_tiles",
+  "stride": 1,
+  "max_turns": 1000,
+  "shard_games": 50,
+  "top_k": 12,
+  "random_k": 4,
+  "playouts": 8,
+  "split": {
+    "test": [
+      3300000,
+      50
+    ]
+  },
+  "note": "Predeclared 2026-11-11 before any of its games. 50 fresh games of the served bot (all seats); at each of the 8 setup settlement decisions per game (400 decisions) the candidates are the served economic ranking's top 12 plus 4 seeded random other legal vertices, each played out 8 times (dice and deck reshuffled per playout, common random numbers across candidates). Never used for training or model selection."
+}
