@@ -182,6 +182,9 @@ def make_policy(name: str, seed: int) -> Policy:
     if name == 'planner_pv2_exact':
         from .exact_search import TurnExactPlanner
         return TurnExactPlanner(rng)
+    if name.startswith('planner_pv2_tiles_va_'):
+        from .value_arms_serving import make
+        return make(name[len('planner_pv2_tiles_va_'):], rng)
     if name == 'planner_pv2_tiles_buyfix':
         from .purchase_scoring import PVSearchTilesBuyFixPlanner
         return PVSearchTilesBuyFixPlanner(rng)
