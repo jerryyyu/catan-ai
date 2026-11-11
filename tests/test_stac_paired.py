@@ -155,3 +155,12 @@ def test_restriction_keeps_pomcp_health_and_compat():
     missing = _blocked('planner_pv2_tiles_va_t9', [True, False], [False])
     del missing['blocks']['LadPomcpA']
     assert not sp.compare(missing, full, {'pomcp_ts_cr': 2})['healthy']  # no per-block evidence, no pass
+
+
+def test_stac_configs_bar_matches_their_blocks():
+    """Codex HOLD @0dc404f: a config's completion bar must equal the games its blocks request."""
+    import json
+    for path in sorted((ROOT / 'experiments').glob('stac*.json')):
+        cfg = json.loads(path.read_text())
+        if 'blocks' in cfg and 'pass_bar' in cfg and 'completed_games' in cfg['pass_bar']:
+            assert cfg['pass_bar']['completed_games'] == sum(b['games'] for b in cfg['blocks']), path.name

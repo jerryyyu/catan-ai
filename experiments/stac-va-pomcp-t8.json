@@ -66,11 +66,11 @@
   "bridge_timeout_ms": 30000,
   "timeout_sec_per_game": 1200,
   "pass_bar": {
-    "completed_games": 768,
+    "completed_games": 256,
     "bridge_errors": 0,
     "max_offer_timeouts": 0
   },
-  "limitations": "STAC's MCTS agents are not reproducible even when seeded, so pairing removes environment luck (board, deck, first player, seats, dice by roll index, steals, discards) but not opponent-play variance. Seats come from STAC's seeded shuffle, not a rotation (position counts are recorded and identical across the pair). The 10 s per-search cap deviates from the paper's uncapped 10k iterations; cap hits and >1 s overruns are counted. Our bot never counter-offers. Both policies run concurrently on the same host (ultra) so MCTS time budgets are comparable.",
-  "predeclared": "2026-11-08 before any ladder game.",
+  "limitations": "STAC's MCTS agents are not reproducible even when seeded, so pairing removes environment luck (board, deck, first player, seats, dice by roll index, steals, discards) but not opponent-play variance. Seats come from STAC's seeded shuffle, not a rotation (position counts are recorded and identical across the pair). The 10 s per-search cap deviates from the paper's uncapped 10k iterations; cap hits and >1 s overruns are counted. Our bot never counter-offers. The control is the historical 2026-11-09 planner_pv2_tiles ladder receipt, not a concurrent run: host load differs (ultra is shared now), so MCTS time budgets and cap hits may differ between the pair; both are recorded and reported.",
+  "predeclared": "2026-11-11 before any STAC game of this candidate (POMCP blocks of the 2026-11-08 stac-ladder design).",
   "note": "Predeclared 2026-11-11 before any STAC game of this candidate. Supersedes experiments/stac-va-t8.json, whose run never played (aborted at startup on the Cython checkpoint selection, board #1). The STAC negotiator table is dropped from the promotion bar (Jerry 2026-11-11: 'stop negotiator for promotion bar'). scripts/stac_paired.py --expect pomcp_ts_cr=256 pairs these blocks by seed with the historical tiles receipt restricted to its POMCP blocks."
 }
