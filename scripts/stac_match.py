@@ -365,7 +365,11 @@ def latency(block_dirs: list[Path]) -> dict:
 
 def bridge_identity(policy: str) -> dict:
     from catan_ai.engine import BACKEND
+    from catan_ai.local_checkpoint import select_parameter_checkpoint
     from catan_ai.parameter_planner import load_parameters
+    # The bots select the Cython-bound checkpoint when made (bots.make_policy); this identity is read first, so
+    # select here too or a Cython run refuses at startup (value-arms held-out attempt 1, 2026-11-11).
+    select_parameter_checkpoint()
     files = {str(p.relative_to(ROOT)): stac_build.sha256(p)
              for p in [ROOT / 'scripts' / 'stac_bridge.py',
                        *sorted((ROOT / 'tools' / 'stac' / 'stacbridge').glob('*.py')),
