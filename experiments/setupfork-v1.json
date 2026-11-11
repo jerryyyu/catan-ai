@@ -1,0 +1,21 @@
+{
+  "name": "setupfork-v1",
+  "stage": "counterfactual data (placement-value P1)",
+  "roots": [],
+  "point": "setupfork",
+  "policy": "planner_pv2_tiles",
+  "stride": 1,
+  "max_turns": 1000,
+  "shard_games": 5000,
+  "split": {
+    "train": [
+      3200000,
+      95000
+    ],
+    "test": [
+      3295000,
+      5000
+    ]
+  },
+  "note": "Predeclared 2026-11-11. scripts/setup_data.py mode setupfork: fresh seeded games of the served bot (all seats); one of the 8 setup settlements (index drawn per game, seed*104729+17) replaced by a uniformly drawn legal vertex; that afterstate encoded from the placing seat's view; the game played to the end by the same bots; label = that seat won; forks reaching max_turns dropped and counted. Train rows feed P1; test rows are reported."
+}

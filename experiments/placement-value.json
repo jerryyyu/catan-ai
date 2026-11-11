@@ -1,0 +1,84 @@
+{
+  "name": "placement-value",
+  "stage": "offline gate (P1: value net that knows game starts)",
+  "decision": "Jerry 2026-11-11: 'yea how can we train it to learn about game starts as well' and 'All sound good'. The served bot places setup settlements with the fitted economic score; the value transformer has never seen a setup position.",
+  "reference": {
+    "pt": "value-arms-v1/t9.pt",
+    "pt_sha256": "db4bc28e01b37dd74f963ff3b8cddd7789a0f22e8ace1a0bc73f99541cc60c12",
+    "note": "T9 (value-arms DEV pass): P1 is T9 plus setup data"
+  },
+  "served_reference": {
+    "pt": "arch-bakeoff-v1/tiles.pt",
+    "pt_sha256": "fb239324ad2195b77965f69aa28e7f8dcf3caa756e84d1892ba5f804a33972ae"
+  },
+  "roots": {
+    "original": {
+      "shards": "value-v2-100k-shards",
+      "declaration": "value-v2-100k.json"
+    },
+    "onpolicy": {
+      "shards": "value-v2-tiles-shards",
+      "declaration": "value-v2-tiles.json"
+    },
+    "setup_original": {
+      "shards": "setup-v2-100k-shards",
+      "declaration": "setup-v2-100k.json"
+    },
+    "setup_onpolicy": {
+      "shards": "setup-v2-tiles-shards",
+      "declaration": "setup-v2-tiles.json"
+    },
+    "setupfork": {
+      "shards": "setupfork-v1-shards",
+      "declaration": "setupfork-v1.json"
+    }
+  },
+  "selection": [
+    "original",
+    "onpolicy"
+  ],
+  "common": {
+    "optimizer": "adamw",
+    "learning_rate": 0.0007,
+    "weight_decay": 0.05,
+    "schedule": "cosine",
+    "warmup_fraction": 0.03,
+    "augment": "one of the 12 hex symmetries per row per batch (encoder-v2 permutation applied before any structuring)",
+    "epochs": 12,
+    "batch": 4096,
+    "validation_games": 5000,
+    "seed": 0,
+    "epoch_selection": "lowest validation BCE of P(I win) on the last 5,000 train games; never test"
+  },
+  "arms": {
+    "p1": {
+      "purpose": "T9's data and recipe plus setup rows from both self-play roots (weight .25 each; 8 rows per game) and counterfactual setup-fork rows with true labels (weight 4)",
+      "data": [
+        "original",
+        "onpolicy",
+        "setup_original",
+        "setup_onpolicy",
+        "setupfork"
+      ],
+      "weight": {
+        "setup_original": 0.25,
+        "setup_onpolicy": 0.25,
+        "setupfork": 4.0
+      }
+    }
+  },
+  "gate": {
+    "placement": "primary, on experiments/placement-test-served.json (400 decisions, 50 games): per decision the model's top candidate's playout win rate minus the served economic choice's; mean over decisions; game-clustered bootstrap (1,000 resamples, seed 37) 5th-percentile lower bound > 0",
+    "non_inferiority": "vs T9 on the original and on-policy end-of-turn test rows: AUC diff 5th-percentile lower bound > -0.005 each (same bootstrap)",
+    "reported": [
+      "the placement metric for T9 and the served net (baselines that never saw setup rows)",
+      "the same metric on placement-data-v1 test games 2896450-2896499 (mixed heuristic lineups)",
+      "oracle (best candidate) rate; top-1 agreement with the economic choice",
+      "setupfork test-row AUC/log loss vs T9"
+    ],
+    "on_fail": "recorded; no screen",
+    "on_pass": "a separately predeclared DEV under the 2026-11-10 policy for planner_pv2_tiles_va_p1: T9's candidate with setup settlements chosen by the value net over afterstates"
+  },
+  "order": "ultra, after the value-arms held-out self tables: setup re-encodes (both roots), setupfork generation and the placement test (CPU, nice 15, alongside the STAC held-out runs); then p1 train (MPS) and the gate",
+  "note": "Predeclared 2026-11-11 before any of this data was produced or P1 trained. Weights stay local."
+}

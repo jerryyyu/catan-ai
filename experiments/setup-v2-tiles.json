@@ -1,0 +1,25 @@
+{
+  "name": "setup-v2-tiles",
+  "stage": "re-encode (placement-value P1)",
+  "roots": [
+    {
+      "root": "value-tiles-v1",
+      "identity_sha256": "238914d01ecba1427e4a86527bb593ad145756873fd4c8ad446125826660da5e"
+    }
+  ],
+  "point": "setup",
+  "stride": 1,
+  "max_turns": 1000,
+  "shard_games": 5000,
+  "split": {
+    "train": [
+      3100000,
+      95000
+    ],
+    "test": [
+      3195000,
+      5000
+    ]
+  },
+  "note": "Predeclared 2026-11-11 (Jerry: 'yea how can we train it to learn about game starts as well'; 'All sound good'). Same roots and split as value-v2-tiles; scripts/setup_data.py mode setup: after each of the 8 setup settlements, the placing seat's view (encoder v2, bot._world); label = the record's winner is that seat; replay verified against the record's first stored turn-start row; truncated records give no rows. No new games."
+}
