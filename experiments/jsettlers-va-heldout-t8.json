@@ -29,7 +29,8 @@
     "completed_games": 5120,
     "bridge_errors": 0
   },
-  "analysis": "scripts/jsettlers_paired.py --alpha 0.05 --expect-games 5120 (candidate vs the tiles control); the held-out verdict is its LCB 'pass' (paired-normal one-sided LCB > 0, healthy, <= 5% excluded) with mean >= 0.",
+  "analysis": "scripts/jsettlers_paired.py --alpha 0.05 --expect-games 5120 --allow-interrupted (candidate vs the tiles control); the held-out verdict is its LCB 'pass' (paired-normal one-sided LCB > 0, healthy, <= 5% excluded) with mean >= 0.",
   "limitations": "The patch file is GPLv3-derived and lives only in runs/external (never in this repo); its sha256 is pinned here. all_smart makes every locally started robot use JSettlers' SMART strategy params, including our extrabot's inherited fallback brain.",
-  "note": "Predeclared 2026-11-11 before any game; fresh base seed 20261120; run from the DEV worktree at 64260248 through scripts/cython_run.py (one serial build/bind, then the three runs with the environment it sets)."
+  "note": "Predeclared 2026-11-11 before any game; fresh base seed 20261120; run from the DEV worktree at 64260248 through scripts/cython_run.py (one serial build/bind, then the three runs with the environment it sets).",
+  "amendment": "Amended 2026-11-11 ~14:30 ET, before any held-out JSettlers outcome was read (Jerry: 'Yes do A'): the three runs played all 5,120 games, but Claude Code's memory-pressure reaper killed the runner processes at about 14:23 ET, during each run's last game (~botsOnly~1; games are numbered down from 5120) and before receipt.json was written. Each run is sealed with scripts/jsettlers_smoke.py --finalize (the receipt rebuilt from its own manifest and logs by the code a normal run uses, marked finalized, no server rc), and the paired analysis adds --allow-interrupted: the single game a finalized receipt recorded as unfinished, which must be its last started game, is excluded (counted toward the 5% exclusion limit) instead of making the table incompatible. Nothing else is relaxed."
 }

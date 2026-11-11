@@ -542,11 +542,20 @@ def main(argv=None) -> int:
                         help='compare two seeded receipts game by game and exit')
     parser.add_argument('--out', help='new output directory (default runs/jsettlers-smoke/<utc stamp>); must not exist')
     parser.add_argument('--games', type=int, help='override the configured game count (not for receipts)')
+    parser.add_argument('--finalize', metavar='RUN_DIR', help='seal receipt.json for a run killed externally after play')
+    parser.add_argument('--reason', help='why the run is finalized (required with --finalize)')
     args = parser.parse_args(argv)
     if args.compare:
         result = compare_receipts(*args.compare)
         print(json.dumps(result, indent=1))
         return 0 if result['compatible'] and result['incomplete_games'] == 0 else 1
+    if args.finalize:
+        if not args.reason:
+            parser.error('--finalize needs --reason')
+        r = finalize(Path(args.finalize), args.reason)
+        print(json.dumps({'games_completed': r['games_completed'], 'pass': r['pass'], **{
+            k: r['finalized'][k] for k in ('unfinished_games', 'interrupted_game')}}))
+        return 0
     if not args.config:
         parser.error('--config is required')
     config_path = Path(args.config)
@@ -613,6 +622,18 @@ def main(argv=None) -> int:
     rc, timed_out = supervise(cmd, build_dir, server_log,
                               config['timeout_sec_per_game'] * games, env=dict(os.environ))
     elapsed = round(time.time() - started, 1)
+    receipt = build_receipt(out, manifest, config, games, jset, rc, timed_out, elapsed)
+    write_exclusive(out / 'receipt.json', receipt)
+    print(json.dumps({k: receipt[k] for k in ('games_completed', 'our_wins', 'bridge_errors', 'fallbacks_total',
+                                              'fallbacks_by_type', 'latency_ms', 'elapsed_sec', 'pass')}))
+    print(f'receipt: {out / "receipt.json"}')
+    return 0 if receipt['pass'] else 1
+
+
+def build_receipt(out: Path, manifest: dict, config: dict, games: int, jset: dict, rc, timed_out, elapsed) -> dict:
+    """The receipt from a run directory's sealed logs (shared by a normal run and ``--finalize``)."""
+    decision_log, bridge_log = out / 'decisions.jsonl', out / 'bridge.jsonl'
+    server_log, bridge_err = out / 'server.log', out / 'bridge.stderr'
     log_rows = read_jsonl(decision_log)
     summary = summarize(log_rows, bridge_log, games)
     seeding = seeded_game_facts(summary['games'], log_rows, server_log, jset, config['seed'])
@@ -637,11 +658,52 @@ def main(argv=None) -> int:
                        and summary['bridge_errors'] <= bar.get('bridge_errors', 0)
                        and not retired and not timed_out
                        and not seeding['seed_mismatches'])
+    return receipt
+
+
+def last_started_game(server_log: Path) -> str | None:
+    """The last game the server started (``catanai-start`` lines; botgames run one at a time)."""
+    last = None
+    with server_log.open(errors='replace') as stream:
+        for line in stream:
+            if line.startswith('catanai-start '):
+                for part in line.split():
+                    if part.startswith('game='):
+                        last = part[len('game='):]
+    return last
+
+
+def finalize(out: Path, reason: str) -> dict:
+    """Seal ``receipt.json`` for a run whose runner process was killed externally after its games were played.
+
+    The receipt is rebuilt from the run's own sealed manifest and logs with ``build_receipt`` (the code a normal
+    run uses). It records the interruption: no server rc, no elapsed time, the reason, this script's revision and
+    hash, and the one game the server had started last (``interrupted_game``) if it never finished. The strict
+    ``pass`` is computed exactly as for a normal run, so an unfinished game keeps it false; whether such a game may
+    be excluded is the analyzer's predeclared decision (``jsettlers_paired.py --allow-interrupted``).
+    """
+    out = Path(out)
+    if (out / 'receipt.json').exists():
+        raise RunRefused(f'{out} already has a receipt')
+    for name in ('manifest.json', 'build-manifest.json', 'decisions.jsonl', 'bridge.jsonl', 'server.log'):
+        if not (out / name).exists():
+            raise RunRefused(f'{out}/{name} missing; nothing to finalize')
+    manifest = json.loads((out / 'manifest.json').read_text())
+    if manifest['build']['manifest_sha256'] != jsettlers_build.sha256(out / 'build-manifest.json'):
+        raise RunRefused('build manifest changed after the run sealed it')
+    config, games = manifest['config'], manifest['games_requested']
+    receipt = build_receipt(out, manifest, config, games, jsettlers_settings(config), None, False, None)
+    unfinished = [g['game'] for g in receipt['games'] if not g.get('finished') or g.get('won') is None]
+    started_last = last_started_game(out / 'server.log')
+    receipt['finalized'] = {
+        'reason': reason, 'finalized_utc': datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ'),
+        'finalize_source_revision': git('rev-parse', 'HEAD'),
+        'finalize_script_sha256': jsettlers_build.sha256(Path(__file__)),
+        'manifest_source_revision': manifest['source_revision'],
+        'last_started_game': started_last, 'unfinished_games': unfinished,
+        'interrupted_game': started_last if unfinished == [started_last] else None}
     write_exclusive(out / 'receipt.json', receipt)
-    print(json.dumps({k: receipt[k] for k in ('games_completed', 'our_wins', 'bridge_errors', 'fallbacks_total',
-                                              'fallbacks_by_type', 'latency_ms', 'elapsed_sec', 'pass')}))
-    print(f'receipt: {out / "receipt.json"}')
-    return 0 if receipt['pass'] else 1
+    return receipt
 
 
 if __name__ == '__main__':

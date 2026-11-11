@@ -33,35 +33,53 @@ def setup_identity(g: dict) -> tuple:
     return tuple(json.dumps(g.get(k), sort_keys=True) for k in SETUP_PAIR_KEYS)
 
 
-def health_problems(r: dict, name: str, expect_games: int | None) -> list[str]:
+def interrupted_game(r: dict, allow_interrupted: bool) -> str | None:
+    """The one game a finalized receipt may exclude: its runner was killed externally while the server played its
+    last started game (``jsettlers_smoke.py --finalize``). Only with ``--allow-interrupted``, only for a receipt
+    that recorded exactly that game as its single unfinished one; otherwise None."""
+    f = r.get('finalized') or {}
+    if not allow_interrupted or not f.get('interrupted_game'):
+        return None
+    if f.get('unfinished_games') != [f['interrupted_game']] or f['interrupted_game'] != f.get('last_started_game'):
+        return None
+    return f['interrupted_game']
+
+
+def health_problems(r: dict, name: str, expect_games: int | None, allow_interrupted: bool = False) -> list[str]:
     """Completed-coverage evidence a receipt must carry before it can support a confirmatory verdict."""
     problems = []
     games = r.get('games') or []
+    skip = interrupted_game(r, allow_interrupted)
+    gap = 1 if skip else 0
     requested = r.get('games_requested')
     if expect_games is not None and requested != expect_games:
         problems.append(f'{name}: games_requested {requested!r} != declared {expect_games}')
     for key in ('games_completed', 'truncated', 'bridge_errors'):
         if not isinstance(r.get(key), int):
             problems.append(f'{name}: missing {key} evidence')
-    if isinstance(r.get('games_completed'), int) and r.get('games_completed') != requested:
-        problems.append(f'{name}: games_completed {r.get("games_completed")} != games_requested {requested}')
-    if r.get('truncated') not in (0, None) or (isinstance(r.get('truncated'), int) and r['truncated'] != 0):
+    if isinstance(r.get('games_completed'), int) and r.get('games_completed') != requested - gap:
+        problems.append(f'{name}: games_completed {r.get("games_completed")} != games_requested {requested}'
+                        + (' - 1 interrupted' if gap else ''))
+    if r.get('truncated') not in (0, gap, None) or (isinstance(r.get('truncated'), int) and r['truncated'] != gap):
         problems.append(f'{name}: truncated {r.get("truncated")}')
+    if r.get('finalized') and r.get('server_rc') is not None:
+        problems.append(f'{name}: finalized receipt carries a server rc')
     if isinstance(r.get('bridge_errors'), int) and r['bridge_errors'] != 0:
         problems.append(f'{name}: bridge_errors {r["bridge_errors"]}')
     if len(games) != requested:
         problems.append(f'{name}: {len(games)} game records != games_requested {requested}')
-    unfinished = [g.get('game') for g in games if not g.get('finished') or g.get('won') is None]
+    unfinished = [g.get('game') for g in games if (not g.get('finished') or g.get('won') is None) and g.get('game') != skip]
     if unfinished:
         problems.append(f'{name}: {len(unfinished)} unfinished games, e.g. {unfinished[:3]}')
     return problems
 
 
 def pair(cand: dict, ctrl: dict, alpha: float, max_excluded: float = 0.05, expect_games: int | None = None,
-         point_bar: float | None = None) -> dict:
+         point_bar: float | None = None, allow_interrupted: bool = False) -> dict:
     problems = [p for p in smoke.receipt_problems(cand, ctrl)
                 if not any(p.startswith(prefix) for prefix in POLICY_FREE_PROBLEMS)]
-    problems += health_problems(cand, 'candidate', expect_games) + health_problems(ctrl, 'control', expect_games)
+    problems += (health_problems(cand, 'candidate', expect_games, allow_interrupted)
+                 + health_problems(ctrl, 'control', expect_games, allow_interrupted))
     if (cand.get('config') or {}).get('policy') == (ctrl.get('config') or {}).get('policy'):
         problems.append('candidate and control use the same policy')
     games_c = {g['game']: g for g in cand.get('games') or [] if g.get('game')}
@@ -96,6 +114,9 @@ def pair(cand: dict, ctrl: dict, alpha: float, max_excluded: float = 0.05, expec
                       ci95=[mean - 1.96 * se, mean + 1.96 * se])
     too_many_excluded = n_total == 0 or len(excluded) > max_excluded * n_total
     result['expect_games'] = expect_games
+    result['allow_interrupted'] = allow_interrupted
+    result['interrupted_excluded'] = {'candidate': interrupted_game(cand, allow_interrupted),
+                                      'control': interrupted_game(ctrl, allow_interrupted)}
     result['pass'] = bool(result['compatible'] and not too_many_excluded and len(diffs) >= 2
                           and result['mean_diff'] >= 0 and result['lcb'] > 0)
     if too_many_excluded:
@@ -116,12 +137,16 @@ def main():
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--point-bar', type=float, default=None,
                         help='DEV verdict: dev_pass = healthy and paired point lift >= this bar (the LCB pass is still reported)')
+    parser.add_argument('--allow-interrupted', action='store_true',
+                        help='exclude (count as excluded) the single game a finalized receipt recorded as interrupted '
+                             'by an external kill; only when the declaration says so')
     parser.add_argument('--expect-games', type=int, required=True,
                         help='the declared game count of each run (512 for experiments/tiles-heldout.json)')
     args = parser.parse_args()
     cand = json.loads(args.candidate.read_text())
     ctrl = json.loads(args.control.read_text())
-    result = pair(cand, ctrl, args.alpha, expect_games=args.expect_games, point_bar=args.point_bar)
+    result = pair(cand, ctrl, args.alpha, expect_games=args.expect_games, point_bar=args.point_bar,
+                  allow_interrupted=args.allow_interrupted)
     result['candidate_receipt'] = str(args.candidate)
     result['control_receipt'] = str(args.control)
     with args.out.open('x') as stream:
