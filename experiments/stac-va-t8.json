@@ -1,6 +1,6 @@
 {
   "name": "stac-va-t8",
-  "purpose": "STAC ladder with player trading (chat negotiation): planner_pv2_tiles as one seat vs 3 POMCP-TS-CR (256 games) and vs 3 STAC negotiators (512 games), seeded so both policies (experiments/stac-ladder-{served,tiles}.json) face the same boards, decks, first players, seats and dice. Analysis experiments/stac-ladder.json.",
+  "purpose": "Reported external number for the value-arms held-out (no gate): planner_pv2_tiles_va_t8 as one seat vs 3 STAC POMCP-TS-CR (256 games) and vs 3 STAC negotiators (512 games), with chat trading, on the same seeded boards, decks, first players, seats and dice as the existing planner_pv2_tiles ladder receipt (stac-ladder-tiles, run 2026-11-09).",
   "policy": "planner_pv2_tiles_va_t8",
   "seed": 20261115,
   "stac": {
@@ -82,5 +82,5 @@
   },
   "limitations": "STAC's MCTS agents are not reproducible even when seeded, so pairing removes environment luck (board, deck, first player, seats, dice by roll index, steals, discards) but not opponent-play variance. Seats come from STAC's seeded shuffle, not a rotation (position counts are recorded and identical across the pair). The 10 s per-search cap deviates from the paper's uncapped 10k iterations; cap hits and >1 s overruns are counted. Our bot never counter-offers. Both policies run concurrently on the same host (ultra) so MCTS time budgets are comparable.",
   "predeclared": "2026-11-08 before any ladder game.",
-  "note": "value-arms held-out, reported external number (no gate): planner_pv2_tiles_va_t8 on the stac-ladder-tiles seeds and STAC build, so scripts/stac_paired.py pairs it with the existing planner_pv2_tiles ladder receipt (runs/stac-ladder-v1/tiles on ultra). Predeclared 2026-11-11 before any game."
+  "note": "Predeclared 2026-11-11 before any game. The comparison is with that historical planner_pv2_tiles receipt, not a concurrent control: scripts/stac_paired.py pairs the games by seed. Run on ultra through scripts/cython_run.py."
 }

@@ -4,7 +4,7 @@
   "candidate": "planner_pv2_tiles_va_t9",
   "control": "planner_pv2_tiles",
   "requires_search": false,
-  "seeds_per_panel": 768,
+  "seeds_per_panel": 896,
   "max_turns": 1000,
   "panels": [
     {
@@ -29,7 +29,7 @@
     "alternative_effect": 0.0347,
     "planning_sigma": 0.21,
     "power": 0.8,
-    "note": "Predeclared 2026-11-11 before any held-out game. Confirmatory self table for planner_pv2_tiles_va_t9 after its DEV self table +0.0462 (runs/value-arms-self-screen-t9-v1.json sha256 d76b6b673151\u2026; board #1 comment 6788114110). Gate: paired-normal seed-cluster LCB > 0 at alpha .05 (one panel) with variance_floor .10 (PR #63; >= 512 seeds), point lift >= 0, 0 truncations, latency as DEV. Power: alternative = .75 x the DEV point (0.0347), sigma .21 (DEV cluster SDs .202 / .192); check_design gives 0.998 at 768 seeds. One fresh seed block 3090000-3090767 shared by both candidates (sized for t8, the smaller DEV point). Runs from the DEV snapshot vadev-source-v1 (source 64260248, Cython) as the evaluator requires; calibration receipt produced by that snapshot's scripts/calibrate_inference.py --alpha .05 --sd-floor .1 --null-seeds 512 --alternative-seeds 1024."
+    "note": "Predeclared 2026-11-11 before any held-out game. Confirmatory self table for planner_pv2_tiles_va_t9 after its DEV self table +0.0462 (runs/value-arms-self-screen-t9-v1.json sha256 d76b6b673151\u2026; board #1 comment 6788114110). Gate: paired-normal seed-cluster LCB > 0 at alpha .05 (one panel) with variance_floor .10 (PR #63; >= 512 seeds), point lift >= 0, 0 truncations, latency as DEV. Power: alternative = .75 x the DEV point (0.0347), sigma .21 (DEV cluster SDs .202 / .192); check_design gives 1.0 at 896 seeds. One fresh seed block 3090000-3090895 shared by both candidates (sized for t8, the smaller DEV point). Runs from the DEV snapshot vadev-source-v1 (source 64260248, Cython) as the evaluator requires; calibration receipt produced by that snapshot's scripts/calibrate_inference.py --alpha .05 --sd-floor .1 --null-seeds 512 --alternative-seeds 1024. Error control (Codex HOLD @50267e6): fixed-sequence testing across candidates, t9 first at alpha .05; t8 is tested at alpha .05 only if t9 passes both tables, which keeps the family-wise error at .05 with no alpha split. Resized to 896 seeds before any held-out game so the t8 joint power reaches .80."
   },
   "requires_dev_pass": true,
   "inference": "paired_normal",

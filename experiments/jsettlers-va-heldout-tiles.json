@@ -1,9 +1,9 @@
 {
   "name": "jsettlers-va-heldout-tiles",
-  "purpose": "value-arms held-out JSettlers table: planner_pv2_tiles alone vs three all-SMART JSettlers 2.6.10 robots, base seed 20261120, 4096 games; the planner_pv2_tiles run is the shared control.",
+  "purpose": "value-arms held-out JSettlers table: planner_pv2_tiles alone vs three all-SMART JSettlers 2.6.10 robots, base seed 20261120, 5120 games; the planner_pv2_tiles run is the shared control.",
   "policy": "planner_pv2_tiles",
   "seed": 20261120,
-  "games": 4096,
+  "games": 5120,
   "jsettlers": {
     "tag": "release-2.6.10",
     "commit": "c5141056d8e3fff548817b3a1712eb66085e897b",
@@ -26,10 +26,10 @@
   },
   "timeout_sec_per_game": 900,
   "pass_bar": {
-    "completed_games": 4096,
+    "completed_games": 5120,
     "bridge_errors": 0
   },
-  "analysis": "scripts/jsettlers_paired.py --alpha 0.05 --expect-games 4096 (candidate vs the tiles control); the held-out verdict is its LCB 'pass' (paired-normal one-sided LCB > 0, healthy, <= 5% excluded) with mean >= 0.",
+  "analysis": "scripts/jsettlers_paired.py --alpha 0.05 --expect-games 5120 (candidate vs the tiles control); the held-out verdict is its LCB 'pass' (paired-normal one-sided LCB > 0, healthy, <= 5% excluded) with mean >= 0.",
   "limitations": "The patch file is GPLv3-derived and lives only in runs/external (never in this repo); its sha256 is pinned here. all_smart makes every locally started robot use JSettlers' SMART strategy params, including our extrabot's inherited fallback brain.",
-  "note": "Predeclared 2026-11-11 before any game; fresh base seed 20261120; run from the DEV worktree at 64260248 with `uv run --with numpy`."
+  "note": "Predeclared 2026-11-11 before any game; fresh base seed 20261120; run from the DEV worktree at 64260248 through scripts/cython_run.py (one serial build/bind, then the three runs with the environment it sets)."
 }

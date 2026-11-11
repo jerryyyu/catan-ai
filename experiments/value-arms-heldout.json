@@ -7,18 +7,20 @@
     "planner_pv2_tiles_va_t8"
   ],
   "tables": {
-    "self_served": "experiments/value-arms-heldout-self-<arm>.json (evaluator, ultra; 768 fresh seeds 3090000+, shared)",
-    "jsettlers": "experiments/jsettlers-va-heldout-{tiles,t9,t8}.json (Mac mini; 4096 games, base 20261120, shared control)",
-    "stac": "experiments/stac-va-<arm>.json (ultra; reported only, paired with the stac-ladder tiles receipt)"
+    "self_served": "experiments/value-arms-heldout-self-<arm>.json (evaluator, ultra; 896 fresh seeds 3090000+, shared)",
+    "jsettlers": "experiments/jsettlers-va-heldout-{tiles,t9,t8}.json (Mac mini; 5120 games, base 20261120, shared control)",
+    "stac": "experiments/stac-va-<arm>.json (ultra; reported only, paired by seed with the 2026-11-09 tiles ladder receipt)"
   },
-  "gate": "Per candidate, PASS iff both: (1) the self_served evaluator receipt passes (paired-normal LCB > 0 at alpha .05, variance_floor .10, point >= 0, 0 truncations, latency); (2) the JSettlers paired table: scripts/jsettlers_paired.py --alpha 0.05 --expect-games 4096 'pass' (one-sided LCB > 0, healthy, <= 5% excluded) and mean >= 0. Each table at alpha .05; a false pass needs both tables to pass, and the two candidates are judged separately (at most about 2 x .05^2 family-wise under independence).",
+  "gate": "Per candidate, PASS iff both: (1) the self_served evaluator receipt passes (paired-normal LCB > 0 at alpha .05, variance_floor .10, point >= 0, 0 truncations, latency); (2) the JSettlers paired table: scripts/jsettlers_paired.py --alpha 0.05 --expect-games 5120 'pass' (one-sided LCB > 0, healthy, <= 5% excluded) and mean >= 0. Both tables must pass (an intersection-union test: each component at .05 bounds this candidate's false-pass probability by .05). Across the two candidates, fixed-sequence testing: t9 first; t8 is tested only if t9 passes, so the family-wise error stays at .05. If t9 fails, t8's tables are reported but support no claim (Codex HOLD @50267e6).",
   "power": {
-    "self_served": "t9 .998, t8 .830 (check_design, 768 seeds, alternative .75 x DEV point, sigma .21)",
-    "jsettlers": "4096 pairs, per-game SD .58 (DEV .574 / .562): pass needs a mean above about +.015; at .75 x the DEV point (t9 +.0205, t8 +.0264) power is about .73 and .90. 4096 instead of the 2048 proposed on 2026-11-10 because 2048 gives only about .48 / .66; chosen before any held-out game.",
-    "joint": "t9 about .73, t8 about .75"
+    "target": "joint power >= .80 per candidate at alternative .75 x its DEV point (Codex HOLD @50267e6: target made explicit)",
+    "self_served": "t9 1.0, t8 0.878 (check_design, 896 seeds, sigma .21)",
+    "jsettlers": "5120 pairs, per-game SD .58 (DEV .574 / .562): pass needs a mean above about +.013; at .75 x the DEV point (t9 +.0205, t8 +.0264) power .812 and .947. Sizes chosen before any held-out game (2048 on 2026-11-10 would give .48 / .66).",
+    "joint": "t9 about 0.81, t8 about 0.83"
   },
   "reported": "STAC POMCP-TS-CR and negotiator win shares with trading, paired with the served tiles ladder (no gate); mean VP; latency",
   "source": "all three tables run the DEV code: ultra snapshot vadev-source-v1 and the Mac mini worktree catan-ai-vadevjs, both at 64260248ad1ef8d7bbacaecc7d0e3c5e8ad8e06e",
   "consequence": "PASS: supports promoting that candidate (owner's call). FAIL: planner_pv2_tiles stays served; no re-test without a new owner decision.",
-  "note": "Predeclared 2026-11-11 before any held-out game."
+  "note": "Predeclared 2026-11-11 before any held-out game.",
+  "launch": "every external table runs through scripts/cython_run.py: one serial build/bind per checkout, then each run with the environment it sets (CATAN_ENGINE=cython, snapshot src on PYTHONPATH)"
 }
