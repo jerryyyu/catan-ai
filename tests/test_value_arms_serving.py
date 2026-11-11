@@ -14,7 +14,7 @@ def test_unknown_arm_is_refused():
 
 def test_candidates_are_registered_and_pinned():
     from catan_ai import value_arms_serving as v
-    assert set(v.ARMS) == {'t9', 't8'}
+    assert set(v.ARMS) == {'t9', 't8', 's1'}
     for arm, pt in v.ARMS.items():
         meta = ROOT / 'checkpoints' / f'value_tiles_va_{arm}.meta.json'
         import json

@@ -4,12 +4,13 @@
   "decision": "Jerry 2026-11-10: 'Sounds good yes let's screen some of these even if they don't pass offline bar'. This overrides experiments/value-arms.json on_fail ('no screen for that arm') for the value-arms candidates; all t-arms passed offline (board #1 comments 6783474189, 6783815428).",
   "candidates": {
     "t9": "planner_pv2_tiles_va_t9: served size trained from scratch on original + on-policy data (offline: +.0027 / +.0055 AUC)",
-    "t8": "planner_pv2_tiles_va_t8: warm start from served, original + on-policy (offline: +.0006 / +.0034 AUC, best cross-eval pick)"
+    "t8": "planner_pv2_tiles_va_t8: warm start from served, original + on-policy (offline: +.0006 / +.0034 AUC, best cross-eval pick)",
+    "s1": "planner_pv2_tiles_va_s1: original end_turn + turn-start rows with a phase flag (served at phase 0). Offline FAIL (cross-eval pick +.0047 < .0065) but city-over-end .770 (board #1 comment 6785287470); screened under the owner decision quoted above"
   },
   "not_screened": {
     "t7": "3.2M params: weakest offline of the capacity arms and not servable by the NumPy server at its size"
   },
-  "later": "s1 / s2 may be added by their own table files under this umbrella before any of their games run (same seeds, same gate).",
+  "later": "s2 may be added by its own table files under this umbrella before any of its games run (same seeds, same gate).",
   "bundle": "each candidate also carries the planner_pv2_tiles_buyfix purchase scoring (owner decision, board #1 comment 6756308802); a pass supports the bundle, not the weights alone",
   "tables": {
     "self_served": "experiments/value-arms-self-screen-<arm>.json (evaluator; 400 seeds 3080000+, shared by all candidates; three planner_pv2_tiles opponents)",

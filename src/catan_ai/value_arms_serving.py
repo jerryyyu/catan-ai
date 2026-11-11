@@ -16,6 +16,7 @@ CHECKPOINTS = Path(__file__).resolve().parents[2] / 'checkpoints'
 ARMS = {
     't9': 'db4bc28e01b37dd74f963ff3b8cddd7789a0f22e8ace1a0bc73f99541cc60c12',
     't8': 'ad8038358820e66d022dedf4b27a28b4bd450d2cf4f2c3aae23cbb424a4d622a',
+    's1': '3096f12ec645ccbda8359c45ad95ffc29e9b71853fddfed7fa0eb5178a5d3101',  # offline FAIL; screened by owner decision
 }
 
 
