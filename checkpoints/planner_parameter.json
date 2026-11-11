@@ -15,7 +15,7 @@
   "_engine_py.py": "5d6021ef5460c6d673819bd8321c5c146108a9f5d2deb826fea57092fdd15fbf",
   "api.py": "f18647b2392441df29c87c4e3a597df78a690d055c53b4470503c3b4b1fe8613",
   "belief.py": "ff5f9f71093e7342b3d4802e9e4cc06cfddd30eb14dcbfa5652d776d9a43dd15",
-  "bots.py": "52c894f078e5059c531aba9675b7abaa1ddef8b806522036633cc793b5643fd0",
+  "bots.py": "c39bf28755ecd87a62491abeec9b830301dc7ad7b120b6692c6ee19ab940bf84",
   "card_planner.py": "2e19eb4fca7ff305a9d1678e5ec7551bef004c1f1cd93e8845b5fc88d690c1c9",
   "card_timing.py": "e200dd709bb96adabca1f222fa7a5b4a87829e13e0d858befb3c3388805fd757",
   "catanatron_adapter.py": "b54a421a77aa24d9c4dba2c5af180f904bcbfdeb1a76cc683f187254ce5d6297",
@@ -63,6 +63,7 @@
   "tactical.py": "c709aea25e30d8d2f2e15fe21ed9cb1cbef04a1c63ef49e5fedf22e02560ada7",
   "tiles_value.py": "371863162b2ef8991c950fddd0d25c62b5c91e77d250f4e2c75e28ff4aa11f86",
   "unified_planner.py": "44743726f7b1ff9986ddd003a9cb098d8d5f6e89c593c589efd6ca18fdfda300",
+  "value_arms_serving.py": "ee9eb8428a2ef9a1d9e8e0aff0ec41588044637702fea521cd387c8bc6e67ee6",
   "value_leaf.py": "7d51d944dc875c8fbc856287be75103217c964d1ecf13cdc0df41467b1f43c61",
   "value_model.py": "9831225f5e84ecb2457fdb1093dc0c38c8c410d3974fb2b6c5cf9f619a572600",
   "engine_backend": "11a4a60b518bf24989d481468076e5d5982884626aed9faeb35b8576fcd223e1"

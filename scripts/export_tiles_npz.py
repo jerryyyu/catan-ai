@@ -53,7 +53,10 @@ def load_torch_net(torch, pt):
     ckpt = torch.load(pt, map_location='cpu', weights_only=False)
     if ckpt.get('arm') != 'tiles' or ckpt.get('smoke'):
         raise ValueError('not a full (non-smoke) tiles checkpoint')
-    net = ab.make_net(torch, 'tiles', ab.layout())
+    if ckpt.get('size'):  # value-arms T7: the NumPy server is fixed at the served dimensions
+        raise ValueError(f'non-default tiles size {ckpt["size"]} cannot be served by tiles_value.TilesValueNet')
+    phase = 'phase_vec' in ckpt['state']  # value-arms S1: served afterstates are phase 0, so the vector is unused
+    net = ab.make_net(torch, 'tiles', ab.layout(), phase=phase)
     net.load_state_dict(ckpt['state'])
     net.eval()
     return net, ckpt
@@ -117,6 +120,8 @@ def main(argv=None):
     mean, sd = ckpt['mean'].numpy().astype(np.float32), ckpt['sd'].numpy().astype(np.float32)
     arrays = {'mean': mean, 'sd': sd}
     for k, v in ckpt['state'].items():
+        if k == 'phase_vec':
+            continue
         if k in ('tidx', 'types'):
             arrays[k] = v.numpy().astype(np.int64)
         else:
@@ -151,13 +156,17 @@ def stage(torch, ckpt, arrays, probe, pt, npz, meta_path, source_run=SOURCE_RUN)
             'npz_sha256': sha256(npz), 'source_run': source_run,
             'arrays': {k: list(v.shape) for k, v in sorted(arrays.items())},
             'params': ckpt['params'], 'epoch': ckpt['epoch'], 'val_bce': ckpt['val_bce'],
-            'epochs': ckpt['epochs'], 'train_identity': ckpt['train_identity'],
-            'train_seconds': ckpt['train_seconds'], 'config': ckpt['config'],
+            'epochs': ckpt.get('epochs'), 'train_identity': ckpt.get('train_identity', ckpt.get('train')),
+            'train_seconds': ckpt.get('train_seconds'), 'config': ckpt['config'],
             'torch_version': torch.__version__,
             'probe': {'seed': PROBE_SEED, 'random_rows': PROBE_RANDOM, 'game_seed': PROBE_GAME_SEED,
                       'rows': len(probe)}}
     if 'derived_from' in ckpt:
         meta['derived_from'] = ckpt['derived_from']
+    if 'value_arm' in ckpt:  # experiments/value-arms.json checkpoint
+        meta.update(value_arm=ckpt['value_arm'], phase_vec_dropped='phase_vec' in ckpt['state'],
+                    init_from_sha256=ckpt.get('init_from_sha256'),
+                    producer_source_revision=(ckpt.get('provenance') or {}).get('source_revision'))
     meta_path.write_text(json.dumps(meta, indent=1) + '\n')
     diff = validate(str(npz)[:-len('.npz')])
     meta['parity_max_abs_diff'] = diff

@@ -1,0 +1,21 @@
+{
+  "name": "value-arms-dev",
+  "stage": "dev (2026-11-10 evaluation policy)",
+  "decision": "Jerry 2026-11-10: 'Sounds good yes let's screen some of these even if they don't pass offline bar'. This overrides experiments/value-arms.json on_fail ('no screen for that arm') for the value-arms candidates; all t-arms passed offline (board #1 comments 6783474189, 6783815428).",
+  "candidates": {
+    "t9": "planner_pv2_tiles_va_t9: served size trained from scratch on original + on-policy data (offline: +.0027 / +.0055 AUC)",
+    "t8": "planner_pv2_tiles_va_t8: warm start from served, original + on-policy (offline: +.0006 / +.0034 AUC, best cross-eval pick)"
+  },
+  "not_screened": {
+    "t7": "3.2M params: weakest offline of the capacity arms and not servable by the NumPy server at its size"
+  },
+  "later": "s1 / s2 may be added by their own table files under this umbrella before any of their games run (same seeds, same gate).",
+  "bundle": "each candidate also carries the planner_pv2_tiles_buyfix purchase scoring (owner decision, board #1 comment 6756308802); a pass supports the bundle, not the weights alone",
+  "tables": {
+    "self_served": "experiments/value-arms-self-screen-<arm>.json (evaluator; 400 seeds 3080000+, shared by all candidates; three planner_pv2_tiles opponents)",
+    "jsettlers": "experiments/jsettlers-va-dev-<arm>.json (Mac mini; 1024 games, base 20261119; the tiles run is the shared control)"
+  },
+  "gate": "Per candidate, PASS iff both: (1) self_served point lift >= +.02 with the evaluator's gates; (2) JSettlers scripts/jsettlers_paired.py --point-bar 0.02 'dev_pass' against the shared control. Candidates are judged separately; the DEV is a screen, so the held-out (fresh seeds, sized from the DEV point, variance_floor .10, >= 512 seeds; 2048 paired JSettlers games) is the confirmatory step for any passer.",
+  "power": "per candidate as exact-dev2: .945 x .861 = .814 at a true +.04 on both tables",
+  "note": "Predeclared 2026-11-10 before any game of these candidates."
+}
