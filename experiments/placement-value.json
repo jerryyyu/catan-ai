@@ -68,11 +68,11 @@
     }
   },
   "gate": {
-    "placement": "primary, on experiments/placement-test-served.json (400 decisions, 50 games): per decision the model's top candidate's playout win rate minus the served economic choice's; mean over decisions; game-clustered bootstrap (1,000 resamples, seed 37) 5th-percentile lower bound > 0",
+    "placement": "primary, on experiments/placement-test-served.json (400 decisions, 50 games): per decision the model's top candidate's playout win rate minus the served economic choice's; mean over decisions; game-clustered bootstrap (1,000 resamples, seed 37) 5th-percentile lower bound > 0; eligible only with the complete declared inventory (50 seeds x 8 setup decisions, 16 distinct candidates each, exactly one served, 8 playouts per candidate) and zero truncated playouts (a truncated playout would count as a loss); otherwise the check is null and the arm does not pass",
     "non_inferiority": "vs T9 on the original and on-policy end-of-turn test rows: AUC diff 5th-percentile lower bound > -0.005 each (same bootstrap)",
     "reported": [
       "the placement metric for T9 and the served net (baselines that never saw setup rows)",
-      "the same metric on placement-data-v1 test games 2896450-2896499 (mixed heuristic lineups)",
+      "the same metric on placement-data-v1 test games 2896450-2896499 (mixed heuristic lineups) (censoring unknown there: truncations not recorded)",
       "oracle (best candidate) rate; top-1 agreement with the economic choice",
       "setupfork test-row AUC/log loss vs T9"
     ],

@@ -72,11 +72,11 @@ def test_placetest_root_must_match_its_declaration(tmp_path):
             for c in range(decl['top_k'] + decl['random_k']):
                 f = tmp_path / 'rows' / f'{seed}-{i}-{c}.json'
                 f.write_text(json.dumps({'seed': seed, 'setup_index': i, 'vertex': c, 'served': c == 0, 'x': [0.0],
-                                         'wins': 1, 'playouts': 8}))
+                                         'wins': 1, 'playouts': 8, 'truncated_playouts': 0}))
                 shards[f.name] = hashlib.sha256(f.read_bytes()).hexdigest()
     (tmp_path / 'DONE.json').write_text(json.dumps({'config': decl, 'shards': shards}))
-    out, _ = g.load_placetest(tmp_path)
-    assert len(out) == 400
+    out, _, truncated = g.load_placetest(tmp_path)
+    assert len(out) == 400 and truncated == 0
     (tmp_path / 'DONE.json').write_text(json.dumps({'config': dict(decl, playouts=4), 'shards': shards}))
     with pytest.raises(ValueError, match='not made under'):
         g.load_placetest(tmp_path)
@@ -102,3 +102,53 @@ def test_setupfork_producer_seals_shards_and_provenance(tmp_path):
     done = json.loads((tmp_path / 'out' / 'DONE.json').read_text())
     assert done['provenance']['source_revision'] and 'setup_data.py' in done['provenance']['scripts_sha256']
     assert len(shards(tmp_path / 'out', 'train')['y']) == 1
+
+
+def _placetest_root(tmp_path, indices=range(8), row=None):
+    import hashlib
+    decl = json.loads((ROOT / 'experiments' / 'placement-test-served.json').read_text())
+    (tmp_path / 'rows').mkdir(parents=True, exist_ok=True)
+    shards = {}
+    lo, n = decl['split']['test']
+    for seed in range(lo, lo + n):
+        for i in indices:
+            for c in range(decl['top_k'] + decl['random_k']):
+                r = {'seed': seed, 'setup_index': i, 'vertex': c, 'served': c == 0, 'x': [0.0], 'wins': 4,
+                     'playouts': 8, 'truncated_playouts': 0}
+                if row:
+                    r = row(r)
+                f = tmp_path / 'rows' / f'{seed}-{i}-{c}.json'
+                f.write_text(json.dumps(r))
+                shards[f.name] = hashlib.sha256(f.read_bytes()).hexdigest()
+    (tmp_path / 'DONE.json').write_text(json.dumps({'config': decl, 'shards': shards}))
+    return tmp_path
+
+
+def test_placetest_requires_every_declared_decision(tmp_path):
+    """Codex HOLD @57504d3 (2): only setup_index 0 per seed (50 of 400 decisions) must be refused."""
+    import placement_value_gate as g
+    with pytest.raises(ValueError, match='requires all 400'):
+        g.load_placetest(_placetest_root(tmp_path, indices=[0]))
+
+
+def test_placetest_rejects_invalid_rows(tmp_path):
+    import placement_value_gate as g
+    cases = [(lambda r: {k: v for k, v in r.items() if k != 'truncated_playouts'}, 'truncation metadata'),
+             (lambda r: dict(r, playouts=4), 'truncation metadata'),
+             (lambda r: dict(r, wins=8, truncated_playouts=1), 'truncation metadata'),
+             (lambda r: dict(r, vertex=0), 'invalid candidates')]
+    for k, (row, match) in enumerate(cases):
+        with pytest.raises(ValueError, match=match):
+            g.load_placetest(_placetest_root(tmp_path / str(k), row=row))
+
+
+def test_censored_rollouts_make_the_primary_ineligible(tmp_path):
+    """Codex HOLD @57504d3 (1): served rollouts truncated, a candidate winning, must not pass."""
+    import placement_value_gate as g
+    root = _placetest_root(tmp_path, row=lambda r: dict(r, wins=0, truncated_playouts=8) if r['served'] else r)
+    decisions, _, truncated = g.load_placetest(root)
+    assert truncated == 50 * 8 * 8
+    m = g.placement_metric(decisions, {k: [0] + [1] + [0] * 14 for k in decisions})
+    assert m['lcb'] > 0  # the raw metric would pass; the gate must not use it
+    gate_check = None if truncated else bool(m['lcb'] > 0)
+    assert gate_check is None

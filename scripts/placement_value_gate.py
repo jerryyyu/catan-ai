@@ -2,7 +2,9 @@
 
 1. placement (primary), on the sealed placement-test-served root: per setup decision the model's top-scored
    candidate's playout win rate minus the served economic choice's; mean over the 400 decisions; game-clustered
-   bootstrap (1,000 resamples, seed 37) 5th-percentile lower bound > 0;
+   bootstrap (1,000 resamples, seed 37) 5th-percentile lower bound > 0. Eligible only with the complete declared
+   inventory (50 seeds x 8 decisions, 16 distinct candidates, one served, 8 playouts each) and zero truncated
+   playouts; any truncation leaves the check null (Codex HOLD @57504d3);
 2. non-inferiority vs T9 on the original and on-policy end-of-turn test rows: AUC diff lower bound > -0.005.
 
 Reported: the placement metric for T9 and the served net, the same metric on placement-data-v1's test games, the
@@ -31,6 +33,7 @@ from value_arms_gate import paired_auc  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 DECL = ROOT / 'experiments' / 'placement-value.json'
 PLACETEST_DECL = ROOT / 'experiments' / 'placement-test-served.json'
+SETUP_DECISIONS = 8
 RESAMPLES, BOOT_SEED, PCT, NONINF = 1000, 37, .05, -0.005
 LEGACY_TEST = (2896450, 50)
 
@@ -49,12 +52,24 @@ def load_placetest(root, declaration=PLACETEST_DECL):
     out = {}
     for f in files:
         r = json.loads(f.read_text())
+        trunc = r.get('truncated_playouts')
+        if (r.get('playouts') != decl['playouts'] or not isinstance(trunc, int) or isinstance(trunc, bool)
+                or not 0 <= trunc <= decl['playouts'] or not isinstance(r.get('wins'), int)
+                or not 0 <= r['wins'] <= decl['playouts'] - trunc):
+            raise ValueError(f'{root}/{f.name}: playout count, wins or truncation metadata invalid')
         out.setdefault((r['seed'], r['setup_index']), []).append(r)
     lo, n = decl['split']['test']
-    if sorted({s for s, _ in out}) != list(range(lo, lo + n)) or any(len(v) != decl['top_k'] + decl['random_k']
-                                                                   or sum(r['served'] for r in v) != 1 for v in out.values()):
-        raise ValueError(f'{root}: decisions or candidates differ from the declaration')
-    return out, hashlib.sha256(json.dumps(done, sort_keys=True).encode()).hexdigest()
+    expected = {(s, i) for s in range(lo, lo + n) for i in range(SETUP_DECISIONS)}  # Codex HOLD @57504d3 (2)
+    if set(out) != expected:
+        raise ValueError(f'{root}: {len(out)} decisions, the declaration requires all {len(expected)} '
+                         f'({n} seeds x {SETUP_DECISIONS} setup decisions)')
+    for key, rows in out.items():
+        vertices = [r['vertex'] for r in rows]
+        if (len(rows) != decl['top_k'] + decl['random_k'] or len(set(vertices)) != len(vertices)
+                or sum(r['served'] for r in rows) != 1):
+            raise ValueError(f'{root}: decision {key} has invalid candidates')
+    truncated = sum(r['truncated_playouts'] for rows in out.values() for r in rows)
+    return out, hashlib.sha256(json.dumps(done, sort_keys=True).encode()).hexdigest(), truncated
 
 
 def load_legacy(root, test=LEGACY_TEST):
@@ -134,13 +149,14 @@ def main(argv=None):
         net = ab.make_net(torch, 'tiles', ab.layout(), size=saved.get('size'), phase='phase_vec' in saved['state'])
         net.load_state_dict(saved['state'])
         nets[name] = (net.to(device), saved)
-    decisions, placetest_sha = load_placetest(args.placetest)
+    decisions, placetest_sha, truncated = load_placetest(args.placetest)
     placement = {n: placement_metric(decisions, score_decisions(torch, net, s, decisions, device))
                  for n, (net, s) in nets.items()}
     legacy = None
-    if args.legacy_test is not None:
+    if args.legacy_test is not None:  # reported only: placement-data-v1 recorded no truncation counts (censoring unknown)
         old = load_legacy(args.legacy_test)
-        legacy = {n: placement_metric(old, score_decisions(torch, net, s, old, device)) for n, (net, s) in nets.items()}
+        legacy = {'censoring': 'unknown (truncations not recorded)',
+                  **{n: placement_metric(old, score_decisions(torch, net, s, old, device)) for n, (net, s) in nets.items()}}
     parts = {}
     roots = va.check_roots(cfg, args.runs, ['original', 'onpolicy', 'setupfork'])
     for label, (path, split) in roots.items():
@@ -153,12 +169,15 @@ def main(argv=None):
                              nets[k][1]['sd'].to(device), device)[0] for k in ('new', 't9')}
         parts[label] = paired_auc(preds['new'], preds['t9'], test['y'].astype(np.float64), test['game'], pct=PCT,
                                   seed=BOOT_SEED)
-    checks = {'placement': bool(placement['new']['lcb'] > 0),
+    # Codex HOLD @57504d3 (1): a censored rollout would count as a loss, so any truncation makes the primary ineligible.
+    checks = {'placement': None if truncated else bool(placement['new']['lcb'] > 0),
               'original_noninferior': bool(parts['original']['lcb'] > NONINF),
               'onpolicy_noninferior': bool(parts['onpolicy']['lcb'] > NONINF)}
     passed = None if smoke else all(checks.values())
     out = {'arm': 'p1', 'declaration_sha256': va.sha256(args.config), 'script_sha256': va.sha256(__file__),
            'model_sha256': va.sha256(model), 'placetest_done_sha256': placetest_sha, 'placement': placement,
+           'placetest_truncated_playouts': truncated,
+           'placement_ineligible': (f'{truncated} truncated playouts (censored as losses)' if truncated else None),
            'legacy_placement': legacy, 'parts_vs_t9': parts, 'checks': checks, 'pass': passed, 'smoke': smoke,
            'bar': {**cfg['gate'], 'resamples': RESAMPLES, 'seed': BOOT_SEED, 'lower_percentile': PCT, 'non_inferiority': NONINF},
            'train_roots': new['train'], 'model_provenance': new.get('provenance'), 'provenance': producer_provenance(),
