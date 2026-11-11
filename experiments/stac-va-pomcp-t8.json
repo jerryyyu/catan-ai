@@ -1,0 +1,76 @@
+{
+  "name": "stac-va-pomcp-t8",
+  "purpose": "Reported external number for the value-arms held-out (no gate): planner_pv2_tiles_va_t8 as one seat vs 3 STAC POMCP-TS-CR (256 games: blocks LadPomcpA/B/C) with chat trading, on the same seeded boards, decks, first players, seats and dice as the POMCP blocks of the 2026-11-09 planner_pv2_tiles ladder receipt.",
+  "policy": "planner_pv2_tiles_va_t8",
+  "seed": 20261115,
+  "stac": {
+    "repo": "https://github.com/ruflab/StacSettlers",
+    "commit": "c9e3b66f69e796b1cdd56a508ec32a6ceed1141d",
+    "patch": {
+      "file": "runs/external/stac-catanai-v2.patch",
+      "sha256": "ebadcfcb42c1dc272d9b2e6f25225e68c25ee877b45f6f72e7c69c91c52aa052"
+    },
+    "seed": 20261115,
+    "no_player_trades": false,
+    "fully_observable": false,
+    "observable_vp": false,
+    "chat_negotiation": true,
+    "force_end_turn_sec": 30,
+    "jvm_heap": "3g",
+    "player_trading": "chat"
+  },
+  "agents": {
+    "pomcp_ts_cr": {
+      "source": "Dobre & Lascarides, POMCP with Human Preferences in Settlers of Catan (AIIDE 2018), POMCP-TS-CR; paper setting 10k iterations, 4 threads, C=4 with PUCT, offers limit 3",
+      "flags": [
+        "MCTS_ITERATIONS:10000",
+        "MCTS_THREADS:4",
+        "MCTS_Cp:4.0",
+        "MCTS_TYPED_ROLLOUTS",
+        "MCTS_FACTORED_BELIEF",
+        "MCTS_OFFERS_LIMIT:3",
+        "MCTS_POMCP",
+        "MCTS_LIST_POMS",
+        "MCTS_HUMAN_ACTION_TYPE_PDF_CONDITIONED_SEEDING",
+        "MCTS_PUCT",
+        "MCTS_HUMAN_ACTION_TYPE_PDF_SEEDING_TEMPERATURE:7",
+        "MCTS_HUMAN_ACTION_TYPE_CONDITIONED_DIST_ROLLOUTS"
+      ],
+      "time_cap_ms": 10000
+    },
+    "stac_negotiator": {
+      "source": "STAC's JSettlers-derived negotiating agent (soc.robot.stac.StacRobotBrain via StacRobotFactory, default StacRobotType): negotiates trades in STAC's chat format"
+    }
+  },
+  "blocks": [
+    {
+      "name": "LadPomcpA",
+      "opponent": "pomcp_ts_cr",
+      "games": 86,
+      "jvm_heap": "7g"
+    },
+    {
+      "name": "LadPomcpB",
+      "opponent": "pomcp_ts_cr",
+      "games": 85,
+      "jvm_heap": "7g"
+    },
+    {
+      "name": "LadPomcpC",
+      "opponent": "pomcp_ts_cr",
+      "games": 85,
+      "jvm_heap": "7g"
+    }
+  ],
+  "parallel_blocks": 3,
+  "bridge_timeout_ms": 30000,
+  "timeout_sec_per_game": 1200,
+  "pass_bar": {
+    "completed_games": 256,
+    "bridge_errors": 0,
+    "max_offer_timeouts": 0
+  },
+  "limitations": "STAC's MCTS agents are not reproducible even when seeded, so pairing removes environment luck (board, deck, first player, seats, dice by roll index, steals, discards) but not opponent-play variance. Seats come from STAC's seeded shuffle, not a rotation (position counts are recorded and identical across the pair). The 10 s per-search cap deviates from the paper's uncapped 10k iterations; cap hits and >1 s overruns are counted. Our bot never counter-offers. The control is the historical 2026-11-09 planner_pv2_tiles ladder receipt, not a concurrent run: host load differs (ultra is shared now), so MCTS time budgets and cap hits may differ between the pair; both are recorded and reported.",
+  "predeclared": "2026-11-11 before any STAC game of this candidate (POMCP blocks of the 2026-11-08 stac-ladder design).",
+  "note": "Predeclared 2026-11-11 before any STAC game of this candidate. Supersedes experiments/stac-va-t8.json, whose run never played (aborted at startup on the Cython checkpoint selection, board #1). The STAC negotiator table is dropped from the promotion bar (Jerry 2026-11-11: 'stop negotiator for promotion bar'). scripts/stac_paired.py --expect pomcp_ts_cr=256 pairs these blocks by seed with the historical tiles receipt restricted to its POMCP blocks."
+}

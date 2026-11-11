@@ -106,3 +106,61 @@ def test_setup_mismatch_is_excluded_and_counted():
     assert r['games_excluded'] == 1 and not r['healthy']  # 1 of 10 > 5%
     b2 = _receipt('planner_offer_accept', [False] * 10)
     assert sp.compare(a, b2, _expect(a))['healthy']
+
+
+def _blocked(policy, pomcp_wins, neg_wins, neg_errors=0):
+    """A receipt with real block declarations and per-block evidence (as stac_match writes)."""
+    blocks = [{'name': 'LadPomcpA', 'opponent': 'pomcp_ts_cr', 'games': len(pomcp_wins)},
+              {'name': 'LadNegA', 'opponent': 'stac_negotiator', 'games': len(neg_wins)}]
+    games = [{'game': f'P_{i}', 'block': 'LadPomcpA', 'opponent': 'pomcp_ts_cr', 'finished': True, 'won': w, **SETUP}
+             for i, w in enumerate(pomcp_wins)]
+    games += [{'game': f'N_{i}', 'block': 'LadNegA', 'opponent': 'stac_negotiator', 'finished': True, 'won': w, **SETUP}
+              for i, w in enumerate(neg_wins)]
+
+    def ev(n, errors=0):
+        return {'games': n, 'games_completed': n, 'truncated': 0, 'bridge_errors': errors,
+                'chat_trades': {'offer_timeout': 0}, 'observability_violations': [], 'seed_mismatches': [],
+                'stac_results_disagree': []}
+    per = {'LadPomcpA': ev(len(pomcp_wins)), 'LadNegA': ev(len(neg_wins), neg_errors)}
+    total = ev(len(games), neg_errors)
+    return {'games_requested': len(games), 'config': {'policy': policy, 'blocks': blocks, 'agents': {}, 'seed': 1},
+            'stac': {'seed': 5, 'patch_sha256': 'p', 'player_trading': 'chat'},
+            'runs': [{'block': 'LadPomcpA', 'timed_out': False}, {'block': 'LadNegA', 'timed_out': False}],
+            'blocks': per, 'total': total, 'games': games}
+
+
+def test_pomcp_only_candidate_pairs_with_a_full_ladder_receipt():
+    """Owner 2026-11-11: negotiator dropped from the promotion bar; pair on the declared POMCP blocks only."""
+    full = _blocked('planner_pv2_tiles', [True, False, False, True], [False, False, True], neg_errors=2)
+    pomcp = _blocked('planner_pv2_tiles_va_t9', [True, True, False, True], [])
+    pomcp['config']['blocks'] = pomcp['config']['blocks'][:1]
+    pomcp['blocks'] = {'LadPomcpA': pomcp['blocks']['LadPomcpA']}
+    pomcp['runs'] = pomcp['runs'][:1]
+    r = sp.compare(pomcp, full, {'pomcp_ts_cr': 4})
+    assert r['healthy'] and set(r['tables']) == {'pomcp_ts_cr'} and r['restricted_from']['b'] == ['LadNegA']
+    assert r['tables']['pomcp_ts_cr']['paired_a_minus_b']['mean_diff'] == 0.25   # neg bridge errors no longer count
+    # the full design is unchanged: both opponents declared, the negotiator errors still fail health
+    full_b = _blocked('planner_offer_accept', [True] * 4, [False] * 3)
+    assert not sp.compare(full, full_b, {'pomcp_ts_cr': 4, 'stac_negotiator': 3})['healthy']
+
+
+def test_restriction_keeps_pomcp_health_and_compat():
+    full = _blocked('planner_pv2_tiles', [True, False], [False])
+    bad = _blocked('planner_pv2_tiles_va_t9', [True, False], [])
+    bad['blocks']['LadPomcpA']['bridge_errors'] = 1
+    assert not sp.compare(bad, full, {'pomcp_ts_cr': 2})['healthy']
+    other = _blocked('planner_pv2_tiles_va_t9', [True, False], [])
+    other['config']['blocks'][0]['games'] = 3
+    assert not sp.compare(other, full, {'pomcp_ts_cr': 2})['healthy']   # POMCP block declarations must match
+    missing = _blocked('planner_pv2_tiles_va_t9', [True, False], [False])
+    del missing['blocks']['LadPomcpA']
+    assert not sp.compare(missing, full, {'pomcp_ts_cr': 2})['healthy']  # no per-block evidence, no pass
+
+
+def test_stac_configs_bar_matches_their_blocks():
+    """Codex HOLD @0dc404f: a config's completion bar must equal the games its blocks request."""
+    import json
+    for path in sorted((ROOT / 'experiments').glob('stac*.json')):
+        cfg = json.loads(path.read_text())
+        if 'blocks' in cfg and 'pass_bar' in cfg and 'completed_games' in cfg['pass_bar']:
+            assert cfg['pass_bar']['completed_games'] == sum(b['games'] for b in cfg['blocks']), path.name

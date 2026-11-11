@@ -9,7 +9,7 @@
   "tables": {
     "self_served": "experiments/value-arms-heldout-self-<arm>.json (evaluator, ultra; 896 fresh seeds 3090000+, shared)",
     "jsettlers": "experiments/jsettlers-va-heldout-{tiles,t9,t8}.json (Mac mini; 5120 games, base 20261120, shared control)",
-    "stac": "experiments/stac-va-<arm>.json (ultra; reported only, paired by seed with the 2026-11-09 tiles ladder receipt)"
+    "stac": "experiments/stac-va-pomcp-<arm>.json (ultra; reported only; POMCP-TS-CR with trading, 256 games, paired by seed with the POMCP blocks of the 2026-11-09 tiles ladder receipt). Amended 2026-11-11 before any STAC game: the first STAC launch aborted at startup, and Jerry dropped the negotiator table from the promotion bar."
   },
   "gate": "Per candidate, PASS iff both: (1) the self_served evaluator receipt passes (paired-normal LCB > 0 at alpha .05, variance_floor .10, point >= 0, 0 truncations, latency); (2) the JSettlers paired table: scripts/jsettlers_paired.py --alpha 0.05 --expect-games 5120 'pass' (one-sided LCB > 0, healthy, <= 5% excluded) and mean >= 0. Both tables must pass (an intersection-union test: each component at .05 bounds this candidate's false-pass probability by .05). Across the two candidates, fixed-sequence testing: t9 first; t8 is tested only if t9 passes, so the family-wise error stays at .05. If t9 fails, t8's tables are reported but support no claim (Codex HOLD @50267e6).",
   "power": {
@@ -18,7 +18,7 @@
     "jsettlers": "5120 pairs, per-game SD .58 (DEV .574 / .562): pass needs a mean above about +.013; at .75 x the DEV point (t9 +.0205, t8 +.0264) power .812 and .947. Sizes chosen before any held-out game (2048 on 2026-11-10 would give .48 / .66).",
     "joint": "t9 about 0.81, t8 about 0.83"
   },
-  "reported": "STAC POMCP-TS-CR and negotiator win shares with trading, paired with the served tiles ladder (no gate); mean VP; latency",
+  "reported": "STAC POMCP-TS-CR win share with trading, paired with the served tiles ladder (no gate); mean VP; latency",
   "source": "all three tables run the DEV code: ultra snapshot vadev-source-v1 and the Mac mini worktree catan-ai-vadevjs, both at 64260248ad1ef8d7bbacaecc7d0e3c5e8ad8e06e",
   "consequence": "PASS: supports promoting that candidate (owner's call). FAIL: planner_pv2_tiles stays served; no re-test without a new owner decision.",
   "note": "Predeclared 2026-11-11 before any held-out game.",
