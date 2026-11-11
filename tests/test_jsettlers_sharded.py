@@ -199,6 +199,8 @@ def _pair_inputs(k_cand=3, k_ctrl=3):
     wins_b = [0, 1, 0, 0, 1, 0, 0, 1] * 20
     cand = _merged(_config('planner_pv2_tiles_va_t9', games=160, shards=k_cand), wins_c)
     ctrl = _merged(_config('planner_pv2_tiles', games=160, shards=k_ctrl), wins_b)
+    for r in (cand, ctrl):  # what run() adds after the shard processes exit
+        r['shard_rc'] = [0] * len(r['shards'])
     return cand, ctrl
 
 
@@ -260,3 +262,22 @@ def test_smoke_runner_refuses_a_sharded_config(tmp_path):
     with pytest.raises(SystemExit):
         jsettlers_smoke.main(['--config', str(cfg), '--out', str(tmp_path / 'o')])
     assert not (tmp_path / 'o').exists()
+
+
+@pytest.mark.parametrize('mutate, match', [
+    (lambda r: r.update(pass_=None) or r.update({'pass': False}), 'merged run pass'),
+    (lambda r: r.update(timed_out=True), 'merged timed_out'),
+    (lambda r: r.update(shard_rc=[1, 0, 0]), 'shard_rc'),
+    (lambda r: r.pop('shard_rc'), 'shard_rc'),
+    (lambda r: r.update(server_rc=[0, 3, 0]), 'server_rc'),
+    (lambda r: r.update(bridge_retired=[{'game': 'x', 'shard': 0}]), 'bridge_retired'),
+    (lambda r: r['shards'][0].update(timed_out=True), 'shard 0'),
+    (lambda r: r['shards'][1].update({'pass': False}), 'shard 1'),
+    (lambda r: r['shards'][2].pop('timed_out'), 'shard 2'),
+])
+def test_paired_refuses_failed_shard_execution(mutate, match):
+    """Codex HOLD @dfd6ae8: complete game records must not hide a failed, timed-out or retired shard."""
+    cand, ctrl = _pair_inputs()
+    mutate(cand)
+    r = jp.pair(cand, ctrl, alpha=0.05, expect_games=160)
+    assert not r['pass'] and any(match in p for p in r['problems']), r['problems']

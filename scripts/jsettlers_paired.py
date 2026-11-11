@@ -59,6 +59,30 @@ def shard_problems(cand: dict, ctrl: dict) -> list[str]:
             problems.append(f'{name}: sharded receipt lists {len(r.get("shards") or [])} shards for shards={k!r}')
         if r.get('merge_problems') != []:
             problems.append(f'{name}: shard merge problems {r.get("merge_problems")!r}')
+        problems += execution_problems(r, name)
+    return problems
+
+
+def execution_problems(r: dict, name: str) -> list[str]:
+    """Every shard and the merged run must carry successful execution evidence (Codex HOLD @dfd6ae8): the merged
+    pass, no timeout, no retired bridge, every shard process rc 0 and server rc 0, every shard pass and not timed
+    out. Missing evidence fails closed."""
+    problems = []
+    if r.get('pass') is not True:
+        problems.append(f'{name}: merged run pass is {r.get("pass")!r}')
+    if r.get('timed_out') is not False:
+        problems.append(f'{name}: merged timed_out is {r.get("timed_out")!r}')
+    if r.get('bridge_retired') != []:
+        problems.append(f'{name}: bridge_retired {r.get("bridge_retired")!r}')
+    shards = r.get('shards') or []
+    for key in ('shard_rc', 'server_rc'):
+        rcs = r.get(key)
+        if not isinstance(rcs, list) or len(rcs) != len(shards) or any(rc != 0 for rc in rcs):
+            problems.append(f'{name}: {key} {rcs!r}')
+    for s in shards:
+        if s.get('pass') is not True or s.get('timed_out') is not False or s.get('server_rc') != 0:
+            problems.append(f'{name}: shard {s.get("index")!r} pass={s.get("pass")!r} timed_out={s.get("timed_out")!r} '
+                            f'server_rc={s.get("server_rc")!r}')
     return problems
 
 
