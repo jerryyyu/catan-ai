@@ -1,0 +1,37 @@
+{
+  "name": "value-arms-heldout-self-t8",
+  "stage": "heldout",
+  "candidate": "planner_pv2_tiles_va_t8",
+  "control": "planner_pv2_tiles",
+  "requires_search": false,
+  "seeds_per_panel": 768,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "self_served",
+      "seed": 3090000,
+      "opponents": [
+        "planner_pv2_tiles",
+        "planner_pv2_tiles",
+        "planner_pv2_tiles"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.0,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 5,
+    "maximum_turn_seconds": 20,
+    "minimum_paired_lcb": 0.0
+  },
+  "power": {
+    "alternative_effect": 0.0197,
+    "planning_sigma": 0.21,
+    "power": 0.8,
+    "note": "Predeclared 2026-11-11 before any held-out game. Confirmatory self table for planner_pv2_tiles_va_t8 after its DEV self table +0.0262 (runs/value-arms-self-screen-t8-v1.json sha256 ae8cd6aca7b4\u2026; board #1 comment 6788114110). Gate: paired-normal seed-cluster LCB > 0 at alpha .05 (one panel) with variance_floor .10 (PR #63; >= 512 seeds), point lift >= 0, 0 truncations, latency as DEV. Power: alternative = .75 x the DEV point (0.0197), sigma .21 (DEV cluster SDs .202 / .192); check_design gives 0.83 at 768 seeds. One fresh seed block 3090000-3090767 shared by both candidates (sized for t8, the smaller DEV point). Runs from the DEV snapshot vadev-source-v1 (source 64260248, Cython) as the evaluator requires; calibration receipt produced by that snapshot's scripts/calibrate_inference.py --alpha .05 --sd-floor .1 --null-seeds 512 --alternative-seeds 1024."
+  },
+  "requires_dev_pass": true,
+  "inference": "paired_normal",
+  "variance_floor": 0.1
+}
