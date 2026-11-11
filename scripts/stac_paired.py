@@ -36,6 +36,36 @@ COMPAT = (('stac', 'seed'), ('stac', 'patch_sha256'), ('stac', 'player_trading')
           ('config', 'agents'), ('config', 'seed'), ('games_requested',))
 
 
+def restrict(r: dict, expect: dict) -> dict:
+    """The receipt restricted to the blocks whose opponent is declared in ``expect`` (owner decision 2026-11-11:
+    STAC negotiator dropped from the promotion bar). Totals, runs and games are rebuilt from the kept blocks' own
+    evidence; a receipt whose blocks are all declared is returned unchanged."""
+    blocks = (r.get('config') or {}).get('blocks') or []
+    if not all(isinstance(b, dict) and 'opponent' in b and 'name' in b for b in blocks):
+        return r  # no per-opponent block declarations: nothing to restrict (health() judges it as is)
+    keep = [b for b in blocks if b.get('opponent') in expect]
+    if len(keep) == len(blocks):
+        return r
+    names = {b['name'] for b in keep}
+    per = {n: v for n, v in (r.get('blocks') or {}).items() if n in names}
+    if set(per) != names:
+        return {**r, 'total': None}  # missing per-block evidence: health() refuses it
+    total = {}
+    for key in ('games', 'games_completed', 'truncated', 'bridge_errors'):
+        vals = [v.get(key) for v in per.values()]
+        total[key] = sum(vals) if all(_is_int(x) for x in vals) else None
+    for key in ('observability_violations', 'seed_mismatches', 'stac_results_disagree'):
+        vals = [v.get(key) for v in per.values()]
+        total[key] = [x for v in vals for x in v] if all(isinstance(v, list) for v in vals) else None
+    chats = [v.get('chat_trades') for v in per.values()]
+    total['chat_trades'] = ({'offer_timeout': sum(c.get('offer_timeout', 0) for c in chats)}
+                            if all(isinstance(c, dict) for c in chats) else None)
+    return {**r, 'config': {**r['config'], 'blocks': keep}, 'games_requested': sum(b['games'] for b in keep),
+            'blocks': per, 'total': total, 'runs': [x for x in r.get('runs') or [] if x.get('block') in names],
+            'games': [g for g in r.get('games') or [] if g.get('block') in names],
+            'restricted_from': sorted(b['name'] for b in blocks if b['name'] not in names)}
+
+
 def _dig(r, path):
     for k in path:
         r = (r or {}).get(k)
@@ -112,6 +142,7 @@ def paired(rows: list[tuple[int, int]]) -> dict:
 def compare(ra: dict, rb: dict, expect: dict[str, int], max_excluded: float = 0.05) -> dict:
     if not expect or any(not _is_int(n) or n <= 0 for n in expect.values()):
         raise ValueError('declared coverage (--expect OPPONENT=GAMES) is required')
+    ra, rb = restrict(ra, expect), restrict(rb, expect)
     problems = [f'{".".join(p)} differs' for p in COMPAT if _dig(ra, p) != _dig(rb, p)]
     if _dig(ra, ('config', 'policy')) == _dig(rb, ('config', 'policy')):
         problems.append('both receipts use the same policy')
@@ -137,7 +168,8 @@ def compare(ra: dict, rb: dict, expect: dict[str, int], max_excluded: float = 0.
                        'paired_a_minus_b': paired(rows)}
     total = len(set(ga) | set(gb))
     too_many = total == 0 or len(excluded) > max_excluded * total
-    return {'expect': expect, 'a_policy': _dig(ra, ('config', 'policy')), 'b_policy': _dig(rb, ('config', 'policy')),
+    return {'expect': expect, 'restricted_from': {'a': ra.get('restricted_from'), 'b': rb.get('restricted_from')},
+            'a_policy': _dig(ra, ('config', 'policy')), 'b_policy': _dig(rb, ('config', 'policy')),
             'compatible': not problems, 'problems': problems, 'games_total': total,
             'games_excluded': len(excluded), 'excluded': excluded[:50], 'tables': tables,
             'healthy': not problems and not too_many,

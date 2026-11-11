@@ -46,7 +46,8 @@ bars below are the honest steps toward it.
   - a seeded, paired JSettlers table (`scripts/jsettlers_paired.py`; all-SMART, patch v2), now a screen-stage
     table rather than held-out only.
 
-  STAC POMCP-TS-CR with trading stays the headline external measurement.
+  STAC POMCP-TS-CR with trading stays the headline external measurement. The STAC negotiator table is not part of
+  the promotion bar (owner decision 2026-11-11); run it only when asked.
 - **Variance floor relaxed** to a declared `variance_floor: 0.10` for paired-normal gates with at least
   512 seeds per table (PR #63). The synthetic calibration passes at .10 for 512 and 1,124 seeds; a
   floor of 0 fails it on skewed nulls, which the floor protects against. Each config states its floor
