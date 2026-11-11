@@ -250,3 +250,13 @@ def test_unsharded_pairing_is_unchanged():
     assert jp.shard_problems(a, b) == []
     r = jp.pair(a, b, alpha=0.05, expect_games=160)
     assert r['compatible'] and r['pass']
+
+
+def test_smoke_runner_refuses_a_sharded_config(tmp_path):
+    import json as _json
+    import jsettlers_smoke
+    cfg = tmp_path / 'c.json'
+    cfg.write_text(_json.dumps({'name': 'x', 'games': 4, 'shards': 2, 'jsettlers': {}}))
+    with pytest.raises(SystemExit):
+        jsettlers_smoke.main(['--config', str(cfg), '--out', str(tmp_path / 'o')])
+    assert not (tmp_path / 'o').exists()
