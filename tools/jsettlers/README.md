@@ -229,6 +229,29 @@ unless every game is complete. Our policy is seeded per game from (config `seed`
 in both modes. Residual nondeterminism can come from robot thread timing (e.g. which robot answers
 a trade offer first, timeouts); it is measured by the determinism check, not removed.
 
+## Sharded runs
+
+A seeded server plays one game at a time, so a 5120-game table takes about 12 h. A config may
+declare a top-level `"shards": K` (absent or 1 is today's single-server run) and run through
+`scripts/jsettlers_sharded.py --config X --out OUT` (`--plan` prints the shards and runs nothing).
+Shard k of K is an ordinary sealed smoke run in `OUT/shard-k` with base seed `base * 1000 + k`
+(k < 1000), `N // K` games plus one for each of the first `N % K` shards, and port
+`server.port + 100 * k`; everything else is the declared config. The runner refuses an existing
+OUT, K < 2 or K > N, an unseeded config, and a shard port declared by another experiment config or
+busy now. It writes `OUT/manifest.json` first, runs the K shards concurrently, then merges their
+receipts into `OUT/receipt.json`: game `~botsOnly~N` of shard k becomes `s{k}:~botsOnly~N`, counts
+are summed, `shards` lists each shard's config and receipt SHA-256, seed and port, and `pass` needs
+every shard to pass, the shards to agree on source/bridge/patch/build identity, and the summed
+totals to meet `pass_bar`. A missing shard receipt refuses the merge. Merged latency keeps only
+the max and count; per-shard percentiles are in `shards`.
+
+The shard games are different games from the unsharded run's (different seeds), so a sharded
+table is a new run, not a continuation of an old one. Candidate and control must use the same K:
+`scripts/jsettlers_paired.py` pairs merged receipts by their prefixed names and refuses a sharded
+receipt against an unsharded one, a different K, shard seed list or shard split, or a merge that
+recorded problems. `jsettlers_smoke.py` itself ignores `shards`; run a sharded config only through
+the sharded runner.
+
 ## Known limitations
 
 - The server chooses our seat and the first player; the smoke receipt records both (and our
