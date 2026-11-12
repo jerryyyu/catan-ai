@@ -47,11 +47,14 @@ def test_new_games_default_to_the_served_policy():
     bots = sessions[created['game_id']].bots.values()
     info = client.get('/api/bots').json()
     if BACKEND == 'python':
-        # The committed checkpoint is bound to the pure-Python engine; the tiles value
-        # weights are a local file, so without them the served chain stops at
-        # planner_offer_accept (tests/test_serve_tiles.py covers both links).
+        # The committed checkpoint is bound to the pure-Python engine; the T9 and tiles
+        # value weights are local files, so without them the served chain stops at
+        # planner_pv2_tiles or planner_offer_accept (tests/test_serve_tiles.py covers
+        # every link).
         from catan_ai.api import value_weights_status
-        served = 'planner_pv2_tiles' if value_weights_status()[0] else 'planner_offer_accept'
+        served = ('planner_pv2_tiles_va_t9' if value_weights_status('planner_pv2_tiles_va_t9')[0]
+                  else 'planner_pv2_tiles' if value_weights_status('planner_pv2_tiles')[0]
+                  else 'planner_offer_accept')
         assert created['opponent'] == info['default'] == served and info['checkpoint_available']
         from catan_ai.unified_planner import AcceptanceOfferPlanner
         assert all(isinstance(p, AcceptanceOfferPlanner) for p in bots)
@@ -66,9 +69,9 @@ def test_unbound_checkpoint_falls_back_to_tactical_visibly(tmp_path, monkeypatch
     client = TestClient(app)
     info = client.get('/api/bots').json()
     assert {k: v for k, v in info.items() if k != 'fallback_detail'} == {
-        'default': 'tactical', 'served': 'planner_pv2_tiles', 'served_available': False,
+        'default': 'tactical', 'served': 'planner_pv2_tiles_va_t9', 'served_available': False,
         'fallback_reason': 'Trained planner checkpoint is not bound to this server version',
-        'checkpoint_available': False}
+        'checkpoint_available': False, 'tiles_available': False}
     created = client.post('/api/games', json={'seed': 4}).json()
     assert created['opponent'] == 'tactical'
     assert all(isinstance(p, TacticalBot) for p in sessions[created['game_id']].bots.values())
