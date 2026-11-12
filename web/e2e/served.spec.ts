@@ -9,7 +9,8 @@ test('new games start from the server default and show its fallback reason', asy
   await expect(page.locator('option[value="planner_pv2_tiles_va_t9"]')).toHaveText('Trained planner, retrained value net (served default)');
   await expect(page.locator('option[value="planner_pv2_tiles"]')).toHaveText('Trained planner with value search (previous default)');
   const tiles = page.locator('option[value="planner_pv2_tiles"]');
-  if (info.tiles_available) await expect(tiles).toBeEnabled(); else await expect(tiles).toBeDisabled();
+  // Playwright's toBeDisabled does not read a native <option>'s disabled attribute; assert the attribute itself.
+  if (info.tiles_available) await expect(tiles).not.toHaveAttribute('disabled'); else await expect(tiles).toHaveAttribute('disabled', '');
   if (info.fallback_reason) await expect(page.getByText(info.fallback_reason, {exact: false})).toBeVisible();
   else await expect(page.locator('.landing .error')).toHaveCount(0);
   const created = page.waitForResponse(response => response.url().endsWith('/api/games') && response.request().method() === 'POST');
