@@ -18,16 +18,19 @@ React table for solo play and private rooms. Target: Colonist ranked four-player
 | [docs/ENGINE.md](docs/ENGINE.md) | Rules coverage, privacy, search methods, rules validation |
 | [docs/PLAYING.md](docs/PLAYING.md) | Pilots, replays, private rooms, audits |
 
-Served solo bot: `planner_pv2_tiles_va_t9` (owner promotion 2026-11-11; fallbacks `planner_pv2_tiles`, then `planner_offer_accept`). Its weights are a
-local file, never committed:
+Served solo bot: `planner_pv2_tiles_va_t9` (owner promotion 2026-11-11; fallbacks `planner_pv2_tiles`, then `planner_offer_accept`). Both value
+nets are local files, never committed; install both:
 
 ```bash
-cp /path/to/value_tiles_v1.npz checkpoints/   # sha256 must equal npz_sha256 in checkpoints/value_tiles_v1.meta.json
+cp /path/to/value_tiles_va_t9.npz checkpoints/   # sha256 must equal npz_sha256 in checkpoints/value_tiles_va_t9.meta.json
+cp /path/to/value_tiles_v1.npz checkpoints/      # sha256 must equal npz_sha256 in checkpoints/value_tiles_v1.meta.json
+shasum -a 256 checkpoints/value_tiles_va_t9.npz checkpoints/value_tiles_v1.npz
 uv run python -c "from catan_ai.api import bots_info; print(bots_info())"   # expect 'default': 'planner_pv2_tiles_va_t9'
 ```
 
-Missing or unverified weights fall back to `planner_offer_accept` with the reason in `GET /api/bots`
-([docs/PLAYING.md](docs/PLAYING.md)).
+If the T9 weights are missing or unverified, new games use `planner_pv2_tiles`; if the tiles weights (or NumPy) are
+also missing, `planner_offer_accept`; if the fitted checkpoint is unbound, Tactical. `GET /api/bots` names the policy
+in use and the reason ([docs/PLAYING.md](docs/PLAYING.md)).
 
 ## Run
 
