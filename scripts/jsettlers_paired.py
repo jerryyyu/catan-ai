@@ -62,8 +62,17 @@ def health_problems(r: dict, name: str, expect_games: int | None, allow_interrup
                         + (' - 1 interrupted' if gap else ''))
     if r.get('truncated') not in (0, gap, None) or (isinstance(r.get('truncated'), int) and r['truncated'] != gap):
         problems.append(f'{name}: truncated {r.get("truncated")}')
-    if r.get('finalized') and r.get('server_rc') is not None:
-        problems.append(f'{name}: finalized receipt carries a server rc')
+    if r.get('finalized'):
+        # Codex HOLD @ad27715: the strict pass is false by design for an interrupted receipt, so every other
+        # producer health condition is checked here, present and clean; only the interrupted game is excused.
+        if r.get('server_rc') is not None:
+            problems.append(f'{name}: finalized receipt carries a server rc')
+        if r.get('timed_out') is not False:
+            problems.append(f'{name}: finalized receipt timed_out {r.get("timed_out")!r}')
+        if r.get('bridge_retired') != []:
+            problems.append(f'{name}: bridge_retired {r.get("bridge_retired")!r}')
+        if (r.get('seeding') or {}).get('seed_mismatches') != []:
+            problems.append(f'{name}: seed_mismatches {(r.get("seeding") or {}).get("seed_mismatches")!r}')
     if isinstance(r.get('bridge_errors'), int) and r['bridge_errors'] != 0:
         problems.append(f'{name}: bridge_errors {r["bridge_errors"]}')
     if len(games) != requested:

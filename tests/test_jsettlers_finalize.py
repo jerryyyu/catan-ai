@@ -22,6 +22,7 @@ def _finalized(r, interrupted='~botsOnly~0', last=None, extra_unfinished=()):
     r['games_completed'] = len(r['games']) - len(unfinished)
     r['truncated'] = len(unfinished)
     r['server_rc'] = None
+    r['timed_out'], r['bridge_retired'], r['seeding'] = False, [], {'seed_mismatches': []}
     last = last or interrupted
     r['finalized'] = {'reason': 'killed', 'unfinished_games': unfinished, 'last_started_game': last,
                       'interrupted_game': last if unfinished == [last] else None}
@@ -94,3 +95,21 @@ def test_finalize_seals_once_from_the_run_and_records_the_interruption(tmp_path,
     (out / 'build-manifest.json').write_text('{"changed": 1}')
     with pytest.raises(smoke.RunRefused, match='build manifest changed'):
         smoke.finalize(out, 'x')
+
+
+@pytest.mark.parametrize('mutate, match', [
+    (lambda r: r.update(bridge_retired=[{'type': 'bridge_retired'}]), 'bridge_retired'),
+    (lambda r: r.pop('bridge_retired'), 'bridge_retired'),
+    (lambda r: r['seeding'].update(seed_mismatches=['~botsOnly~5']), 'seed_mismatches'),
+    (lambda r: r.pop('seeding'), 'seed_mismatches'),
+    (lambda r: r.update(timed_out=True), 'timed_out'),
+    (lambda r: r.pop('timed_out'), 'timed_out'),
+])
+def test_other_producer_failures_stay_fatal_for_a_finalized_receipt(mutate, match):
+    """Codex HOLD @ad27715: only the interrupted game is excused."""
+    cand, ctrl = _pair_inputs()
+    fc = _finalized(cand)
+    fc['pass'] = False
+    mutate(fc)
+    r = jp.pair(fc, _finalized(ctrl), alpha=.05, expect_games=160, allow_interrupted=True)
+    assert not r['compatible'] and not r['pass'] and any(match in p for p in r['problems']), r['problems']
