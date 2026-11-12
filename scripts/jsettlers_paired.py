@@ -7,6 +7,10 @@ first player, our seat, seated robots, deck), so both policies faced the same lu
 per-game difference won(candidate) − won(control); the one-sided paired-normal lower bound uses the alpha
 given on the command line.
 
+Merged receipts from scripts/jsettlers_sharded.py pair the same way (by their ``s{k}:~botsOnly~N`` names), but
+only with another sharded receipt of the same K, seed function, shard seeds and shard game counts, whose merge
+recorded no problems; a sharded receipt never pairs with an unsharded one.
+
 Usage:
     python scripts/jsettlers_paired.py CANDIDATE/receipt.json CONTROL/receipt.json --alpha 0.0125 --expect-games 512 --out OUT.json
 """
@@ -43,6 +47,55 @@ def interrupted_game(r: dict, allow_interrupted: bool) -> str | None:
     if f.get('unfinished_games') != [f['interrupted_game']] or f['interrupted_game'] != f.get('last_started_game'):
         return None
     return f['interrupted_game']
+
+
+SHARD_KEYS = ('shards', 'shard_seed_function', 'shard_seeds', 'shard_games')
+
+
+def shard_problems(cand: dict, ctrl: dict) -> list[str]:
+    """Sharded (merged) receipts pair only with sharded receipts of the identical shard design.
+
+    Two unsharded receipts carry none of these keys, so this adds nothing for them.
+    """
+    ja, jb = cand.get('jsettlers') or {}, ctrl.get('jsettlers') or {}
+    sharded = ['shards' in ja, 'shards' in jb]
+    if not any(sharded):
+        return []
+    if not all(sharded):
+        return [f'sharded receipt cannot pair with an unsharded one (candidate shards={ja.get("shards")!r}, '
+                f'control shards={jb.get("shards")!r})']
+    problems = [f'jsettlers.{k} differs: {ja.get(k)!r} vs {jb.get(k)!r}' for k in SHARD_KEYS if ja.get(k) != jb.get(k)]
+    for name, r, j in (('candidate', cand, ja), ('control', ctrl, jb)):
+        k = j.get('shards')
+        if not isinstance(k, int) or k < 2 or len(r.get('shards') or []) != k:
+            problems.append(f'{name}: sharded receipt lists {len(r.get("shards") or [])} shards for shards={k!r}')
+        if r.get('merge_problems') != []:
+            problems.append(f'{name}: shard merge problems {r.get("merge_problems")!r}')
+        problems += execution_problems(r, name)
+    return problems
+
+
+def execution_problems(r: dict, name: str) -> list[str]:
+    """Every shard and the merged run must carry successful execution evidence (Codex HOLD @dfd6ae8): the merged
+    pass, no timeout, no retired bridge, every shard process rc 0 and server rc 0, every shard pass and not timed
+    out. Missing evidence fails closed."""
+    problems = []
+    if r.get('pass') is not True:
+        problems.append(f'{name}: merged run pass is {r.get("pass")!r}')
+    if r.get('timed_out') is not False:
+        problems.append(f'{name}: merged timed_out is {r.get("timed_out")!r}')
+    if r.get('bridge_retired') != []:
+        problems.append(f'{name}: bridge_retired {r.get("bridge_retired")!r}')
+    shards = r.get('shards') or []
+    for key in ('shard_rc', 'server_rc'):
+        rcs = r.get(key)
+        if not isinstance(rcs, list) or len(rcs) != len(shards) or any(rc != 0 for rc in rcs):
+            problems.append(f'{name}: {key} {rcs!r}')
+    for s in shards:
+        if s.get('pass') is not True or s.get('timed_out') is not False or s.get('server_rc') != 0:
+            problems.append(f'{name}: shard {s.get("index")!r} pass={s.get("pass")!r} timed_out={s.get("timed_out")!r} '
+                            f'server_rc={s.get("server_rc")!r}')
+    return problems
 
 
 def health_problems(r: dict, name: str, expect_games: int | None, allow_interrupted: bool = False) -> list[str]:
@@ -87,6 +140,7 @@ def pair(cand: dict, ctrl: dict, alpha: float, max_excluded: float = 0.05, expec
          point_bar: float | None = None, allow_interrupted: bool = False) -> dict:
     problems = [p for p in smoke.receipt_problems(cand, ctrl)
                 if not any(p.startswith(prefix) for prefix in POLICY_FREE_PROBLEMS)]
+    problems += shard_problems(cand, ctrl)
     problems += (health_problems(cand, 'candidate', expect_games, allow_interrupted)
                  + health_problems(ctrl, 'control', expect_games, allow_interrupted))
     if (cand.get('config') or {}).get('policy') == (ctrl.get('config') or {}).get('policy'):
