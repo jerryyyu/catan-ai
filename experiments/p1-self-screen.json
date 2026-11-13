@@ -1,0 +1,33 @@
+{
+  "name": "p1-self-screen",
+  "stage": "dev",
+  "candidate": "planner_pv2_tiles_va_p1",
+  "control": "planner_pv2_tiles_va_t9",
+  "requires_search": false,
+  "seeds_per_panel": 400,
+  "max_turns": 1000,
+  "panels": [
+    {
+      "name": "self_served",
+      "seed": 3400000,
+      "opponents": [
+        "planner_pv2_tiles_va_t9",
+        "planner_pv2_tiles_va_t9",
+        "planner_pv2_tiles_va_t9"
+      ]
+    }
+  ],
+  "gates": {
+    "maximum_match_truncations": 0,
+    "minimum_paired_win_lift": 0.02,
+    "maximum_p95_decision_seconds": 2,
+    "maximum_step_seconds": 5,
+    "maximum_turn_seconds": 20
+  },
+  "power": {
+    "alternative_effect": 0.04,
+    "planning_sigma": 0.25,
+    "power": 0.8,
+    "note": "P1 DEV self table (experiments/p1-dev.json): planner_pv2_tiles_va_p1 (the served T9 candidate with its two setup settlements chosen by the P1 value net over afterstates; actions-phase net unchanged, so this measures placement alone) vs the served planner_pv2_tiles_va_t9 with three planner_pv2_tiles_va_t9 opponents (control = the research baseline, Jerry 2026-11-12). Gate as exact-dev2: point lift >= +.02, 0 truncations, p95 <= 2 s, step <= 5 s, turn <= 20 s. check_design: alternative +.04, sigma .25, 400 seeds -> .945; with the JSettlers table (.861) the conjunction is .814. Fresh seeds 3400000-3400399. Cython via scripts/cython_run.py. Predeclared 2026-11-13 before any game."
+  }
+}

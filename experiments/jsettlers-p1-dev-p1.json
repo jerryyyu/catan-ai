@@ -1,0 +1,36 @@
+{
+  "name": "jsettlers-p1-dev-p1",
+  "purpose": "P1 DEV JSettlers table (experiments/p1-dev.json): planner_pv2_tiles_va_p1 alone vs three all-SMART JSettlers 2.6.10 robots, base seed 20261121, 1024 games in 4 shards (scripts/jsettlers_sharded.py; shard seeds 20261121000+k, ports 8889+100k); the planner_pv2_tiles_va_t9 run is the control, paired by shard-prefixed game name.",
+  "policy": "planner_pv2_tiles_va_p1",
+  "seed": 20261121,
+  "games": 1024,
+  "jsettlers": {
+    "tag": "release-2.6.10",
+    "commit": "c5141056d8e3fff548817b3a1712eb66085e897b",
+    "patch": {
+      "file": "runs/external/jsettlers-seed-v2.patch",
+      "sha256": "d18f25934bc0d8a429f5d237e33d653ef06186c3e3e2304e69c6cf0166b3014c"
+    },
+    "seed": 20261121,
+    "all_smart": true
+  },
+  "server": {
+    "port": 8889,
+    "max_connections": 50,
+    "builtin_robots": 6,
+    "percent3p": 25,
+    "botgames_parallel": 1,
+    "botgames_wait_sec": 5,
+    "fast_pause_percent": 1,
+    "timeout_turn_sec": 120
+  },
+  "timeout_sec_per_game": 900,
+  "pass_bar": {
+    "completed_games": 1024,
+    "bridge_errors": 0
+  },
+  "analysis": "scripts/jsettlers_paired.py --alpha 0.05 --expect-games 1024 --point-bar 0.02 on the two merged receipts (same shard design); the DEV verdict is 'dev_pass'.",
+  "limitations": "The patch file is GPLv3-derived and lives only in runs/external (never in this repo); its sha256 is pinned here. all_smart makes every locally started robot use JSettlers' SMART strategy params, including our extrabot's inherited fallback brain.",
+  "note": "Predeclared 2026-11-13 before any game; fresh base seed 20261121; the first sharded table (PR #72), both runs with the same shard design. Launched through scripts/cython_run.py.",
+  "shards": 4
+}

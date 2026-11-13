@@ -1,0 +1,15 @@
+{
+  "name": "p1-dev",
+  "stage": "dev (2026-11-10 evaluation policy; control = T9 baseline)",
+  "decision": "Jerry 2026-11-13: 'ok lets do what you recommended' (P1 DEV after its offline PASS, board #1 comment 6824446953). experiments/placement-value.json on_pass.",
+  "candidate": "planner_pv2_tiles_va_p1: the served planner_pv2_tiles_va_t9 with setup settlements chosen by the P1 value net (checkpoints/value_tiles_va_p1.meta.json, pt 95571cf5...) over the afterstate of each legal vertex; the actions-phase value net stays T9, so a pass is attributable to placement",
+  "control": "planner_pv2_tiles_va_t9 (served; the research baseline from 2026-11-12)",
+  "tables": {
+    "self_served": "experiments/p1-self-screen.json (evaluator, ultra; 400 seeds 3400000+; three planner_pv2_tiles_va_t9 opponents)",
+    "jsettlers": "experiments/jsettlers-p1-dev-{t9,p1}.json (Mac mini; 1024 games, base 20261121, 4 shards each, identical shard design)"
+  },
+  "gate": "PASS iff both: (1) self_served point lift >= +.02 with the evaluator's gates (0 truncations, latency); (2) JSettlers scripts/jsettlers_paired.py --point-bar 0.02 'dev_pass' on the merged sharded receipts (paired point won(p1) - won(t9) >= +.02, identical shard design, every shard passed, 0 bridge errors, <= 5% excluded).",
+  "power": "As exact-dev2: self_served .945 (400 seeds, sigma .25, alternative +.04) x JSettlers .861 (1024 pairs) = .814.",
+  "next": "A pass leads to a separately predeclared held-out on fresh seeds (self table variance_floor .10, >= 512 seeds; paired JSettlers sized for .80). A fail is recorded; the P1 net stays a research artifact.",
+  "note": "Predeclared 2026-11-13 before any game of planner_pv2_tiles_va_p1."
+}

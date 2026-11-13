@@ -1,0 +1,29 @@
+{
+  "name": "value-data-t10",
+  "stage": "data-generation",
+  "schema": 2,
+  "policy": "planner_pv2_tiles_va_t9_explore",
+  "max_turns": 1000,
+  "seeds": [
+    3500000,
+    100000
+  ],
+  "decision_rate": 0.0,
+  "candidates": 4,
+  "playouts": 0,
+  "value_points": [
+    "roll",
+    "end_turn"
+  ],
+  "split": {
+    "train": [
+      3500000,
+      95000
+    ],
+    "test": [
+      3595000,
+      5000
+    ]
+  },
+  "note": "T10 (Jerry 2026-11-13: 'ok lets do what you recommended'; the step that produced T9, repeated from the T9 baseline). 100,000 self-play games of planner_pv2_tiles_va_t9_explore: the served T9 (weights checkpoints/value_tiles_va_t9.npz sha256 a20be3e1...) that, with probability .05 at each actions-phase decision where ending the turn and a city or settlement build are both legal, ends the turn through the served end-of-turn path (src/catan_ai/value_arms_serving.py EXPLORE_END_TURN_RATE; the draw uses the policy's seeded rng, so scripts/reencode_v2.py replays it). Purpose: the 'end now with a buildable hand' rows the recipe review found missing (board #1 comment 6771511862), with true outcome labels, on top of fresh on-policy data. Same producer, schema and fields as value-data-tiles (scripts/rank_data.py); fresh seeds 3500000-3599999; split train 95,000 / test 5,000. The training arm (T10: served recipe on original + on-policy + this root, with the exploration end-turn rows reported separately) and its offline gate vs the T9 net are predeclared separately before any training or test read. Weights stay local. Predeclared 2026-11-13 before any game."
+}
