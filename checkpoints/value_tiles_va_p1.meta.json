@@ -1,0 +1,359 @@
+{
+ "schema": "catan-value-tiles-v1",
+ "arm": "tiles",
+ "pt_sha256": "95571cf567db6cc74a13fe790bd7372e748fa3b8e4f76fc8181a8368d4ecc4b0",
+ "npz_sha256": "6220b36f8ee2d1181c2aa17a0d943ad2344aa5a308012fe58f735a8aa3b67655",
+ "source_run": "runs/placement-value-v1 (ultra), arm p1",
+ "arrays": {
+  "mean": [
+   1324
+  ],
+  "parity_logit": [
+   456
+  ],
+  "parity_x": [
+   456,
+   1324
+  ],
+  "sd": [
+   1324
+  ],
+  "tidx": [
+   19,
+   116
+  ],
+  "types": [
+   24
+  ],
+  "w:encoder.layers.0.linear1.bias": [
+   256
+  ],
+  "w:encoder.layers.0.linear1.weight": [
+   256,
+   128
+  ],
+  "w:encoder.layers.0.linear2.bias": [
+   128
+  ],
+  "w:encoder.layers.0.linear2.weight": [
+   128,
+   256
+  ],
+  "w:encoder.layers.0.norm1.bias": [
+   128
+  ],
+  "w:encoder.layers.0.norm1.weight": [
+   128
+  ],
+  "w:encoder.layers.0.norm2.bias": [
+   128
+  ],
+  "w:encoder.layers.0.norm2.weight": [
+   128
+  ],
+  "w:encoder.layers.0.self_attn.in_proj_bias": [
+   384
+  ],
+  "w:encoder.layers.0.self_attn.in_proj_weight": [
+   384,
+   128
+  ],
+  "w:encoder.layers.0.self_attn.out_proj.bias": [
+   128
+  ],
+  "w:encoder.layers.0.self_attn.out_proj.weight": [
+   128,
+   128
+  ],
+  "w:encoder.layers.1.linear1.bias": [
+   256
+  ],
+  "w:encoder.layers.1.linear1.weight": [
+   256,
+   128
+  ],
+  "w:encoder.layers.1.linear2.bias": [
+   128
+  ],
+  "w:encoder.layers.1.linear2.weight": [
+   128,
+   256
+  ],
+  "w:encoder.layers.1.norm1.bias": [
+   128
+  ],
+  "w:encoder.layers.1.norm1.weight": [
+   128
+  ],
+  "w:encoder.layers.1.norm2.bias": [
+   128
+  ],
+  "w:encoder.layers.1.norm2.weight": [
+   128
+  ],
+  "w:encoder.layers.1.self_attn.in_proj_bias": [
+   384
+  ],
+  "w:encoder.layers.1.self_attn.in_proj_weight": [
+   384,
+   128
+  ],
+  "w:encoder.layers.1.self_attn.out_proj.bias": [
+   128
+  ],
+  "w:encoder.layers.1.self_attn.out_proj.weight": [
+   128,
+   128
+  ],
+  "w:encoder.layers.2.linear1.bias": [
+   256
+  ],
+  "w:encoder.layers.2.linear1.weight": [
+   256,
+   128
+  ],
+  "w:encoder.layers.2.linear2.bias": [
+   128
+  ],
+  "w:encoder.layers.2.linear2.weight": [
+   128,
+   256
+  ],
+  "w:encoder.layers.2.norm1.bias": [
+   128
+  ],
+  "w:encoder.layers.2.norm1.weight": [
+   128
+  ],
+  "w:encoder.layers.2.norm2.bias": [
+   128
+  ],
+  "w:encoder.layers.2.norm2.weight": [
+   128
+  ],
+  "w:encoder.layers.2.self_attn.in_proj_bias": [
+   384
+  ],
+  "w:encoder.layers.2.self_attn.in_proj_weight": [
+   384,
+   128
+  ],
+  "w:encoder.layers.2.self_attn.out_proj.bias": [
+   128
+  ],
+  "w:encoder.layers.2.self_attn.out_proj.weight": [
+   128,
+   128
+  ],
+  "w:encoder.layers.3.linear1.bias": [
+   256
+  ],
+  "w:encoder.layers.3.linear1.weight": [
+   256,
+   128
+  ],
+  "w:encoder.layers.3.linear2.bias": [
+   128
+  ],
+  "w:encoder.layers.3.linear2.weight": [
+   128,
+   256
+  ],
+  "w:encoder.layers.3.norm1.bias": [
+   128
+  ],
+  "w:encoder.layers.3.norm1.weight": [
+   128
+  ],
+  "w:encoder.layers.3.norm2.bias": [
+   128
+  ],
+  "w:encoder.layers.3.norm2.weight": [
+   128
+  ],
+  "w:encoder.layers.3.self_attn.in_proj_bias": [
+   384
+  ],
+  "w:encoder.layers.3.self_attn.in_proj_weight": [
+   384,
+   128
+  ],
+  "w:encoder.layers.3.self_attn.out_proj.bias": [
+   128
+  ],
+  "w:encoder.layers.3.self_attn.out_proj.weight": [
+   128,
+   128
+  ],
+  "w:glob.bias": [
+   128
+  ],
+  "w:glob.weight": [
+   128,
+   20
+  ],
+  "w:head.bias": [
+   1
+  ],
+  "w:head.weight": [
+   1,
+   128
+  ],
+  "w:kind": [
+   3,
+   128
+  ],
+  "w:norm.bias": [
+   128
+  ],
+  "w:norm.weight": [
+   128
+  ],
+  "w:player.bias": [
+   128
+  ],
+  "w:player.weight": [
+   128,
+   27
+  ],
+  "w:pos": [
+   24,
+   128
+  ],
+  "w:tile.bias": [
+   128
+  ],
+  "w:tile.weight": [
+   128,
+   116
+  ]
+ },
+ "params": 555009,
+ "epoch": 9,
+ "val_bce": 0.44918634373635863,
+ "epochs": null,
+ "train_identity": {
+  "original": {
+   "identity": "357454ad9f771952b02214b8efc4ee95aa0254efb9720b00368d7b460d6111fd",
+   "arrays_sha256": "48728ccdea17d682fedf50b3e01619adfdd561d5efd2a056d7f081fb639d861d",
+   "done_sha256": "b3f19f7b636aa8f4e0846cf3e6eaa2f2602800c112ab8c725c5fba02d41c27a8"
+  },
+  "onpolicy": {
+   "identity": "a76c571d8551e528dfb40faf4e57edf050943318830b6da54e9194416b1b9f25",
+   "arrays_sha256": "8790100db9f0ca77c00e7227f7ad20614604315f427603c3cc63c82567ba2795",
+   "done_sha256": "0def7a526eb0c198780057948aaf0a4175f97cf25cd4e55b9cd79a3dd2707602"
+  },
+  "setup_original": {
+   "identity": "9b1893c1a17691a20aa6972dde3cf2f006b6c6f62c4c64a77e2539fc2c68f283",
+   "arrays_sha256": "8b15d804dc3ac5f78775210e82a6e58b6e5999ecdf08b6e8a86cf3b6de0af893",
+   "done_sha256": "4d9b720d126a86f8873d63561c0de916aec245920ff6c561db3cbb9a1d54137a"
+  },
+  "setup_onpolicy": {
+   "identity": "4ab767ffa4bdc5da8f09f2286baa62c2aa72afad6eff3c7708d8f12364e5814c",
+   "arrays_sha256": "2415edb2bab48113177ff2c14b1c440c1d370ae61f56e97678b1181c46506eb8",
+   "done_sha256": "0adf5b76e8b814d5235acd498fb9b384c5439a52e70e173902af24b7dd910964"
+  },
+  "setupfork": {
+   "identity": "bb3c70bf68320927610ef3d4f956ca86143a043d2e57a1adb9593afc6c82aaad",
+   "arrays_sha256": "63de1789f10961a7284f4570bc7f528b9177e5dfef2628c747462746becec8ba",
+   "done_sha256": "046148dcab5cbecd50b5c267ea018c094988a7ec60d95bffa9d5974f71d3f3c6"
+  }
+ },
+ "train_seconds": null,
+ "config": {
+  "name": "placement-value",
+  "stage": "offline gate (P1: value net that knows game starts)",
+  "decision": "Jerry 2026-11-11: 'yea how can we train it to learn about game starts as well' and 'All sound good'. The served bot places setup settlements with the fitted economic score; the value transformer has never seen a setup position.",
+  "reference": {
+   "pt": "value-arms-v1/t9.pt",
+   "pt_sha256": "db4bc28e01b37dd74f963ff3b8cddd7789a0f22e8ace1a0bc73f99541cc60c12",
+   "note": "T9 (value-arms DEV pass): P1 is T9 plus setup data"
+  },
+  "served_reference": {
+   "pt": "arch-bakeoff-v1/tiles.pt",
+   "pt_sha256": "fb239324ad2195b77965f69aa28e7f8dcf3caa756e84d1892ba5f804a33972ae"
+  },
+  "roots": {
+   "original": {
+    "shards": "value-v2-100k-shards",
+    "declaration": "value-v2-100k.json"
+   },
+   "onpolicy": {
+    "shards": "value-v2-tiles-shards",
+    "declaration": "value-v2-tiles.json"
+   },
+   "setup_original": {
+    "shards": "setup-v2-100k-shards",
+    "declaration": "setup-v2-100k.json"
+   },
+   "setup_onpolicy": {
+    "shards": "setup-v2-tiles-shards",
+    "declaration": "setup-v2-tiles.json"
+   },
+   "setupfork": {
+    "shards": "setupfork-v1-shards",
+    "declaration": "setupfork-v1.json"
+   }
+  },
+  "selection": [
+   "original",
+   "onpolicy"
+  ],
+  "common": {
+   "optimizer": "adamw",
+   "learning_rate": 0.0007,
+   "weight_decay": 0.05,
+   "schedule": "cosine",
+   "warmup_fraction": 0.03,
+   "augment": "one of the 12 hex symmetries per row per batch (encoder-v2 permutation applied before any structuring)",
+   "epochs": 12,
+   "batch": 4096,
+   "validation_games": 5000,
+   "seed": 0,
+   "epoch_selection": "lowest validation BCE of P(I win) on the last 5,000 train games; never test"
+  },
+  "arms": {
+   "p1": {
+    "purpose": "T9's data and recipe plus setup rows from both self-play roots (weight .25 each; 8 rows per game) and counterfactual setup-fork rows with true labels (weight 4)",
+    "data": [
+     "original",
+     "onpolicy",
+     "setup_original",
+     "setup_onpolicy",
+     "setupfork"
+    ],
+    "weight": {
+     "setup_original": 0.25,
+     "setup_onpolicy": 0.25,
+     "setupfork": 4.0
+    }
+   }
+  },
+  "gate": {
+   "placement": "primary, on experiments/placement-test-served.json (400 decisions, 50 games): per decision the model's top candidate's playout win rate minus the served economic choice's; mean over decisions; game-clustered bootstrap (1,000 resamples, seed 37) 5th-percentile lower bound > 0; eligible only with the complete declared inventory (50 seeds x 8 setup decisions, 16 distinct candidates each, exactly one served, 8 playouts per candidate) and zero truncated playouts (a truncated playout would count as a loss); otherwise the check is null and the arm does not pass",
+   "non_inferiority": "vs T9 on the original and on-policy end-of-turn test rows: AUC diff 5th-percentile lower bound > -0.005 each (same bootstrap)",
+   "reported": [
+    "the placement metric for T9 and the served net (baselines that never saw setup rows)",
+    "the same metric on placement-data-v1 test games 2896450-2896499 (mixed heuristic lineups) (censoring unknown there: truncations not recorded)",
+    "oracle (best candidate) rate; top-1 agreement with the economic choice",
+    "setupfork test-row AUC/log loss vs T9"
+   ],
+   "on_fail": "recorded; no screen",
+   "on_pass": "a separately predeclared DEV under the 2026-11-10 policy for planner_pv2_tiles_va_p1: T9's candidate with setup settlements chosen by the value net over afterstates"
+  },
+  "order": "ultra, after the value-arms held-out self tables: setup re-encodes (both roots), setupfork generation and the placement test (CPU, nice 15, alongside the STAC held-out runs); then p1 train (MPS) and the gate",
+  "note": "Predeclared 2026-11-11 before any of this data was produced or P1 trained. Weights stay local."
+ },
+ "torch_version": "2.15.0",
+ "probe": {
+  "seed": 20261108,
+  "random_rows": 64,
+  "game_seed": 2690000,
+  "rows": 456
+ },
+ "value_arm": "p1",
+ "phase_vec_dropped": false,
+ "init_from_sha256": null,
+ "producer_source_revision": "0c3a1691575c11c3c308e903f44dee8598a10dfd",
+ "parity_max_abs_diff": 2.3863054963157992e-06
+}
