@@ -7,7 +7,21 @@ and top-level receipts plus run-directory summaries and readouts are indexed in
 
 ## Served default
 
-- **Policy:** `planner_pv2_tiles` for new solo web and API games, promoted by
+- **Policy:** `planner_pv2_tiles_va_t9` for new solo web and API games, promoted by the owner (Jerry) on 2026-11-11.
+  It is `planner_pv2_tiles` with its value transformer retrained on the original 100k self-play games plus 100k
+  on-policy games of `planner_pv2_tiles` (value-arms T9: same architecture and recipe, 555k parameters,
+  experiments/value-arms.json) and the red-team purchase-scoring fixes (`planner_pv2_tiles_buyfix`, PR #59). Its
+  held-out (experiments/value-arms-heldout.json, fresh seeds, fixed sequence t9 first): self table vs three served copies **+.035** (896 seeds, seed LCB +.024, alpha .05, variance floor .10) and paired seeded JSettlers **+.026** (2,360 vs 2,228 of 5,120, LCB +.012) vs the served `planner_pv2_tiles`; DEV (experiments/value-arms-dev.json) +.046 / +.027. The two changes are bundled, so the result supports the bundle, not either change alone.
+- **Fallback chain:** T9 weights missing or unverified -> `planner_pv2_tiles` (below) -> `planner_offer_accept` ->
+  Tactical, each with its reason shown by `/api/bots`.
+- **Identity:** the 16-game trace hash of `planner_pv2_tiles_va_t9` (`scripts/trace_hash.py --seed 2690000 --games 16
+  --policy planner_pv2_tiles_va_t9`) is 6eae37ea1ed0312d164fc3c5df72a7c511dd319506c437426bda69cfe5b19bdf. Its weights
+  (`checkpoints/value_tiles_va_t9.npz`) are local, pinned by `checkpoints/value_tiles_va_t9.meta.json` (pt
+  db4bc28e…, the checkpoint the offline gate scored).
+
+### Previous default (first fallback)
+
+- **Policy:** `planner_pv2_tiles`, served 2026-11-09 to 2026-11-11, promoted by
   the owner (Jerry) on 2026-11-08 and served since 2026-11-09 (PR #45). It is `planner_offer_accept` (below)
   with its own-turn build decisions chosen by PV search: the served search
   proposes ending now plus its four best build sequences, and the arch-bakeoff-v1

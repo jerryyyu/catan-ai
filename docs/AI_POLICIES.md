@@ -1,12 +1,30 @@
 # AI policies and benchmarks
 
-Last reconciled: **2026-11-10**.
+Last reconciled: **2026-11-11**.
 
-**Served default: `planner_pv2_tiles`** (ladder row 8 in [POLICIES.md](POLICIES.md); promoted by Jerry on
-2026-11-08, served since 2026-11-09 after its held-out and JSettlers re-test, PR #45). Its 16-game trace hash is
-`c7d07a76c9f3249f170ade344e3564df62b3a127c4b311b05eeea586334cb815`. The previous default `planner_offer_accept`
-(row 7, trace `9fd2805e…`) is the fallback. **Strongest measured candidate: `planner_pv2_exact`** (turn-exact
-search): DEV screen PASS; held-out FAIL on the mixed table only; paired JSettlers +.042 (LCB +.015) over the served bot.
+**Served default: `planner_pv2_tiles_va_t9`** (promoted by Jerry 2026-11-11; ladder row 9 in [POLICIES.md](POLICIES.md)).
+Its 16-game trace hash is `6eae37ea1ed0312d164fc3c5df72a7c511dd319506c437426bda69cfe5b19bdf`. Fallbacks:
+`planner_pv2_tiles` (row 8, trace `c7d07a76…`), then `planner_offer_accept` (row 7), then Tactical. Every production
+release is logged in [Production releases](#production-releases) below.
+
+## Production releases
+
+One row per change to the served solo default, newest first. Add the row in the same PR that changes
+`SERVED_POLICY` (`src/catan_ai/api.py`), with the evidence the promotion rests on and its receipts; a later
+rollback or fallback event gets its own row. Detail per release: the ladder in [POLICIES.md](POLICIES.md).
+
+| # | served from | policy | what changed | evidence the release rests on | PR | trace |
+|---|---|---|---|---|---|---|
+| 9 | 2026-11-11 | `planner_pv2_tiles_va_t9` | value transformer retrained on original + on-policy self-play (T9) + buyfix purchase scoring | held-out vs row 8: self table **+.035** (seed LCB +.024, 896 seeds), paired seeded JSettlers **+.026** (LCB +.012, 5,120 games); DEV +.046 / +.027 | #67–#69, #73 (evaluation), this PR (serving) | `6eae37ea…` |
+| 8 | 2026-11-09 | `planner_pv2_tiles` | PV search scored by the tile-token value transformer | held-out vs row 7: internal +.046 / +.040 / +.096; JSettlers re-test +.061 (LCB +.032) | #34, #45 | `c7d07a76…` |
+| 7 | 2026-11-03 | `planner_offer_accept` | trade offers weighted by the recipient's public acceptance rate | held-out mixed-table PASS vs row 6 | #20, #23 | `9fd2805e…` |
+| 6 | 2026-11-02 | `planner_offer_guard` | no offers to 8+ point seats; offers net of the recipient's gain | DEV point floor only (no own held-out) | #19 | — |
+| 5 | 2026-11-01 | `planner_unified_offer` | one player trade offer per turn | held-out vs row 4 | #18 | — |
+| 4 | 2026-11-01 | `planner_unified` | one shared position score for robber, steal, discard, dev-card and trade answers | held-out vs row 2 | #17 | — |
+| 3 | 2026-11-01 | `planner_devfix` | development-card fixes | see POLICIES.md row 3 | #15 | — |
+| 2 | 2026-11-01 | `planner_parameter` | bounded public-information planner with fitted economic weights | +.110 / +.227 vs Tactical | #9 | — |
+| 1 | 2026-10-31 | `tactical` | rule-based baseline | — | initial | — |
+| 0 | 2026-10-29 | `heuristic` | first baseline | — | — | — |
 
 This file is the map of every AI this project plays with or against: what each one is, how it decides, and what
 it measured. It complements, and does not replace:
